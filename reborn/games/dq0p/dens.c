@@ -21,7 +21,7 @@ typedef char sden_fits[offsetof (struct actor, den) - offsetof (struct actor, x)
                                                 /* (Its square, doing, name and record copied whole: the record its
                                                 **   capital's, the user's designators) */
 
-unsigned char low_far (void);                   /* (sense.c's, part 6's: a low body unlit, past the character's
+unsigned char low_far (void);                   /* (sense.c's, part den_senses's: a low body unlit, past the character's
                                                 **   darkvision's cut for it) */
 
 unsigned char dens_seen (void)

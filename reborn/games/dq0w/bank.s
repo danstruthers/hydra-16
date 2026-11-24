@@ -7,8 +7,8 @@
 ; kinds: dq0w.cfg's CAT, read into the hub's catalogue bank as the world starts): each through m0, m1 or m2, which
 ; call it and put the catalogue's bank back in the window after it (it may have put another there: an item's, the
 ; hub's), so the code there goes on.  Its arguments as the function wants them (16 bits each: m1's in .A and .X, m2's
-; first on the C stack), its result kept through (.A and .X).  A part's function (part 10's: the catalogue's code
-; runs while part 10's in the area, called from it) through its stub.
+; first on the C stack), its result kept through (.A and .X).  A part's function (part things's: the catalogue's code
+; runs while part things's in the area, called from it) through its stub.
 ;
 ;   unsigned __fastcall__ m0 (void* f);                         f ()
 ;   unsigned __fastcall__ m1 (void* f, unsigned a);             f (a)

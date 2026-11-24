@@ -52,14 +52,14 @@ static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 
 #define noise(loud)     told (E_NOISE, 0, (loud))
 #define trap_told(o)    told (E_TRAP, (o) << 8 | wk.tq.kind | wk.tq.trigger << 4, 0)
-void __fastcall__ bearings_off (unsigned feet); /* (Part 52's: dq0w.c, wbody.h's) The character's bearings shaken */
+void __fastcall__ bearings_off (unsigned feet); /* (Part bearings's: dq0w.c, wbody.h's) The character's bearings shaken */
 #ifndef BO_OUT
 #define BO_OUT          0xFFFFU                 /* (Knocked senseless: wbody.h's) */
 #endif
 
 #ifdef W_HARM
-void harm_fx (void);                            /* (Part 49's: wlimbs.c) */
-void den_harm (void);                           /* (Part 121's: wstep.c, an actor's, the request made) */
+void harm_fx (void);                            /* (Part limbs's: wlimbs.c) */
+void den_harm (void);                           /* (Part harm's: wstep.c, an actor's, the request made) */
 
 /* The referee's harm (rs.h's RS_HARM: cause a, and b, c, w1, w2 by it), the UI told (E_HARM), the time it's out for
 ** taken */
@@ -80,13 +80,13 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
     r->b &= a == HC_STRIKE ? 3 : 0xFF;
     r->text[0] = 0;
     if (wk.who) {
-        den_harm ();                            /* (An actor's, the request made: its sheet's, its body's, part 121's) */
+        den_harm ();                            /* (An actor's, the request made: its sheet's, its body's, part harm's) */
         return;
     }
     r = hub_ask (SLOT_WORLD);
     wk.tt += RS_HARM_OUT (*r);
     told (E_HARM, a | RS_HARM_BAND (*r) << 8 | (RS_HARM_OUT (*r) ? E_OUT : 0), 0);
-    harm_fx ();                                 /* (What it dropped, fallen prone: part 49's, slice 4.1b's) */
+    harm_fx ();                                 /* (What it dropped, fallen prone: part limbs's, slice 4.1b's) */
     hub_map (0);
     r->state = REQ_FREE;
 }
@@ -190,7 +190,7 @@ static void __fastcall__ spring (unsigned char on)
     } else if (k == TK_GAS) {
         o = TO_CHOKED;
         wk.tt += wk.tq.power * 300;             /* (Senseless, half a minute a point of its power) */
-        bearings_off (BO_OUT);                  /* (Its bearings astray as it comes round: part 52's, slice 4.2's) */
+        bearings_off (BO_OUT);                  /* (Its bearings astray as it comes round: part bearings's, slice 4.2's) */
     }
     trap_told (o);
     if (o == TO_SPRUNG && k < TK_GAS) {
@@ -200,7 +200,7 @@ static void __fastcall__ spring (unsigned char on)
                                                 **   the character's poison none of its, wstep.c's) */
             HUB->pc_aff = AK_DART;              /* (Poisoned, one dart trap in four by its square, a wound drawn: the
                                                 **   referee told with the bodies' time, at its next minute, part
-                                                **   70's; a door's needle not yet: part 5's room) */
+                                                **   70's; a door's needle not yet: part doors's room) */
             HUB->pc_dose = 2;
         }
 #endif

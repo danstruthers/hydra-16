@@ -1,6 +1,6 @@
 /*
 ** wtrscent.c - (dq0w) the way the character's scent goes (wtrace.c's store, read: a hunter by smell's step,
-** STEP_SCENT, wbody.c's part 14 asking).  Swapped part 32's (../dq0/swap.inc, bank.s's stub tr_scent).
+** STEP_SCENT, wbody.c's part den_bodies asking).  Swapped part scent's (../dq0/swap.inc, bank.s's stub tr_scent).
 */
 
 #include <string.h>
@@ -57,7 +57,7 @@ static unsigned char __fastcall__ sniffed (unsigned char way, unsigned char c)
     act_get (q, AC_SNIFF);
     bd.ready += q.r.time;
     hub_map (0);                                /* (act_test's request, an actor's, laid out here: a hunter sniffs each ten
-                                                **   seconds, and part 69's swap in and out for it cost the UI's first
+                                                **   seconds, and part robbery's swap in and out for it cost the UI's first
                                                 **   words their time, dq0letseveral's, 2026-11-21) */
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_TEST;

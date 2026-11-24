@@ -1,7 +1,7 @@
 /*
 ** sheets.c - (the referee skeleton's, ../referee.h's) the creatures' sheets' file: the save folder's beasts.dat (the
 ** hub's savedir), kept with the game's other records, opened for the ruleset's rf_sheets.  A file of its own so each
-** referee puts it where its room is (dq0harn's swapped part 2, beside its rf_sheets; dq0null's main RAM).
+** referee puts it where its room is (dq0harn's swapped part names, beside its rf_sheets; dq0null's main RAM).
 */
 
 #include <fcntl.h>

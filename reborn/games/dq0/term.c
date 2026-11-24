@@ -190,10 +190,10 @@ unsigned char t_getkey (void)
 /* The window's size: its consctl's size line (C R), else $COLUMNS and $LINES, else 80 by 24; and whether the console
 ** shows its terminals both (the serial port's and the Vera X's screen: "terminal both"), and whether the screen has a
 ** keyboard someone's typed at ("keyboard screen": the console's, the Vera X's) */
-void size (void);                               /* (Part 1's: its stub, bank.s) */
+void size (void);                               /* (Part start_end's: its stub, bank.s) */
 static unsigned char both, kbd, whole;          /* (Both; the keyboard; the screen alone made so by the game, put
                                                 **   back as it ends) */
-#pragma code-name (push, "SW_start_end_CODE")             /* (The UI's part 1: as the terminal's set up) */
+#pragma code-name (push, "SW_start_end_CODE")   /* (The UI's part start_end: as the terminal's set up) */
 #pragma rodata-name (push, "SW_start_end_RODATA")
 
 void s_size (void)
@@ -244,7 +244,7 @@ void s_size (void)
 
 /* ---- The screen */
 
-#pragma code-name (push, "SW_start_end_CODE")             /* (Part 1's, its stub t_init, bank.s's: the main RAM's room) */
+#pragma code-name (push, "SW_start_end_CODE")   /* (Its stub t_init, bank.s's: the main RAM's room) */
 #pragma rodata-name (push, "SW_start_end_RODATA")
 
 void s_t_init (void)

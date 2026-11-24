@@ -2,8 +2,8 @@
 ** wtake.c - (dq0w) the take rule, every actor's (Phase 3C's one path, 2026-11-02: DUNGEON.md's one path for every
 ** actor), and a denizen's own take: its mind's I_TAKE (a its wants, TW_*), the first thing lying in its reach it wants
 ** taken up by the rule (wfetch.c's errands by it too, an ally's FE_TAKE), held, told; none, the nearest it sees told its
-** mind (the hub's dig_t).  All of it swapped part 81's (../dq0/swap.inc: dq0w.cfg's SW81), called through its stubs
-** (bank.s's: part 80's den_more, part 72's den_fetch).
+** mind (the hub's dig_t).  All of it swapped part take_rule's (../dq0/swap.inc: dq0w.cfg's SW_take_rule), called through its stubs
+** (bank.s's: part den_doors's den_more, part errands's den_fetch).
 **
 ** And the things' rest, every actor's by the character's rules (2026-11-04: HOUSE.md's denizens handling things): what it
 ** holds let fall (I_ROB's FE_DROP: the character's let fall, where it stands, no time, a shaft's head takes it), the food
@@ -35,14 +35,14 @@
 #pragma code-name ("SW_take_rule_CODE")
 #pragma rodata-name ("SW_take_rule_RODATA")
 
-unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
-unsigned char __fastcall__ throw_at (const char* name);    /* (Part 88's: things.c, every actor's; 0 body bd's, tk_x the thing) */
+unsigned __fastcall__ weight_of (unsigned i);   /* (Part things's) */
+unsigned char __fastcall__ throw_at (const char* name);    /* (Part hub_attach's: things.c, every actor's; 0 body bd's, tk_x the thing) */
 extern unsigned tk_x, tk_y;
-unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part 114's: wthings.c, a denizen's things by the
+unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part den_errands's: wthings.c, a denizen's things by the
                                                 **   character's rules, the act table's rows) */
-unsigned __fastcall__ den_room (unsigned n);    /* (Part 114's: room on it, its hands full: its purse, its pack) */
+unsigned __fastcall__ den_room (unsigned n);    /* (Part den_acts's: room on it, its hands full: its purse, its pack) */
 unsigned char __fastcall__ den_got (unsigned i, unsigned char tell);
-unsigned __fastcall__ den_tt (unsigned i);      /* (Part 114's: a taking's time) */   /* (Part 114's: a thing taken, its time, carried, told) */
+unsigned __fastcall__ den_tt (unsigned i);      /* (Part den_acts's: a taking's time) */   /* (Part den_acts's: a thing taken, its time, carried, told) */
 unsigned char __fastcall__ icomp (unsigned i);  /* (things.c's: thing i's compartment in what holds it, crow its row) */
 extern struct comp crow;
 unsigned char __fastcall__ ln_seen (unsigned char sn, unsigned x, unsigned y, unsigned tx, unsigned ty,
@@ -329,7 +329,7 @@ static unsigned char __fastcall__ got (unsigned i, unsigned char k, unsigned cha
         bd.ready += den_tt (i);                 /* (Two seconds: stooped, taken up, the take row's; out of a thing the
                                                 **   takeout row's and its levels: wthings.c's, every taking's) */
         if (i != (bd.dropped & ~DR_OWN) || !bd.arm) {   /* (A weapon: in its hand as its own let fall is */
-            bd.dropped = i | DR_OWN;            /*   taken up again, part 60's den_took; that one, */
+            bd.dropped = i | DR_OWN;            /*   taken up again, part den_things's den_took; that one, */
             bd.arm = k;                         /*   as it is) */
         }
         den_took ();

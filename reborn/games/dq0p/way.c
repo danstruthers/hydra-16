@@ -22,7 +22,7 @@
 #include "../dq0w/world.h"
 #include "view.h"
 
-#pragma code-name ("SW_way_record_CODE")                   /* (Part 3's, all of it: once a look one way) */
+#pragma code-name ("SW_way_record_CODE")                   /* (Part way_record's, all of it: once a look one way) */
 #pragma rodata-name ("SW_way_record_RODATA")
 #pragma bss-name ("SW_way_record_RODATA")                  /* (Its state too, the part's own: none kept from one call to the next) */
 #pragma static-locals (on)

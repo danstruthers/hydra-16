@@ -2,7 +2,7 @@
 ** wport.c - (dq0w) one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path for every actor; DECISIONS.md's
 ** the command interpreter's common structure, the user's of 2026-11-02): a denizen's mind posts the character's own
 ** intents (I_PORTAL: a its PA_*, w1 w2 the door's square; I_TAKE), and the world carries them out by the character's
-** code.  A door worked by body bd (wbody.c's part 14 calls it, the body copied out): the work's parts the character's
+** code.  A door worked by body bd (wbody.c's part den_bodies calls it, the body copied out): the work's parts the character's
 ** (wdoor.c's doors, wblow.c's blows: work.h's wk, its who the actor's), the character's own work kept round it (a
 ** battering under way, its blows' count), the referee asked of the actor (its sheet), nothing told the UI by the parts
 ** but its outcome (wk.out, or an opening's wk.open): a portcullis's and a battering's told here as the denizens' event
@@ -18,7 +18,7 @@
 ** own things (I_KIT's KT_LAIR, with its first denizen: the key its own, on it); door_key looks for one on the work's
 ** actor (the character, or body bd).
 **
-** All of it swapped part 80's (../dq0/swap.inc: dq0w.cfg's SW80), called through its stubs (bank.s's).
+** All of it swapped part den_doors's (../dq0/swap.inc: dq0w.cfg's SW_den_doors), called through its stubs (bank.s's).
 */
 
 #include <stddef.h>
@@ -33,7 +33,7 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wempty.c, every actor's) */
+unsigned char __fastcall__ handout (const struct msg* m);   /* (Part empty's: wempty.c, every actor's) */
 #pragma code-name ("SW_den_doors_CODE")
 #pragma rodata-name ("SW_den_doors_RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
                                                 **   parts, which copy this one in again after) */
@@ -41,14 +41,14 @@ unsigned char __fastcall__ handout (const struct msg* m);   /* (Part 111's: wemp
 #define FORCE_T         100                     /* (Forcing's ten seconds: wdoor.c's) */
 #define KEYS_MAX        2                       /* (A lair's doors' keys, at most) */
 
-unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part things's) */
 
 /* A thing of kind k carried by actor who (0 the character: on it, or in what it carries, on_pc's; else body bd: its
 ** own, held or in what it carries, IW_DEN at the last): a key only if it fits lock id (its size and thick: a thing's
 ** its id; 0 the work's door's, DOOR_KEY of wk's sn, px, py).  Its number, or 0.  Every actor's tools by one rule (a door's key, a lid's, lockpicks:
 ** the one-path plan's stage 2, closures, 2026-11-21; a door's key, s_door_key, and den_pry's own loop, a lid's, before;
 ** an actor's door key then only held, not in its pouch); the hub's header in the window after */
-#pragma code-name (push, "SW_robbery_CODE")             /* (Part 69's, the one senders': part 80's room) */
+#pragma code-name (push, "SW_robbery_CODE")     /* (The one senders': part den_doors's room) */
 #pragma rodata-name (push, "SW_robbery_RODATA")
 unsigned __fastcall__ s_tool_of (unsigned char who, unsigned char k, unsigned id)
 {
@@ -126,8 +126,8 @@ static unsigned char __fastcall__ den_bar (unsigned char put)
 ** changed; DT_DOOR, a door's work, the body's own square's too), what lies between (E_DEN's x[3]: the rock carries a
 ** pick's knock, whatever the air does, a square of wall for each four between them, the house's; from the body, or
 ** a door's work's from the door); the hub's header in the window after.  The one sender of a denizen's door work and a
-** tunneller's and a builder's (wdig.c's, part 79's, through its stub: each its own copy before, 2026-11-11, narration
-** as data's stage 3; here, not part 79: its bank dq0w.rop's, read in only at ropes_in); its event on the C stack */
+** tunneller's and a builder's (wdig.c's, part den_dig's, through its stub: each its own copy before, 2026-11-11, narration
+** as data's stage 3; here, not part den_dig: its bank dq0w.rop's, read in only at ropes_in); its event on the C stack */
 void __fastcall__ s_den_told (unsigned char what, unsigned char loud, unsigned x, unsigned y)
 {
     struct msg m;
@@ -176,17 +176,17 @@ static unsigned char __fastcall__ taken (unsigned x, unsigned y)
 static void __fastcall__ den_portal (const struct msg* m);
 static void __fastcall__ door_keys (const struct msg* m);
 
-/* Body bd's rarer intents (part 14's room): up or down a flight to stratum x[2] (I_CLIMB: part 118's, every actor's,
+/* Body bd's rarer intents (part den_bodies's room): up or down a flight to stratum x[2] (I_CLIMB: part flight's, every actor's,
 ** the one-path plan's, 2026-11-23); none within its reach, an ally come along with the character, beside it at w1 w2
-** (a shaft's climb, a rope's, a fall: not yet any actor's); a light of its own lit or put out (I_LIGHT: part 119's);
-** a robbery, a round's work (I_ROB); its door work (I_PORTAL); a lair's doors' keys (I_KIT's KT_LAIR, part 51's: no
+** (a shaft's climb, a rope's, a fall: not yet any actor's); a light of its own lit or put out (I_LIGHT: part den_lights's);
+** a robbery, a round's work (I_ROB); its door work (I_PORTAL); a lair's doors' keys (I_KIT's KT_LAIR, part den_limbs's: no
 ** body) */
 void __fastcall__ s_den_more (const struct msg* m)
 {
     if (m->kind == I_LIGHT) {
         den_light (m);
     } else if (m->kind == I_CLIMB) {
-        den_flight (m);                         /* (Part 118's: wflight.c) */
+        den_flight (m);                         /* (Part flight's: wflight.c) */
     } else if (m->kind == I_ROB) {
         hub_map (0);
         if (I_ROB_ERRAND (*m) >= FE_EMPTY) {
@@ -194,7 +194,7 @@ void __fastcall__ s_den_more (const struct msg* m)
                                                 **   handled: the character's own code, wempty.c's, wthings.c's; part
                                                 **   14's till 2026-11-23, its room) */
         } else if (I_ROB_ERRAND (*m) >= FE_DROP) {
-            den_take (m);                       /* (The things' rest, by the character's rules, their own time: part 81's) */
+            den_take (m);                       /* (The things' rest, by the character's rules, their own time: part take_rule's) */
         } else {
             if (I_ROB_ERRAND (*m) == FE_ROB) {
                 bd.ready += HUB->round;         /* (A robbery's round's work; an errand's its act's own, the act table's
@@ -205,15 +205,15 @@ void __fastcall__ s_den_more (const struct msg* m)
     } else if (m->kind == I_KIT) {
         door_keys (m);
     } else if (m->kind == I_TAKE) {
-        den_take (m);                           /* (A thing taken up by the take rule: part 72's) */
+        den_take (m);                           /* (A thing taken up by the take rule: part errands's) */
     } else if (m->kind == I_RISE) {             /* (Its position, its mind's: lain down to sleep a moment's; up, the
                                                 **   Rise's round, wlimbs.c's den_legs: 2026-11-02) */
         if (I_RISE_POS (*m) & POS_HIDE) {
-            hid_op (HO_DEN | (I_RISE_POS (*m) & 7));   /* (Hiding oneself: part 94's) */
+            hid_op (HO_DEN | (I_RISE_POS (*m) & 7));   /* (Hiding oneself: part hide_self's) */
         } else if (I_RISE_POS (*m) != POS_STANDING) {
             if (I_RISE_POS (*m) == POS_PRONE && dlit[bk]) {
                 den_lights (DL_DOUSE);          /* (Lain down to sleep: a rest puts a burning light out first, every
-                                                **   actor's, the user's, 2026-11-17: part 114's) */
+                                                **   actor's, the user's, 2026-11-17: part den_acts's) */
             }
             bd.pos = I_RISE_POS (*m);
             bd.ready += 10;

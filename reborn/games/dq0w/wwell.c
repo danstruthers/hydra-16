@@ -9,10 +9,10 @@
 ** about it); one in two of those and one in three of the rest with a way on, a passage up out of the water to the halls
 ** nearest along one of the four ways, the water standing at their floor; in the halls (a room's floor, a passage's) a
 ** pool two feet deep where it comes out in the roof; anything else under it (a wall, a stair), choked.  The climb is any
-** shaft's (dq0w.c's parts 89 and 97: the rope's help, a slip, a fall), a fall into the water at its foot (the book's
+** shaft's (dq0w.c's parts shaft and climb_on: the rope's help, a slip, a fall), a fall into the water at its foot (the book's
 ** landing in water), the words its own (here, and the UI's E_ARRIVE O_WELL).
 **
-** All of it swapped part 103's (../dq0/swap.inc: dq0w.cfg's SW103), in dq0w.rop's last overlay (things.c's ropes_in: the
+** All of it swapped part well's (../dq0/swap.inc: dq0w.cfg's SW_well), in dq0w.rop's last overlay (things.c's ropes_in: the
 ** caller reads it in first), through its stub, well (WL_*).  What it keeps across the stubs it calls (change, its
 ** records; stratum_in, grow_below, it_need) is in the things' request's copy (things.c's iq), the fields a rope's drop
 ** uses (wrope.h's R_*: the same meanings, the curb's square and its strata), the main RAM's at no cost.
@@ -33,9 +33,9 @@
 #pragma rodata-name ("SW_well_RODATA")
 #pragma bss-name ("SW_well_RODATA")               /* (Its statics its own, good only within a call that calls no stub) */
 
-void __fastcall__ grow_below (unsigned char n);     /* (Part 3's) */
+void __fastcall__ grow_below (unsigned char n);     /* (Part dungeon_begin's) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: the things' words, after those so far) */
-unsigned __fastcall__ at_hand (const char* name);   /* (Part 4's) */
+unsigned __fastcall__ at_hand (const char* name);   /* (Part ui_requests's) */
 unsigned __fastcall__ seen_named (const char* name);
 extern struct ireq iq;                          /* (things.c's) */
 
@@ -273,14 +273,14 @@ static unsigned char shaft_of (void)
 }
 
 /* (Its stub's: WL_DOWN the shaft of the well within reach, to climb down: its link, 0xFF none there, 0xFE choked (told);
-** WL_ROPE a rope's drop down it, the R_*'s (wrope.h's: 2, or 0 none); WL_NEAR, WL_SHAFT, WL_FOOT part 104's: near_well's,
+** WL_ROPE a rope's drop down it, the R_*'s (wrope.h's: 2, or 0 none); WL_NEAR, WL_SHAFT, WL_FOOT part well_drop's: near_well's,
 ** shaft_of's, footed's) */
 unsigned char __fastcall__ s_well (unsigned w)
 {
     static struct msg m;
     unsigned char k;
 
-    switch (w) {                                /* (wwell2.c's, part 104's: a thing let fall down it) */
+    switch (w) {                                /* (wwell2.c's, part well_drop's: a thing let fall down it) */
     case WL_NEAR:
         return near_well () != 0;
     case WL_SHAFT:

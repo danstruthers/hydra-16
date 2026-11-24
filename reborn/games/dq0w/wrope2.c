@@ -1,5 +1,5 @@
 /*
-** wrope2.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part 98's: a rope in place untied, shaken
+** wrope2.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part rope_untie's: a rope in place untied, shaken
 ** loose, its grapple giving, and looked at.
 */
 

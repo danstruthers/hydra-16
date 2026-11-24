@@ -9,7 +9,7 @@
 ** from wk.  Picking and forcing timed work (HOUSE.md's long tasks): begun (wk.plan: the means asked, the time and the
 ** long task's kind given, nothing told), then done at its time's end (dq0w.c's work_done: the test made then).
 **
-** All of it swapped part 5's (../dq0/swap.inc: dq0w.cfg's SW5), doors () called through its stub (bank.s's).
+** All of it swapped part doors's (../dq0/swap.inc: dq0w.cfg's SW_doors), doors () called through its stub (bank.s's).
 */
 
 #include <string.h>
@@ -34,7 +34,7 @@
 
 extern unsigned char burn_ask;                  /* (things.h's) */
 #define door_key()      tool_of (wk.who, KI_KEY, 0)     /* (A key that fits it, the actor's: wport.c's) */
-unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part 109's, wdrag.c) */
+unsigned char __fastcall__ braced (unsigned char sn, unsigned x, unsigned y);   /* (Part drag's, wdrag.c) */
 
 /* A door's outcome's act (PO_*, AC_* in pairs): its noise, every actor's, by the act table's row (act_noise: the
 ** character's E_NOISE, an actor's E_DEN, at the door; wport.c's own table of an actor's before, the character's own
@@ -56,7 +56,7 @@ void s_doors (void)
     mine = wk.pq.bar == ((wk.pd + 2) & 3);      /* (The character on its bar's side) */
     if (wk.pq.parts & PP_SKY && wk.pq.kind == PK_WINDOW && !wk.who) {
         burn_ask |= 2;                          /* (A window on the surface's shutters: the sky looked at, as it's
-                                                **   worked: part 76's, things.h's TS_ASK) */
+                                                **   worked: part time_believed's, things.h's TS_ASK) */
     }
     if (what == PA_BEND) {
         what = PA_FORCE;                        /* (Bent: forced) */

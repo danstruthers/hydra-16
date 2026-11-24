@@ -1,5 +1,5 @@
 /*
-** wtime.c - (dq0w, swapped part 76: ../dq0/swap.inc) the character's time of day believed (DUNGEON.md's the time of day
+** wtime.c - (dq0w, swapped part time_believed: ../dq0/swap.inc) the character's time of day believed (DUNGEON.md's the time of day
 ** believed, HOUSE.md's, for review; the user's, 2026-10-31: "Timekeeping should also be a fuzzy thing, unless there is
 ** some place where you can actually see outside ... especially after sleeping the current time-of-day should be quite
 ** arbitrary to the player, and should drift further and further away from known as the play progresses", "Time-of-day
@@ -8,7 +8,7 @@
 ** whatever happens go by it); the character's own the hub's tb: the hour it believes it is against the true one (skew,
 ** in minutes) and how sure it is (unc, minutes either way), as the bearings are a belief about north.
 **
-** Reckoned lazily, at the lights' burning's look (part 27's s_burns_now: its due, tb.due, or at once, burn_ask: a
+** Reckoned lazily, at the lights' burning's look (part burning's s_burns_now: its due, tb.due, or at once, burn_ask: a
 ** light's change, a wait or a sleep begun or ended, a black-out, another stratum, the way out opened), never polled:
 **   - the hours awake: the referee's test of the time kept (rs.h's TIME_STEPS) each hour (the hours since the last, at once), its failure's drift its
 **     way (the referee's d8: odd the earlier), the more the longer since it last knew the time;
@@ -18,7 +18,7 @@
 **     was set by it, to a twelfth), its hunger since its last meal (to a quarter);
 **   - the sky in sight (an open way out near it: the top stratum's up its stairs, its light alone; a far exit below
 **     the top, the open sky; a window on the surface, a skylight, a shaft open to the sky by it, HOUSE.md's what shows
-**     the sky, part 89's; or a test's poke, tb.sky): its light (dawn, day, dusk, night) narrows it; the sun or the
+**     the sky, part shaft's; or a test's poke, tb.sky): its light (dawn, day, dusk, night) narrows it; the sun or the
 **     stars read by the north it believes in set it (wrong by its bearings' error, unknown to it); its bearings lost,
 **     the sun high or low; watched a while (a wait in its sight: SKY_WATCH minutes, the stars STARS_WATCH), their way
 **     across the sky shows the time and north both (its bearings set right).
@@ -50,13 +50,13 @@ extern signed char wsteps;
 #define FELL            0xFFFF                  /* (T.gone: come round from a fall as the game begins) */
 #define T               (HUB->tb)
 
-#pragma bss-name (push, "SW_time_believed_RODATA")           /* (Its own, wanted only as it runs: the main RAM's room) */
+#pragma bss-name (push, "SW_time_believed_RODATA") /* (Its own, wanted only as it runs: the main RAM's room) */
 static unsigned n;                              /* (The clock's minute now) */
 #pragma bss-name (pop)
 static unsigned m;                              /* (The true minute of the day, now) */
 static int lo, hi;                              /* (The sky's: the part of the day, minutes) */
 
-/* ---- Part 99 (2026-11-04, the swap study's: part 76's room, an hour's test or a waking, seldom): the belief drifting */
+/* ---- Part time_drift (2026-11-04, the swap study's: part time_believed's room, an hour's test or a waking, seldom): the belief drifting */
 #pragma code-name (push, "SW_time_drift_CODE")
 #pragma rodata-name (push, "SW_time_drift_RODATA")
 #pragma bss-name (push, "SW_time_drift_RODATA")
@@ -159,7 +159,7 @@ void __fastcall__ s_time_kept (unsigned n)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-void __fastcall__ time_kept (unsigned n);       /* (Part 99's) */
+void __fastcall__ time_kept (unsigned n);       /* (Part time_drift's) */
 
 /* A clue's belief (its skew s, its doubt u), taken if it's surer than the one it has */
 static void __fastcall__ clue (int s, unsigned u)
@@ -204,10 +204,10 @@ static void clues (void)
     T.hung = f;
 }
 
-void __fastcall__ sky_seen (unsigned char kind);  /* (Part 77's, below: its stub, bank.s's; SKY_BEGUN, the start) */
+void __fastcall__ sky_seen (unsigned char kind);  /* (Part sky_seen's, below: its stub, bank.s's; SKY_BEGUN, the start) */
 #define SKY_BEGUN       0xFF
 
-/* ---- Part 77 (overlay 22's room): the sky seen, the game's start */
+/* ---- Part sky_seen (overlay 22's room): the sky seen, the game's start */
 #pragma code-name (push, "SW_sky_seen_CODE")
 #pragma rodata-name (push, "SW_sky_seen_RODATA")
 
@@ -357,8 +357,8 @@ static unsigned char sky_here (void)
     return T.sky ? T.sky : s;
 }
 
-/* The reckoning (part 27's, at its due or at once): the time it believes brought up to now, its next due */
-void rest_go (void);                            /* (Part 53's) */
+/* The reckoning (part burning's, at its due or at once): the time it believes brought up to now, its next due */
+void rest_go (void);                            /* (Part intent_few's) */
 void s_tsense (void)
 {
     unsigned e;

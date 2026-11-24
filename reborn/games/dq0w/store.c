@@ -11,10 +11,10 @@
 ** stocked twice.  All under the hub's change_lock (the maker reads them meanwhile), never held while the maker's asked
 ** for anything.
 **
-** The rarer work is swapped part 4's (../dq0/swap.inc, bank.s's stubs): the chunks stocked marked (their kept rooms'
-** lights kept, wkept.c's), the UI's requests (the save, a portal looked at closely); the files' work part 18's
+** The rarer work is swapped part ui_requests's (../dq0/swap.inc, bank.s's stubs): the chunks stocked marked (their kept rooms'
+** lights kept, wkept.c's), the UI's requests (the save, a portal looked at closely); the files' work part change_files's
 ** (wfile.c: a region read in, a page made room for, a region written back, a version of its file each time; the
-** save's; the game begun: its generation, its stamps); a square's record of a kind looked up, part 19's (wfile.c's
+** save's; the game begun: its generation, its stamps); a square's record of a kind looked up, part game_files's (wfile.c's
 ** store_get: a hole dug part way, DUG, as a dig begins).
 */
 
@@ -32,11 +32,11 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)                      /* (Smaller: none of it's called again before it returns) */
 
-void store_in (void);                           /* (Part 18's stubs: wfile.c) */
+void store_in (void);                           /* (Part change_files's stubs: wfile.c) */
 unsigned char store_page (void);
 void store_save (void);
-void store_commit (void);                       /* (Part 19's) */
-void stocked (void);                            /* (Part 4's) */
+void store_commit (void);                       /* (Part game_files's) */
+void stocked (void);                            /* (Part change_put's) */
 void __fastcall__ keep (unsigned char back);    /* (The things': items.dat) */
 
 unsigned char rsn, rrx, rry;                    /* (The region wanted) */
@@ -45,8 +45,8 @@ struct change buf[8];                           /* (Records to or from a file, a
                                                 **   RAM; wfile.c's too) */
 char path[56];
 
-/* ==== Part 38 (its own, the main RAM's room: 2026-10-22): a change record kept and made, store_put and change
-** through their stubs (the work's parts', a dig's, a door's, the kept rooms' lights', part 4's) */
+/* ==== Part change_put (its own, the main RAM's room: 2026-10-22): a change record kept and made, store_put and change
+** through their stubs (the work's parts', a dig's, a door's, the kept rooms' lights', part ui_requests's) */
 #pragma code-name (push, "SW_change_put_CODE")
 #pragma rodata-name (push, "SW_change_put_RODATA")
 
@@ -212,7 +212,7 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
 #pragma rodata-name (pop)
 
 /* The chunks the maker stocked as it made them (their slots CS_FRESH), if there are any, their things put down and
-** marked so (part 4's).  Every pass of the world's (its jobs' first row): the slots' used bytes looked at by their
+** marked so (part ui_requests's).  Every pass of the world's (its jobs' first row): the slots' used bytes looked at by their
 ** offset from a fixed address (cc65's .Y; a pointer stepped, some 1,000 cycles a pass, a twentieth of the world's
 ** cycles as a step goes, 2026-11-16) */
 typedef char cs_fits[NCSLOTS * sizeof (struct cslot) < 256 ? 1 : -1];
@@ -230,7 +230,7 @@ void stocks (void)
     }
 }
 
-#pragma code-name (push, "SW_change_put_CODE")           /* (Part 38's, store_put's own, since 2026-11-17: part 4's room) */
+#pragma code-name (push, "SW_change_put_CODE")  /* (store_put's own, since 2026-11-17: part ui_requests's room) */
 #pragma rodata-name (push, "SW_change_put_RODATA")
 
 /* The chunks the maker stocked (their slots CS_FRESH), in the order it stocked them (each one's list's seq): their
@@ -302,7 +302,7 @@ static void look_at (void)
     HUB->wreq.res = r;
 }
 
-/* The hub's wreq answered (the UI's: the save, a close look; the game begun, the character's state set: part 16's) */
+/* The hub's wreq answered (the UI's: the save, a close look; the game begun, the character's state set: part game_rules's) */
 void s_answer (void)
 {
     hub_map (0);

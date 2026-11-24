@@ -30,7 +30,7 @@
 ** as the light allows: a glance's reach every way else.
 **
 ** And what the character keeps of it (DUNGEON.md, the map kept): each chunk it sees any of, its memory (struct
-** chunk's kept) made fresh after the view (part 4's: kept); mapping as it goes on paper, what it sees drawn as the
+** chunk's kept) made fresh after the view (part kept's: kept); mapping as it goes on paper, what it sees drawn as the
 ** marks go in (T_DRAWN: cast.s's run_out, run_d).
 */
 
@@ -42,7 +42,7 @@
 #include "light.h"
 #include "eyes.h"
 
-#pragma code-name ("SW_look_CODE")                   /* (Part 1's, all of it: swapped, bank.s's stubs, once a look) */
+#pragma code-name ("SW_look_CODE")                   /* (Part look's, all of it: swapped, bank.s's stubs, once a look) */
 #pragma rodata-name ("SW_look_RODATA")
 
 #define EYE         5                           /* The eyes, feet above the floor */
@@ -85,11 +85,11 @@ extern unsigned char here_known;                /* (dq0p.c's: come to a square i
 
 /* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
 ** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage (a wide one's breadth beside it no way on), on at
-** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there); a walk in the dark (d | 0x80) as it
+** its bends, through a door, into a room (part perceive's: its breadth, chunk.c's, there); a walk in the dark (d | 0x80) as it
 ** goes there, by what the character knew: straight on, round a bend only where the way ahead's closed.  A walk in
-** the light, mapping as it goes on paper, drawn too (the view's run_d: the look's view first, dq0p.c's).  Part 4's
-** (part 2's room for a passage's runs, sight.c's, 2026-11-01), with a copy of chunk.c's ways of its own (ways.inc's,
-** renamed: the ways part 2's, its look's) */
+** the light, mapping as it goes on paper, drawn too (the view's run_d: the look's view first, dq0p.c's).  Part kept's
+** (part perceive's room for a passage's runs, sight.c's, 2026-11-01), with a copy of chunk.c's ways of its own (ways.inc's,
+** renamed: the ways part perceive's, its look's) */
 #pragma code-name (push, "SW_kept_CODE")
 #pragma rodata-name (push, "SW_kept_RODATA")
 #pragma static-locals (push, on)
@@ -333,7 +333,7 @@ static unsigned char __fastcall__ chunks (unsigned char on)
     return m;
 }
 
-/* ==== Part 4 (its own, small: a look's, after the view's, dq0p.c's) */
+/* ==== Part kept (its own, small: a look's, after the view's, dq0p.c's) */
 #pragma code-name (push, "SW_kept_CODE")
 #pragma rodata-name (push, "SW_kept_RODATA")
 
@@ -394,14 +394,14 @@ static void __fastcall__ fresh (const struct fresh* fr)
 ** before it marks them, its bends near enough), each chunk it went through made fresh the same (HOUSE.md's travel: what's felt kept as what's
 ** seen, slice 4.2's) */
 /* A passage's ways' runs (../dq0/run.h's: the user's, 2026-10-31, ways off the compass; HOUSE.md's a passage's
-** heading), for what the character perceives (sight.c's, part 2's: its room), as a look begins: from the character's
+** heading), for what the character perceives (sight.c's, part perceive's: its room), as a look begins: from the character's
 ** square in a passage, each heading it can step (step8's) followed as a walk goes (its one way on, none behind: a wide
 ** passage's breadth a way, its run's end), through the squares
 ** seen now (T_VIS), to a door, a room, a fork, its end, or RUN_MAX steps: its run's bearing in sixteenths, by its
 ** first heading, into the senses' bank (RUNS); a look one way's far part's, to a chunk it may not make (way_stop's) */
 #include "../dq0/run.h"
 typedef char runs_fit[sizeof (struct sight) <= RUN_AT ? 1 : -1];
-#pragma bss-name (push, "SW_kept_RODATA")            /* (Its state the part's own: none kept from one call to the next) */
+#pragma bss-name (push, "SW_kept_RODATA")       /* (Its state the part's own: none kept from one call to the next) */
 static void runs (void)
 {
     static unsigned char r[8], d, n, h, sn, k, w, nh;
@@ -460,7 +460,7 @@ void __fastcall__ s_kept (unsigned char what)
     struct fresh fr;
 
     if (what & 1) {
-        runs ();                                /* (A passage's ways' runs, for sight.c's: part 2's room) */
+        runs ();                                /* (A passage's ways' runs, for sight.c's: part perceive's room) */
     }
     if (!(what & 2)) {
         return;
@@ -541,7 +541,7 @@ void __fastcall__ s_kept (unsigned char what)
 /* The chunk at the view's squares i_, j_ on (ni_, nj_ of them) one a look one way may see into (way_grid's: the half
 ** ahead, a diagonal's quarter, and a glance's reach; the bounds way_box's): its light layer's grid wanted; the rest
 ** of the view's chunks the look can't see, their light not worked out for it (the menacing pace's look across, its light
-** layer's some 280,000 cycles, 2026-11-18; the main RAM's, part 1's room) */
+** layer's some 280,000 cycles, 2026-11-18; the main RAM's, part look's room) */
 #pragma code-name (push, "CODE")
 static unsigned char wg0, wg1, wi0, wi1, wj0, wj1;
 static unsigned char way_in (void)

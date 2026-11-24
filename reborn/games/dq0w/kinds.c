@@ -320,7 +320,7 @@ const struct burn burns[NBURNS] = {
 };
 
 /* What breaks as it's used (slice 4.7's missiles to use, the user's, 2026-10-23: "arrows can break"), its kind and its
-** chance in a hundred, shot or thrown; a lot's one used up as a drawing thing is (dq0w.c's s_use_up, part 7's) */
+** chance in a hundred, shot or thrown; a lot's one used up as a drawing thing is (dq0w.c's s_use_up, part portals's) */
 const struct snap snaps[NSNAPS] = {
     { KI_ARROWS, 25 }
 };
@@ -371,7 +371,7 @@ typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 ** of where worn"): each such kind, its place unsaid (WP_* in items.h: a place on the body, PB_*, WP_PAIR a pair;
 ** a hand's, the off hand's first, then the other's), the locations it may be worn at (a bit each).  Then how many
 ** things worn in those places one place holds (a ring's four a hand, the user's; the neck three, the face one, the
-** ears a pair).  Swapped part 107's (things.c's worn places, wworn.c), not the catalogue's bank's: its room */
+** ears a pair).  Swapped part worn's (things.c's worn places, wworn.c), not the catalogue's bank's: its room */
 #pragma rodata-name (push, "SW_worn_RODATA")
 #define L(h)    (1 << (h))
 const struct wplace wplaces[NWPLACES] = {

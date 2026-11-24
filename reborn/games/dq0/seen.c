@@ -1,5 +1,5 @@
 /*
-** seen.c - (overlay 12, after part 6's image: overlay 7 full) more of what the character perceives, in words
+** seen.c - (overlay 12, after part names_said's image: overlay 7 full) more of what the character perceives, in words
 ** (words.c's overlay is full): the things it sees lying about (words.c's, after the place; then the denizens it sees,
 ** dens.c's, overlay 9).  As words.c's: only what it sees now (nothing behind it), and what's further off in less
 ** detail, the further it is and the weaker the character's sight (the referee's: struct sight's eye): a thing too far
@@ -127,7 +127,7 @@ static void __fastcall__ one (struct li* e, unsigned char i, unsigned char n)
 ** things after it, hid 2); "At your feet lies a lit torch." (hid 4); one too far off to make out (by its size, hid's
 ** high bits, and the character's sight), only by its size: "On the floor ahead lies something small." (and nothing
 ** on it told); none behind it; a sconce on the wall, what's in it with it: "On the wall to your left is a sconce, a
-** lit torch in it." (part 8's words for where it is, its verb with them: lie_words's 2).  Each sentence a UK_LIST
+** lit torch in it." (part where's words for where it is, its verb with them: lie_words's 2).  Each sentence a UK_LIST
 ** row, its things a list (said.txt's LIST and LI rows: the look's lists, the user's, 2026-11-16) */
 static void items (void)
 {
@@ -173,7 +173,7 @@ static void items (void)
             }
         } else if ((k = lie_words (i)) == 2) {
             add (" \002");
-            said_s[0] = where_w + 1;            /* (A sconce on the wall, the verb with it: part 8's) */
+            said_s[0] = where_w + 1;            /* (A sconce on the wall, the verb with it: part where's) */
             w = 1;
             k = LF_WHERE;
         } else {
@@ -188,7 +188,7 @@ static void items (void)
             told |= now;
             add (" \002");
             if (k) {
-                said_s[0] = where_w + 1;        /* (In a corner, against a wall: part 8's) */
+                said_s[0] = where_w + 1;        /* (In a corner, against a wall: part where's) */
                 f.w2 = 4 << 4;
             } else {
                 f.w2 |= (S->item[i].hid & 8 ? 6 : (S->item[i].hid & 1) << 1 | (S->item[i].rel != 0xFF)) << 4;  /* (At its

@@ -320,7 +320,7 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
 #pragma rodata-name (push, "OV14RODATA")
 #pragma local-strings (push, on)
 
-/* (Overlay 14's, through its stub wield: part 9's till speed13, 2026-11-23, whose copy over part 2 and part 2's back
+/* (Overlay 14's, through its stub wield: part aliases's till speed13, 2026-11-23, whose copy over part commands and part commands's back
 ** were 91,000 cycles of an attack's first letter) A blow with nothing named (the command, cmd:
 ** VB_ATTACK_OBJECT's at a denizen there to strike, but a kick's, a punch's, a head butt's; VB_BREAK_OBJECT's at a door,
 ** a window, a portcullis): what's in its hands strikes (the things' IO_HANDS; of two, the referee's choice,
@@ -330,7 +330,7 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
 ** strikes (the user's, 2026-11-17: "nothing is battered with a light"): its hand as if empty, the other's thing, or the
 ** better thing asked about (| 4: "no" its fist), or its bare hands, SK_PUNCH (its fist, the light kept in the other).
 ** The hub read and written by hub_mem (the window's this overlay's), the things and the referee asked by wield_ask
-** (part 2's: o_choose's caller's, s_command's, there already) */
+** (part commands's: o_choose's caller's, s_command's, there already) */
 #define USLOT           (HUB->slot[SLOT_UI])
 unsigned char __fastcall__ wield_ask (unsigned char op, unsigned char b);
 unsigned char o_wield (void)
@@ -402,7 +402,7 @@ unsigned char o_wield (void)
 #pragma rodata-name (push, "SW_commands_RODATA")
 #pragma local-strings (push, on)
 
-/* (Part 2's, o_wield's: the commands' part, there as a command's carried out) The things asked from o_wield's overlay,
+/* (Part commands's, o_wield's: the commands' part, there as a command's carried out) The things asked from o_wield's overlay,
 ** what's in its hands (IO_HANDS) or the tool with the referee's key worn by nothing (IO_WEAR, its key the slot's text:
 ** its name back in the request's), or (op 0) the referee's choice (RS_WIELD, b its a door's, a window's, a
 ** portcullis's), its reply let go; the hub's header in the window for it, then the window put back */

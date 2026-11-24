@@ -1,7 +1,7 @@
 /*
-** outfit.h - (dq0w) the outfits, between their swapped parts: the draw's order (part 57, outfit.c: the referee asked,
-** the outfits' file opened, its sections found in the order an outfit's drawn), a section drawn (part 59, outdraw.c:
-** each line's choice drawn, priced and bought) and the making (part 58, outmake.c: each thing drawn made in the item
+** outfit.h - (dq0w) the outfits, between their swapped parts: the draw's order (part outfit, outfit.c: the referee asked,
+** the outfits' file opened, its sections found in the order an outfit's drawn), a section drawn (part outdraw, outdraw.c:
+** each line's choice drawn, priced and bought) and the making (part outmake, outmake.c: each thing drawn made in the item
 ** store, where it goes, its own).  The things drawn in a list between them, in the hub's kinds' bank (the world's,
 ** after the outfits' index), the draw's state in the main RAM (ost).  A denizen's (I_KIT's): its role's things as its
 ** lair's placed, its lair's own with its first (its beds, its stores, its hoard: the [lair KEY] section's), its
@@ -27,7 +27,7 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 #define TF_FINE         0x08                    /*   a point better; the high four bits, a denizen's: its life's tenths
                                                 **   lost, its condition, Treasure 1's, 2026-10-28) */
 #define MT_JEWEL        0xFE                    /* (A thing's material: a jewel, Treasure 5's item and material drawn,
-                                                **   part 59's) */
+                                                **   part outdraw's) */
 #define SF_WEAPON       0x01                    /* (A section's flags: a weapon skill's, */
 #define SF_SHIELD       0x02                    /*   the shield's, */
 #define SF_FREE         0x04                    /*   every line given (a denizen's), */
@@ -46,10 +46,10 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 struct ofit {
     unsigned char   kind, qty, quality, place, in, flags, mat;
 };
-/* A thing carried, as kit.dat keeps it (the save's folder's, part 40's: one after another, 23 bytes each, NOFIT at most): an
+/* A thing carried, as kit.dat keeps it (the save's folder's, part look_more's: one after another, 23 bytes each, NOFIT at most): an
 ** outfit's entry, then struct item's own fields, wear to shut as they lie there, then its letter.  A carried-on game makes each from
-** its entry (part 57's: coins at the money-changer's cut), then lays its wear, its life, its version and its fuel on it as it was
-** (part 63's: no new life, no new fuel, no new edge; dur_max 0, a thing not made its own yet; coins none, their mints the old
+** its entry (part outfit's: coins at the money-changer's cut), then lays its wear, its life, its version and its fuel on it as it was
+** (part kit's: no new life, no new fuel, no new edge; dur_max 0, a thing not made its own yet; coins none, their mints the old
 ** region's), and its letter (hub.h's designators: the user's, 2026-11-06, kept between dungeons).  The plan's step 3 */
 struct kitrec {
     struct ofit     o;
@@ -71,7 +71,7 @@ struct kitrec {
                                                 **   bank, 2026-11-03: make.js holds the kinds and their words under it) */
 #define OF_LIST         ((struct ofit*) 0x9E40)
 
-/* The draw's state (things.c's, in the main RAM: parts 57 and 59 both read and write it) */
+/* The draw's state (things.c's, in the main RAM: parts outfit and outdraw both read and write it) */
 struct ost {
     int             fd;                         /* The outfits' file, open */
     unsigned        budget, kept;               /* The money left to spend, and kept */
@@ -104,18 +104,18 @@ extern struct ost ost;
 enum { MD_ALL, MD_NEED, MD_CHANCE, MD_HEAD };   /* (A section's lines drawn: all, the needs, the rest; none, its head
                                                 **   only read) */
 
-unsigned char outfit (void);                    /* (Part 57) The character's outfit drawn (the referee asked): its
+unsigned char outfit (void);                    /* (Part outfit) The character's outfit drawn (the referee asked): its
                                                 **   things in the list, 0 none (the kit as it was); else 1 and its
                                                 **   weapons' version (WV_*: a strong character's heavy, D13's); or
-                                                **   OF_CARRIED, its kit carried on (kit.dat open, ost's kept, for part 58) */
+                                                **   OF_CARRIED, its kit carried on (kit.dat open, ost's kept, for part outmake) */
 #define OF_CARRIED      4
-unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Part 59) The outfits' section at off
+unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Part outdraw) The outfits' section at off
                                                 **   read, its head kept (ost), drawn as mode says if its flags are
                                                 **   ost.want's: 1 drawn, 0 not (none there, not wanted) */
-void __fastcall__ outmake (unsigned char who);  /* (Part 58) The list's things made: the character's (who 0), or a
+void __fastcall__ outmake (unsigned char who);  /* (Part outmake) The list's things made: the character's (who 0), or a
                                                 **   denizen's (1: ost's did, its things filed at hx, hy, IW_DEN) */
-unsigned char old_mint (void);                  /* (Part 51) The lair's stratum's oldest era's mint (ost's hsn), 0 none */
-void __fastcall__ den_kit (const struct msg* m); /* (Part 57) A denizen's things drawn by its kind and made (I_KIT's:
+unsigned char old_mint (void);                  /* (Part den_limbs) The lair's stratum's oldest era's mint (ost's hsn), 0 none */
+void __fastcall__ den_kit (const struct msg* m); /* (Part outfit) A denizen's things drawn by its kind and made (I_KIT's:
                                                 **   ost's did, hx, hy, hsn, fac set, the chunk in the store) */
 
 #endif

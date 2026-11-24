@@ -1,7 +1,7 @@
 /*
 ** wshoot.c - (dq0w) missiles (slice 4.7: DUNGEON.md's fights complete; HarnMaster's Combat 15-17, the referee's
 ** RS_MISSILE): a shot or a throw at an actor, every actor's by the same code, the character's (I_ATTACK's AIM_SHOT, a
-** round's, fought on as a blow is: part 24's) and a denizen's (its intent's, I_ATTACK's AIM_SHOT: its mind's, as it
+** round's, fought on as a blow is: part engage's) and a denizen's (its intent's, I_ATTACK's AIM_SHOT: its mind's, as it
 ** senses the character with a launcher of its own and a shot to be had); a launcher loaded ("nock an arrow", "load the
 ** crossbow": I_LOAD); the missiles gathered again where they fell (I_GATHER).
 **
@@ -23,7 +23,7 @@
 ** the room.)  Its time a round (a bow's load and loose, a sling's; a crossbow's load a round more: the
 ** book's, Combat 8's missile attack options), the loading alone its half.
 **
-** Swapped parts 65's and 66's (dq0w.cfg's SW65, SW66: overlay 20's), called through their stubs (bank.s's: shot_op,
+** Swapped parts missiles's and gather's (dq0w.cfg's SW_missiles, SW_gather: overlay 20's), called through their stubs (bank.s's: shot_op,
 ** gath_op).  Their locals on the C stack, but the line's own (no part called while they're used: their bytes the
 ** image's), the main RAM's room
 */
@@ -41,16 +41,16 @@
 
 #pragma local-strings (on)
 
-unsigned char pshoot;                           /* (The character's fight a missile's: part 24's, I_ATTACK's AIM_SHOT) */
+unsigned char pshoot;                           /* (The character's fight a missile's: part engage's, I_ATTACK's AIM_SHOT) */
 extern const unsigned char throws[];            /* (kinds.c's, the catalogue's bank's) */
-unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
-unsigned __fastcall__ bulk_in (unsigned x);     /* (Part 10's: what's in x, its bulk) */
-unsigned __fastcall__ bulk_of (unsigned i);     /* (Part 10's: thing i's bulk) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part things's) */
+unsigned __fastcall__ bulk_in (unsigned x);     /* (Part things's: what's in x, its bulk) */
+unsigned __fastcall__ bulk_of (unsigned i);     /* (Part things's: thing i's bulk) */
 void cat_map (void);                            /* (things.c's: the catalogue's bank in the window) */
 unsigned char __fastcall__ mfire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
-    unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk);    /* (Part 65's) */
+    unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk);    /* (Part missiles's) */
 void __fastcall__ mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned char out,
-    unsigned char mk, unsigned thr);            /* (Part 67's) */
+    unsigned char mk, unsigned thr);            /* (Part shots's) */
 
 /* The launchers by kind, from KI_SLING: a sling, the bows, a crossbow; their missiles' family */
 #define IS_LAUNCHER(k)  ((unsigned char) ((k) - KI_SLING) <= KI_CROSSBOW - KI_SLING)
@@ -59,7 +59,7 @@ void __fastcall__ mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned tx
 
 /* What an actor has to shoot with (arms'): its launcher (sl_item, held: sl_held) and a missile for it (sm_item: the
 ** launcher's loaded one, or the handiest of its family carried); the main RAM's (kept through the parts called: items
-** calls part 19's items_begin, which puts a part's image back as it was) */
+** calls part game_files's items_begin, which puts a part's image back as it was) */
 static unsigned sl_item, sm_item;
 static unsigned char sl_kind, sl_held;
 
@@ -195,7 +195,7 @@ static unsigned char __fastcall__ arms (unsigned char who)
 
 /* ---- A shot (or a throw) by att (0 the character, else an actor's entry plus 1; body bd the denizen in it) at def,
 ** its aim z, from sx, sy at tx, ty on sn: its launcher's (sl_*, sm_item) or the thing thrown (thr, its kind tk): its
-** range, its line, the referee asked (part 15's blow), its missile taken and fallen.  0 if it was shot, or if the
+** range, its line, the referee asked (part fight_blows's blow), its missile taken and fallen.  0 if it was shot, or if the
 ** shooter's turn went getting up or taking up its weapon; else why not (SH_*) */
 unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
     unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk)
@@ -221,7 +221,7 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
     mshot.band = band;
     mshot.flags = (lcover ? MS_COVER : 0) | ((att ? (*at (sn, sx, sy) & T_VIS) : bd.doing != DO_ROAM) ? 0 :
         MS_UNAWARE) | (thr && (z & AIM_HARD) ? MS_HARD : 0);   /* (The character sees its shooter; a denizen senses the character) */
-    den_blow (def, (z & ~AIM_HARD) | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
+    den_blow (def, (z & ~AIM_HARD) | AIM_FIRE);               /* (Part fight_blows's blow, the missile's: how it came out, told, bev's) */
     if ((out = bev.x[1]) == 0xFF || out == O_RISE || out == O_REARM) {
         return out == 0xFF ? SH_CANT : 0;       /* (None struck; or its turn went getting up, taking up its weapon) */
     }
@@ -235,13 +235,13 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
             p->kind = 0;
         }
     }
-    return 0;                                   /* (Where it falls the caller's, part 67's: mfall, a call less deep,
+    return 0;                                   /* (Where it falls the caller's, part shots's: mfall, a call less deep,
                                                 **   2026-10-30) */
 }
 
 /* ---- The part's calls */
 
-/* Whether the character can shoot at actor k (k its entry plus 1: fighting on's, part 24's fight_reach, pshoot's): 2
+/* Whether the character can shoot at actor k (k its entry plus 1: fighting on's, part engage's fight_reach, pshoot's): 2
 ** if it can (within range, seen, a clear line, a missile to hand), 1 if it's senseless (the same), 0 not (a thing
 ** thrown: one throw, no fighting on); within z bands of its range (the auto-target range, the hub's pc_auto), 0 all it
 ** may (2026-10-30) */
@@ -302,12 +302,12 @@ static unsigned __fastcall__ to_throw (unsigned char* tk)
     return top > 2 || (top && nw > 1) ? best : 0;
 }
 
-/* Part 65's calls: SO_ARMS what an actor shoots with (arms', k who: 0 the character, 1 body bd); SO_REACH whether the
-** character can shoot at k (its entry plus 1), within z bands; SO_DEN what body bd has to shoot or throw (part 67's
+/* Part missiles's calls: SO_ARMS what an actor shoots with (arms', k who: 0 the character, 1 body bd); SO_REACH whether the
+** character can shoot at k (its entry plus 1), within z bands; SO_DEN what body bd has to shoot or throw (part shots's
 ** den_shot, in one look: the part's swap once, 2026-10-30), DS_*: its launcher with a missile for it (sl_*, sm_item),
 ** in hand or not, or its launcher spent in its hand (to let fall) and a thing to throw (sm_item, its kind sl_kind: none
 ** of a launcher's then), in hand or to draw; DS_LINE, a shot at the character from where it stands (in range: a
-** launcher's bands, a thing thrown's short and medium; a clear line); SO_FOE part 67's pc_shot's */
+** launcher's bands, a thing thrown's short and medium; a clear line); SO_FOE part shots's pc_shot's */
 unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigned char z)
 {
     unsigned t;
@@ -347,11 +347,11 @@ unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigne
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 66: the missiles gathered again */
+/* ==== Part gather: the missiles gathered again */
 #pragma code-name (push, "SW_gather_CODE")
 #pragma rodata-name (push, "SW_gather_RODATA")
 
-/* E_TASK told (w1, b), by the world's one sender (dq0w.c's event: this part's copy and part 68's gone, 2026-11-11) */
+/* E_TASK told (w1, b), by the world's one sender (dq0w.c's event: this part's copy and part missile_fall's gone, 2026-11-11) */
 #define told(w1, b)     (evb = (b), event (E_TASK, 0, (w1)))
 
 /* Lot kind k a missile of family f (0: any) */
@@ -465,7 +465,7 @@ static unsigned char gather_on (void)
     return 2;
 }
 
-/* Part 66's calls: GO_GATHER a gathering begun (a the family); GO_ON its next */
+/* Part gather's calls: GO_GATHER a gathering begun (a the family); GO_ON its next */
 unsigned __fastcall__ s_gath_op (unsigned char op, unsigned char a)
 {
     if (op == GO_ON) {
@@ -482,7 +482,7 @@ unsigned __fastcall__ s_gath_op (unsigned char op, unsigned char a)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 67: the character's shot, and where a missile falls */
+/* ==== Part shots: the character's shot, and where a missile falls */
 #pragma code-name (push, "SW_shots_CODE")
 #pragma rodata-name (push, "SW_shots_RODATA")
 
@@ -493,10 +493,10 @@ static unsigned char __fastcall__ span67 (int dx, int dy)
     return dx > dy ? (dx > 255 ? 255 : dx) : (dy > 255 ? 255 : dy);
 }
 
-void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+void den_equip (void);                          /* (Part den_things's, wlimbs.c's: body bd's things told the referee) */
 extern unsigned char den_eq_all;                /* (wlimbs.c's: told though nothing's left) */
 
-/* A shot or a throw (part 65's mfire, its arguments), and where its missile falls after it (part 68's mfall, called
+/* A shot or a throw (part missiles's mfire, its arguments), and where its missile falls after it (part missile_fall's mfall, called
 ** from here: a swapped call less deep, 2026-10-30): mfire's value */
 static unsigned char __fastcall__ fire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
     unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk)
@@ -530,7 +530,7 @@ static unsigned char __fastcall__ fire (unsigned char att, unsigned char def, un
     return r;
 }
 
-/* Body bd about to strike in melee (part 15's den_blow): a launcher it holds let fall at its feet, its hands free for
+/* Body bd about to strike in melee (part fight_blows's den_blow): a launcher it holds let fall at its feet, its hands free for
 ** its weapon (dropped, no time: the book's; told, WB_DROP) */
 static void den_unbow (void)
 {
@@ -552,13 +552,13 @@ static void den_unbow (void)
     den_equip ();                               /* (The referee told it's gone from its hands: den_drop's) */
 }
 
-/* A denizen's shot or throw (body bd, entry bk: its intent's, I_ATTACK's AIM_SHOT, part 15's den_blow) at the character
-** (its aim the middle, its mind's): what it has to shoot or throw, and whether it has a shot, part 65's (SO_DEN: one
+/* A denizen's shot or throw (body bd, entry bk: its intent's, I_ATTACK's AIM_SHOT, part fight_blows's den_blow) at the character
+** (its aim the middle, its mind's): what it has to shoot or throw, and whether it has a shot, part missiles's (SO_DEN: one
 ** look, its swap once, the answers' time); its launcher taken in hand first, what it holds put up (its round's, part
 ** 60's den_draw: the book's grope; a light it holds, no shot: AG_SHOOTS gone till its things change), a missile of its
 ** own for it; its missiles spent, its launcher let fall and a thing to throw (to_throw's: drawn first, its round's);
 ** none to be had, out of range, no clear line: AG_NOSHOT, its mind's to close with the character till the character
-** moves (part 14's).  A thing thrown within the medium band (the house's) */
+** moves (part den_bodies's).  A thing thrown within the medium band (the house's) */
 static void den_shot (void)
 {
     unsigned char g = AG_SHOOTS, r;             /* (What's lost if there's no shot: its shooting, else this shot) */
@@ -601,7 +601,7 @@ none:
     bd.ready = blow_t ? blow_t : HUB->now;      /* (At its blow's moment, its intent's: 2026-11-13) */
 }
 
-/* The character's shot at actor k (part 15's pc_blow, pshoot's: the hub's pc_strike SK_OF what it shoots with,
+/* The character's shot at actor k (part fight_blows's pc_blow, pshoot's: the hub's pc_strike SK_OF what it shoots with,
 ** a launcher, or the thing it throws; its aim pc_aim): the shot, its missile, its time (a crossbow's load a round
 ** more, a missile not handy its reach); one carried not in hand taken up first (its round's, TE_READIED); not to be shot, told (E_TASK
 ** TE_NO_SHOT, b why: SH_*) and the fight given up */
@@ -612,7 +612,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
     struct msg m;
     struct item* p;
 
-    if (k == PS_DEN) {                          /* (Body bd's shot or throw, its unbow: part 15's den_blow's) */
+    if (k == PS_DEN) {                          /* (Body bd's shot or throw, its unbow: part fight_blows's den_blow's) */
         den_shot ();
         return 0;
     }
@@ -623,7 +623,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
     hub_map (0);
     ar = HUB->pc_strike;
     if (k == PS_AUTO) {                         /* (Its auto-target range set, the player's, and none beside it to
-                                                **   fight: fighting on's, part 24's; its launcher and a missile for it
+                                                **   fight: fighting on's, part engage's; its launcher and a missile for it
                                                 **   to hand, what it shoots with, the foe found) */
         if (!shot_op (SO_ARMS, 0, 0) || !sm_item) {
             return 0;
@@ -633,7 +633,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
         k = 0xFF;
     }
     if (k == 0xFF) {                            /* (The foe it turns its missiles to: the nearest hostile it can shoot
-                                                **   at, not fleeing, fighting on's, part 24's fight_foe; its range the
+                                                **   at, not fleeing, fighting on's, part engage's fight_foe; its range the
                                                 **   launcher's bands, or the auto-target range the player set, the
                                                 **   hub's pc_auto: 2026-10-30) */
         for (why = 0xFF, k = 0; k < NACTORS; ++k) {
@@ -732,7 +732,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 68: where a missile falls, a miss's stray (part 67's till 2026-10-30, its room: the denizens' shots), and a
+/* ==== Part missile_fall: where a missile falls, a miss's stray (part shots's till 2026-10-30, its room: the denizens' shots), and a
 ** launcher loaded */
 #pragma code-name (push, "SW_missile_fall_CODE")
 #pragma rodata-name (push, "SW_missile_fall_RODATA")
@@ -758,7 +758,7 @@ static void __fastcall__ bd_get (unsigned char k)
 ** one beside it half the time; Combat 17, a mark not engaged, a nearby one a fifth of the time; the user's, 2026-11-03:
 ** "follow the book"; every shooter's and thrower's, at anyone, the character too: 2026-10-30): the one struck chosen among
 ** those on the squares about the mark (s's tx, ty on sn: the character, the actors; not the shooter, at sx, sy), the mark
-** engaged if it or one beside it is in a fight (doing DO_FIGHT), struck (the referee's MS_STRAY, part 15's blow: a strike, no test; mshot's
+** engaged if it or one beside it is in a fight (doing DO_FIGHT), struck (the referee's MS_STRAY, part fight_blows's blow: a strike, no test; mshot's
 ** kind what it was shot with, s's thr the thing thrown, its band kept; bev's who the shooter, 0 the character, else the
 ** actor plus 1, wfight.c's den_blow's), told as a blow (FW_STRAY's words).  Who it struck (0xFE the character, else the
 ** actor's entry), or 0xFF none; body bd and bk as they were (the caller's) */
@@ -803,7 +803,7 @@ static unsigned char __fastcall__ stray (const struct stray* s)
     return k;
 }
 
-/* Where a missile falls (part 65's fire, out the blow's O_*), shot from sx, sy at the target's tx, ty on sn: a hit or a
+/* Where a missile falls (part missiles's fire, out the blow's O_*), shot from sx, sy at the target's tx, ty on sn: a hit or a
 ** block at the target's feet, a miss on past it along the line (a square to four, short of what stops it), a wild one
 ** near the target; an arrow or a bolt broken by its chance (snaps; a bolt's the house's 15), lost; a launcher's missile
 ** gone wild lost one time in two besides (the user's "wild misses should possibly be lost"; how often the house's); a
@@ -820,7 +820,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
 
     x = tx;                                     /* (Where it falls) */
     y = ty;
-    st.sn = sn;                                 /* (A miss's stray at one beside the mark: part 66's) */
+    st.sn = sn;                                 /* (A miss's stray at one beside the mark: part gather's) */
     st.sx = sx;
     st.sy = sy;
     st.tx = tx;

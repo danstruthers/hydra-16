@@ -1,5 +1,5 @@
 /*
-** outmake.c - (dq0w, swapped part 58: ../dq0/swap.inc, bank.s's stubs) the outfits made: the things part 57 drew (the
+** outmake.c - (dq0w, swapped part outmake: ../dq0/swap.inc, bank.s's stubs) the outfits made: the things part outfit drew (the
 ** list in the kinds' bank, outfit.h's) made in the item store, each where its outfit says: worn, in a hand (the main
 ** one, the other, both: a hand that's full, the pack), hung from the belt (its slots; in its carrier, the thing before
 ** it, a sword in its scabbard), in the pouch on the belt, in the pack (its room, the weight it bears: what won't go in
@@ -41,7 +41,7 @@ static unsigned box;                            /* The last thing with a lid mad
 static unsigned sqx[2], sqy[2];                 /* Its bed's square and its stores' (a denizen's: PL_BED's, PL_HOME's) */
 static unsigned char sqset;                     /*   chosen (a bit each) */
 
-/* The draw's die, its own (part 59's way: the same stream, on from where the draw left it): 0 ... n - 1 */
+/* The draw's die, its own (part outdraw's way: the same stream, on from where the draw left it): 0 ... n - 1 */
 static unsigned char __fastcall__ die (unsigned char n)
 {
     ost.rs = ost.rs * 25173U + 13849U;
@@ -240,7 +240,7 @@ static void __fastcall__ own (unsigned i)
     kind_get (p->kind);
     m = e.mat ? e.mat : kk.mat;                 /* (The list's material, else its kind's: a gold ring) */
     if (m & 0x80) {
-        item_at (i)->size = m << 4 | 15;        /* (Old coins: their mint, whole, part 59's; part 63's piles) */
+        item_at (i)->size = m << 4 | 15;        /* (Old coins: their mint, whole, part outdraw's; part kit's piles) */
         m = kk.mat;
     }
     if (m == MT_IRON && kk.craft == AP_WEAPON) {
@@ -258,7 +258,7 @@ static void __fastcall__ own (unsigned i)
     if (!p->dur) {
         p->dur = p->dur_max = 1;
     }
-    p->dur -= p->dur_max / 10 * (e.flags >> 4);    /* (A denizen's condition, part 59's: Treasure 1's) */
+    p->dur -= p->dur_max / 10 * (e.flags >> 4);    /* (A denizen's condition, part outdraw's: Treasure 1's) */
     if ((kk.keeps & KF_CLOSES) == KF_STOPPER) {
         p->shut = IS_CLOSED;
     } else if (p->kind == KI_CHEST) {

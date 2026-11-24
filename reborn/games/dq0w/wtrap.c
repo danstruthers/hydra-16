@@ -5,12 +5,12 @@
 ** (the world's climb); gas resisted (P_RESIST_POISON) or choked on, senseless a while; an alarm a noise the denizens
 ** hear (E_NOISE); the rest dodged (P_DODGE_HAZARD) or struck by (HC_STRIKE: their aspect, dice and place, trap_harm's,
 ** their power more).  Noticed as the character steps on one (P_NOTICE_SIGHT, a smaller chance than a search's: it
-** stops short), found by a search (P_SEARCH, as hidden doors are; magic's only by magical means: wtsrch.c's, part 123's
+** stops short), found by a search (P_SEARCH, as hidden doors are; magic's only by magical means: wtsrch.c's, part tsearch's
 ** since 2026-11-23); one known of is gone
 ** round (the world's walks), its door left shut, and disarmed (P_DISARM; magic only by magical means; a pit not at
 ** all).  Their states kept (TRAP_STATE), a pit's square T_PIT once it's given way.
 **
-** All of it swapped part 8's (../dq0/swap.inc: dq0w.cfg's SW8), traps () called through its stub (bank.s's).
+** All of it swapped part traps's (../dq0/swap.inc: dq0w.cfg's SW_traps), traps () called through its stub (bank.s's).
 */
 
 #include <string.h>
@@ -106,7 +106,7 @@ static unsigned char near_trap (void)
 }
 
 /* A trap stepped onto (W_STEP: at px, py); a trap disarmed: the door's at px, py, or one in reach (else res 1: none
-** there); a door gone over for traps.  (A search: wtsrch.c's tsearch, part 123's since 2026-11-23, this part's room) */
+** there); a door gone over for traps.  (A search: wtsrch.c's tsearch, part tsearch's since 2026-11-23, this part's room) */
 void s_traps (void)
 {
     unsigned char armed = 0;

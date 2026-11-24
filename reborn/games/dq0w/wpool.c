@@ -4,7 +4,7 @@
 ** pool is made as oil's poured away or emptied out (wpour2.c's, every actor's); each actor that steps into it is asked
 ** to keep its feet (the referee's P_STUMBLE, act_test's, every actor's: fallen, prone, told as any fall is, the limbs'
 ** news); a lit thing lying in it, or a naked flame carried by one fallen in it, sets it alight; burning, it burns the
-** character in it (a burn, HC_FIRE, the firedamp's harm), then it's gone.  Swapped part 99's (its room; its stub, pool): its
+** character in it (a burn, HC_FIRE, the firedamp's harm), then it's gone.  Swapped part time_drift's (its room; its stub, pool): its
 ** state the world bank's (wrec's pools, copied in for a call), but the count, the main RAM's.
 */
 
@@ -34,8 +34,8 @@ typedef char pool_fits[sizeof (struct pool) * NPOOLS + 2 == sizeof WREC->pools ?
                                                 **   and the outfits' mark after them) */
 extern unsigned char npools;                    /* (dq0w.c's: how many there are, 0 none, the callers' cheap test) */
 
-void __fastcall__ make_own (unsigned i);         /* (Part 13's) */
-void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);    /* (Part 74's: a harm, the UI told) */
+void __fastcall__ make_own (unsigned i);         /* (Part item_store's) */
+void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);    /* (Part waterskin's: a harm, the UI told) */
 
 #pragma code-name ("SW_time_drift_CODE")
 #pragma rodata-name ("SW_time_drift_RODATA")
@@ -260,11 +260,11 @@ static void __fastcall__ oil_new (unsigned from)
         q->fuel = OIL_PINT;
         q->flags = f;
         q->mat = MT_OTHER;                      /* (Its make none to roll: the things' own dice as they were) */
-        make_own (j);                           /* (Its own number: part 13's; this part copied in again after) */
+        make_own (j);                           /* (Its own number: part item_store's; this part copied in again after) */
     }
 }
 
-/* Part 99's way in for them (wtime.c's time_kept, its stub, its codes past any minute: no stub of their own, the main
+/* Part time_drift's way in for them (wtime.c's time_kept, its stub, its codes past any minute: no stub of their own, the main
 ** RAM's room): POOL_OP, the character stepped onto its square, POOL_OP + 1 body bd (pool_step; the character fallen, prone); POOL_ADD + 0 or
 ** 1, oil poured out where the character or body bd stands; POOL_TIME, the pools' minute; POOL_MARK, the things'
 ** numbers so far marked (the world bank's, after the pools), an outfit to be made; POOL_FILL, the flasks of oil made since

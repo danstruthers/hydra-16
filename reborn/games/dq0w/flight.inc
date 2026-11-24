@@ -1,7 +1,7 @@
 /*
 ** flight.inc - (dq0w) a flight's crossing, tenths, every actor's (acts.h's FLIGHT_T, the one-path plan's links,
-** 2026-11-23): one source, compiled into the two parts that use it, the character's s_climb's (dq0w.c, part 2) and an
-** actor's den_flight's (wflight.c, part 118), each its own static copy (room7, 2026-11-23: out of the main RAM, 161
+** 2026-11-23): one source, compiled into the two parts that use it, the character's s_climb's (dq0w.c, part climb) and an
+** actor's den_flight's (wflight.c, part flight), each its own static copy (room7, 2026-11-23: out of the main RAM, 161
 ** bytes of it, no part's copy added to a climb's path).  Included where the part's code-name is in force.
 */
 

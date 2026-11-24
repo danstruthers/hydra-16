@@ -1,5 +1,5 @@
 /*
-** names.c - (parts 5, 6) the names the character gives (the user, 2026-10-16: "I would like to be able to reference
+** names.c - (parts names_given, names_said) the names the character gives (the user, 2026-10-16: "I would like to be able to reference
 ** items by aliases, as long as the alias doesn't clash with something else"): a thing it carries or sees ("name my
 ** sword Linda", "name the sword as Linda", "call the dagger Sting"), the room it's in ("call this room the Mausoleum",
 ** "name this room "The Mausoleum""), an ally (the denizens' task's: "name the rat Grub", recorded here too); and a
@@ -16,7 +16,7 @@
 ** ("You are in the Mausoleum, a small crypt": names_look's).  A room's name is the way to it: room_named finds one
 ** in a line's words (DUNGEON.md's names, for the orientation's travel).
 **
-** Its table's reading the main code's; its commands a swapped part's (part 5: swap.inc), its words another's (part
+** Its table's reading the main code's; its commands a swapped part's (part names_given: swap.inc), its words another's (part
 ** 6), called through bank.s's stubs; their data and BSS the main RAM's.  A line's first look, whether it may be
 ** either part's (names_in: so an ordinary command copies neither in), is overlay 10's.
 */
@@ -137,7 +137,7 @@ static void count (void)
     }
 }
 
-/* Text t begun with key k (the case aside) up to a word's end there: its length, or 0 (part 6's alone: the main RAM's
+/* Text t begun with key k (the case aside) up to a word's end there: its length, or 0 (part names_said's alone: the main RAM's
 ** room, 2026-11-01) */
 #pragma code-name (push, "SW_names_said_CODE")
 #pragma rodata-name (push, "SW_names_said_RODATA")
@@ -186,7 +186,7 @@ unsigned char __fastcall__ o_names_in (const char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW_names_given_CODE")            /* ---- Part 5: the commands */
+#pragma code-name (push, "SW_names_given_CODE") /* ---- Part names_given: the commands */
 #pragma rodata-name (push, "SW_names_given_RODATA")
 
 /* A free entry (np, e cleared), or 0, told */
@@ -534,7 +534,7 @@ unsigned char __fastcall__ s_names_line (char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW_names_said_CODE")            /* ---- Part 6: the words */
+#pragma code-name (push, "SW_names_said_CODE")  /* ---- Part names_said: the words */
 #pragma rodata-name (push, "SW_names_said_RODATA")
 
 /* ---- The words */

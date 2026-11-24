@@ -6,7 +6,7 @@
 ;                                               as tpe (put_bank's: text_new sets both); or, tq set (a main RAM text,
 ;                                               as far as tqe), there; its 0 after it.  The hub's header in the window
 ;                                               after the UI bank's (as the C one left it), tq's: as it was
-;   unsigned next_got (void);                   (part 11's: next_in's, the list gathered, its bank in the window) the
+;   unsigned next_got (void);                   (part things_listed's: next_in's, the list gathered, its bank in the window) the
 ;                                               next record after nx_n at nx_w, nx_x in GOT_AT's list (from gcur, the
 ;                                               one it gave last, if that's nx_n; else from the list's start): its
 ;                                               number, gcur its place; 0 if none

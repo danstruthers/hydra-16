@@ -7,7 +7,7 @@
 ** two by turns, no main one: halfway between them);
 ** else the run is straight on its first heading, as far as that goes.  So a bend is a bend (its corner's one step the
 ** other way, then on that way), and a staircase one slant.  In assembly (run.inc), in the part that wants it (the
-** senses' look's, part 2: dq0p/run.s; the world's walk's beats, part 23: dq0w/run.s), with level.h's head_x, head_y.
+** senses' look's, part perceive: dq0p/run.s; the world's walk's beats, part long_task: dq0w/run.s), with level.h's head_x, head_y.
 */
 
 #define RUN_MAX         8                       /* (The steps looked along: a look's, a walk's beat's) */

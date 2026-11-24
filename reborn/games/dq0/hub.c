@@ -98,7 +98,7 @@ void __fastcall__ hub_back (unsigned w)
 #endif
 
 #ifndef HUB_ATTACHED
-#pragma code-name (push, "SW_start_end_CODE")    /* (The UI's part start_end, the start's and the end's) */
+#pragma code-name (push, "SW_start_end_CODE")   /* (The UI's part start_end, the start's and the end's) */
 #pragma rodata-name (push, "SW_start_end_RODATA")
 int __fastcall__ hub_create (unsigned char banks)
 {
@@ -292,7 +292,7 @@ unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
 #endif
 
 #ifndef HUB_ATTACHED
-#pragma code-name (push, "SW_start_end_CODE")    /* (The UI's part start_end, the start's and the end's) */
+#pragma code-name (push, "SW_start_end_CODE")   /* (The UI's part start_end, the start's and the end's) */
 #pragma rodata-name (push, "SW_start_end_RODATA")
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
 
@@ -307,7 +307,7 @@ unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
 
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
 {
-#pragma bss-name (push, "SW_start_end_RODATA")    /* (The part's own: the main RAM's room, 2026-11-11) */
+#pragma bss-name (push, "SW_start_end_RODATA")  /* (The part's own: the main RAM's room, 2026-11-11) */
     static char args[64];
 #pragma bss-name (pop)
     unsigned char n;

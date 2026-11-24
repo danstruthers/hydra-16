@@ -16,7 +16,7 @@
 **     hammering, stones being laid (act_noise: the character's E_NOISE, an actor's E_DEN DE_HANGS, DE_WALLS, told seen
 **     or heard; a builder's work gone badly heard as its noise, DE_NOISE, not told as done).  Its time the character's
 **     wait (the UI's, the request's x), an actor's ready.
-** The character's words in things_text (SA_HUNG ...: said.txt's SA rows).  Swapped part 124's (../dq0/swap.inc: its
+** The character's words in things_text (SA_HUNG ...: said.txt's SA rows).  Swapped part build's (../dq0/swap.inc: its
 ** stub build, things.c's s_serve and wdig.c's); its locals on the C stack (it calls other parts, which copy this one
 ** in again after).
 */
@@ -38,7 +38,7 @@ void __fastcall__ put (const char* s);          /* (tlist.s's: its words after t
 extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
-unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: a record looked up, rec's) */
+unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part game_files's: a record looked up, rec's) */
 extern struct change rec;                       /* (store.c's) */
 
 #pragma code-name (push, "SW_build_CODE")

@@ -1,6 +1,6 @@
 /*
 ** wflight.c - (dq0w) a flight between strata crossed by an actor, by the character's rule (the one-path plan's stage 2,
-** climbing and links, 2026-11-23: wlink.c's header says how).  Swapped part 118's; its lights wlink.c's, part 119.
+** climbing and links, 2026-11-23: wlink.c's header says how).  Swapped part flight's; its lights wlink.c's, part den_lights.
 */
 
 #include <stddef.h>

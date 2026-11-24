@@ -41,13 +41,13 @@
 ** table in its head.
 **
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
-** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the
-** populations, the records paged; part 2, the character's ways with a denizen, and harmed; part 3, the placing; part
+** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part populations, the
+** populations, the records paged; part sway, the character's ways with a denizen, and harmed; part placing, the placing; part
 ** 4, the records kept, the task's start (the kinds read in, popgen loaded),
 ** and what its actors seldom do (one made an actor or no longer one, killed, an ally come along, a cornered one's
-** dart); part 5, the senses' own (a hunter's stalk, a scent followed, one drawn on); part 6, morale (HOUSE.md's: the
+** dart); part senses, the senses' own (a hunter's stalk, a scent followed, one drawn on); part morale, morale (HOUSE.md's: the
 ** field about an actor and its bonds to its leaders, reckoned as it engages and as one near it falls; its kin
-** dismayed, a leader's loss known); part 7, succession, and the bonds aged by the clock (a dead leader's
+** dismayed, a leader's loss known); part succession, succession, and the bonds aged by the clock (a dead leader's
 ** post taken by the most influential of those below it).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
@@ -74,24 +74,24 @@
 
 /* ---- The swapped parts' stubs (bank.s's) */
 
-void __fastcall__ populate (unsigned char n);   /* Part 1 */
+void __fastcall__ populate (unsigned char n);   /* Part populations */
 void __fastcall__ place (unsigned char i);
-void __fastcall__ keep (unsigned char back);    /* Part 3 */
+void __fastcall__ keep (unsigned char back);    /* Part records */
 unsigned char __fastcall__ rec_new (unsigned char lair);
-unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry);   /* (Part 1's own calls) */
+unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry);   /* (Part populations's own calls) */
 unsigned char __fastcall__ s_rec_new (unsigned char lair);
 void dneed (void);
-void __fastcall__ harmed (unsigned char k);     /* Part 2 */
+void __fastcall__ harmed (unsigned char k);     /* Part sway */
 unsigned char __fastcall__ stalks (unsigned char k);
 unsigned char __fastcall__ scent (unsigned char k);
 unsigned char __fastcall__ draw_on (unsigned char k);
 void sway (void);
-int __fastcall__ start (char** argv);          /* Part 4 */
+int __fastcall__ start (char** argv);          /* Part start */
 void __fastcall__ enlist (unsigned char i, unsigned char k);
 void __fastcall__ retire (unsigned char k);
 void __fastcall__ killed (unsigned char k);
 unsigned char __fastcall__ along (unsigned char k);
-unsigned char __fastcall__ dart (unsigned char k);    /* Part 8 (its bodies, 2026-10-31; part 4's room) */
+unsigned char __fastcall__ dart (unsigned char k);    /* Part bodies_rare (its bodies, 2026-10-31; part records's room) */
 unsigned char __fastcall__ hungry (unsigned char k);
 unsigned char __fastcall__ home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy);
 void __fastcall__ rob_to (unsigned char k);
@@ -100,46 +100,46 @@ unsigned char __fastcall__ name_of (unsigned id);
 void __fastcall__ kept_file (int fd, unsigned char back);
 unsigned char depth (void);
 unsigned char __fastcall__ rests (unsigned char k);
-unsigned char __fastcall__ homes (unsigned char k);   /* Part 22 (a robber's takings home, 2026-11-23) */
+unsigned char __fastcall__ homes (unsigned char k);   /* Part bodies_rare (a robber's takings home, 2026-11-23) */
 unsigned char __fastcall__ fends (unsigned char lim);
 unsigned char __fastcall__ want_fl (unsigned char k);
 signed char __fastcall__ fed (unsigned char k, unsigned char ate);
-void __fastcall__ dismay (unsigned char k);    /* Part 6 (morale) */
+void __fastcall__ dismay (unsigned char k);    /* Part morale (morale) */
 void __fastcall__ heart (unsigned char k);
 void age (void);
-void __fastcall__ succeed (unsigned char x);   /* Part 7 */
-unsigned char __fastcall__ ally (unsigned char k);   /* Part 5 (slice 4.8's: an ally's turn, its errands) */
+void __fastcall__ succeed (unsigned char x);   /* Part succession */
+unsigned char __fastcall__ ally (unsigned char k);   /* Part senses (slice 4.8's: an ally's turn, its errands) */
 void __fastcall__ aside (unsigned char k);
 void __fastcall__ gift (unsigned char k);
 void __fastcall__ regard (unsigned char f, unsigned char pts);
-unsigned char __fastcall__ daily (unsigned char k);  /* Part 9 (the day's, 2026-10-31) */
+unsigned char __fastcall__ daily (unsigned char k);  /* Part day_kept (the day's, 2026-10-31) */
 unsigned char __fastcall__ wander (unsigned char lim);
 unsigned char __fastcall__ sched (unsigned char k, unsigned id);
-void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part 10 */
-void rfound (void);                             /* Part 19: a record's rounds finding a body (2026-11-02) */
-void __fastcall__ told (unsigned char j);      /* Part 6's hook: a loss told (a body found, the day's) */
+void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part day_kept */
+void rfound (void);                             /* Part body_found: a record's rounds finding a body (2026-11-02) */
+void __fastcall__ told (unsigned char j);      /* Part morale's hook: a loss told (a body found, the day's) */
 unsigned char __fastcall__ found (unsigned char k);
 void hour (void);
-void enlist_near (void);                        /* Part 11 (the main RAM's room, 2026-10-31) */
-unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
-void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
-unsigned char __fastcall__ hid_mind (unsigned char k);   /* Part 20: hiding oneself (HM_*: HOUSE.md's) */
+void enlist_near (void);                        /* Part enlist_near (the main RAM's room, 2026-10-31) */
+unsigned char __fastcall__ plan (unsigned char k);   /* Part day's: an actor's day and its place (leisure's, 2026-10-31) */
+void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part day_kept's: a pastime let go */
+unsigned char __fastcall__ hid_mind (unsigned char k);   /* Part hiding: hiding oneself (HM_*: HOUSE.md's) */
 #define HM_LOOK         0x00                    /* (hid_mind's k |: senses', a look at the character hidden: is it sensed; */
 #define HM_LURK         0x40                    /*   decide's, one hidden, what it does; */
 #define HM_AMBUSH       0x80                    /*   one sensing the character, whether it lies in wait instead; */
 #define HM_FILCH        0xC0                    /*   a foe beside the character at rest: a robber robs it as it lies) */
 #define LURK_T          1200                    /* (Tenths: how long it lies in wait, two minutes) */
-unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
-unsigned char __fastcall__ work_dig (unsigned char k);  /* Part 15 (their work's digs, the builders', slice 4.11's rest) */
-unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
-unsigned char __fastcall__ door_way (unsigned char k);  /* Part 14: a door worked (Phase 3C's one path, 2026-11-02) */
+unsigned char __fastcall__ dig_way (unsigned char k);   /* Part tunnellers (the tunnellers', slice 4.11's) */
+unsigned char __fastcall__ work_dig (unsigned char k);  /* Part tunnel_work (their work's digs, the builders', slice 4.11's rest) */
+unsigned char nearby (void);                    /* Part lairs_near: the lairs near placed (the main RAM's room, 2026-11-01) */
+unsigned char __fastcall__ door_way (unsigned char k);  /* Part doors: a door worked (Phase 3C's one path, 2026-11-02) */
 unsigned char __fastcall__ take_way (unsigned char k);  /*   a thing taken up */
-void __fastcall__ robs (unsigned char k);       /* Part 8 (its foe helpless: robbed, or left) */
+void __fastcall__ robs (unsigned char k);       /* Part bodies (its foe helpless: robbed, or left) */
 unsigned char __fastcall__ shies (unsigned char k);
-void __fastcall__ feel (unsigned char k);       /* Part 8 (2026-11-02: the main RAM's room, the ways'; with hungry: no copies
+void __fastcall__ feel (unsigned char k);       /* Part bodies_rare (2026-11-02: the main RAM's room, the ways'; with hungry: no copies
                                                 **   back and forth each decision, dq0dig's 6,700) */
-unsigned char __fastcall__ way (unsigned char k);   /* Part 17: a way followed (2026-11-02) */
-unsigned char __fastcall__ wfind (unsigned char k);     /* Part 18: a way found (2026-11-02) */
+unsigned char __fastcall__ way (unsigned char k);   /* Part ways: a way followed (2026-11-02) */
+unsigned char __fastcall__ wfind (unsigned char k);     /* Part way_find: a way found (2026-11-02) */
 /* ---- Each denizen's mind, one record (GAME-CRITIQUE.md's E15, ONE-PATH.md's 2.6, 2026-11-19): who it is, what it
 ** knows, what it wants and what it's doing, an entry for each actor (its body the world's, the hub's
 ** actor; its sheet the referee's).  Laid out by field (md.lsx[k], not md[k].lsx): the 6502 indexes an array of bytes
@@ -191,14 +191,14 @@ struct mind {
                                                 **   always another), and the TQ its stay there last journalled) */
     unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
     unsigned upto[NACTORS];                  /* (Each one up till then, woken or sensing the character: the clock's
-                                                **   high bytes, 25.6 seconds each; part 8's sleeper up meanwhile) */
+                                                **   high bytes, 25.6 seconds each; part bodies's sleeper up meanwhile) */
     unsigned char aact[NACTORS];             /* (Each one's day's doing, SC_* (SC_LEISURE + its pastime), and
-                                                **   where it does it, till aday: part 9's plan, 2026-10-31) */
+                                                **   where it does it, till aday: part day's plan, 2026-10-31) */
     unsigned atx[NACTORS], aty[NACTORS];
     unsigned drunk[NACTORS];                 /* (Each one's last cup, the clock's high bytes: AM_DRUNK a while
                                                 **   after, DRUNK_T) */
     unsigned aday[NACTORS];                  /* (Each one's day not asked again till then, its time about: as
-                                                **   upto, part 9's) */
+                                                **   upto, part day's) */
     unsigned char asrch[NACTORS];            /* (Each one's searched there, the character gone: a robber's, take_way's
                                                 **   TW_SEARCH; 0 as it senses it again) */
     unsigned char slk[NACTORS];
@@ -225,7 +225,7 @@ static struct mind md;
 #define WAY_HOLD(t)     ((unsigned char) (NOW_T + (t)) | 2)
 static unsigned wlim;                           /* (step_for's lim, for way's) */
 static unsigned char wayj = 0xFF;               /* (A shut door on its way: the way to it, the four's; door_way's) */
-static unsigned char rb;                        /* (The ways' bank plus 1: 0 none yet, part 17's) */
+static unsigned char rb;                        /* (The ways' bank plus 1: 0 none yet, part ways's) */
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
@@ -329,7 +329,7 @@ struct den {
     unsigned char   fac;                        /* Its faction (its kind's, the stand-in's; or the theme's) */
     unsigned char   serve;                      /* The weeks it had served its leaders as the game began (a leader's,
                                                 **   it had led: its band's age), */
-    unsigned char   contact;                    /*   and how much it's with them, 0-255 (part 6's: its bonds' growth) */
+    unsigned char   contact;                    /*   and how much it's with them, 0-255 (part morale's: its bonds' growth) */
     unsigned char   ate, drank;                 /* The clock (NOW_U's) it last ate, and drank (its want: 2026-10-31) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
@@ -338,8 +338,8 @@ struct den {
 #define D_MET           0x08                    /* Met (made an actor once: its personal things made, I_KIT's KT_PURSE,
                                                 **   the outfits' phase 3, 2026-10-27) */
 #define D_LOST          0x10                    /* It knows a leader of its is lost (dead): no bond to a dead one after
-                                                **   (part 6's; one it doesn't know of holds), and of the one after it */
-#define D_RANK(f)       ((f) >> 5 & 3)          /* A successor's rank, its post's (RK_*: its kind's the less; part 6's
+                                                **   (part morale's; one it doesn't know of holds), and of the one after it */
+#define D_RANK(f)       ((f) >> 5 & 3)          /* A successor's rank, its post's (RK_*: its kind's the less; part morale's
                                                 **   succession, 2026-10-30), */
 #define D_PROM          0x80                    /*   a successor: its serve the week it took its post (its tenure) */
 #define NOW_U           ((unsigned char) ((unsigned*) &now)[1])    /* (The want's clock: their bodies', below) */
@@ -370,8 +370,8 @@ struct pop {
     struct lair     lair[NLAIRS];
     struct den      den[NDENS];
     unsigned char   nowork[32];                 /* (A lair's number's, its low bits: the clock's high byte plus 1 when
-                                                **   its diggers last found no dig to do, part 9's target: not asked
-                                                **   again till it moves, near enough two hours: part 15's a dearer
+                                                **   its diggers last found no dig to do, part day's target: not asked
+                                                **   again till it moves, near enough two hours: part tunnel_work's a dearer
                                                 **   swap than a record's move) */
 };
 #define POP             ((struct pop*) 0x8000)
@@ -435,7 +435,7 @@ struct dkx {
     unsigned char   body;                       /* Its body (hub.h's BD_*: how it gets up, and falls, worded) */
     unsigned char   rank;                       /* Its rank in its faction (RK_*: kinds.txt's, 2026-10-30) */
     unsigned char   water;                      /* Its way with water (WA_*: kinds.txt's, 2026-10-31) */
-    unsigned char   day;                        /* Its day (DY_*: kinds.txt's, 2026-10-31: part 9's), */
+    unsigned char   day;                        /* Its day (DY_*: kinds.txt's, 2026-10-31: part day's), */
     unsigned char   work;                       /*   and the room it works in (world.h's U_*; 0xFF none) */
     unsigned char   past;                       /* Its pastimes at leisure (a bit each, level.h's PT_*: kinds.txt's,
                                                 **   2026-10-31: 0 no leisure) */
@@ -446,7 +446,7 @@ enum { DY_ALWAYS, DY_DAY, DY_NIGHT, DY_TWILIGHT, DY_WATCHES };   /* (Its day: ne
 enum { SC_ABOUT, SC_SLEEP, SC_MEAL, SC_WORK, SC_WATCH, SC_LEISURE };   /* (SC_LEISURE + its pastime, PT_*) */   /* (What it does by its day now, sched's: about its
                                                 **   range, asleep, at a meal, at work, on watch; DO_SLEEP on in order) */
 enum { RK_FILE, RK_CAPTAIN, RK_LORD };          /* (The rank and file; a band's head; a chieftain or a spiritual
-                                                **   leader: part 6's morale) */
+                                                **   leader: part morale's morale) */
 static struct dkx X;
 static void __fastcall__ kx_get (unsigned char k)
 {
@@ -457,7 +457,7 @@ static void __fastcall__ kx_get (unsigned char k)
 
 /* The room of the chunk at ox, oy (stratum sn: a lair's, kind k's) its home's in: one of the uses its kind likes best
 ** (its home's, kinds.txt's: of the first of them the chunk has, one by the dice), else any; the chunk in the window */
-#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW_bodies_CODE")      /* (Part bodies's since 2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW_bodies_RODATA")
 #pragma code-name (push, "SW_bodies_rare_CODE")
 #pragma rodata-name (push, "SW_bodies_rare_RODATA")
@@ -487,7 +487,7 @@ unsigned char __fastcall__ s_home_room (unsigned char k, unsigned char sn, unsig
 #pragma code-name (push, "SW_records_CODE")
 #pragma rodata-name (push, "SW_records_RODATA")
 
-/* The kinds read in (dir/dq0d.dat): 0, or -1 (part 4's: the start's) */
+/* The kinds read in (dir/dq0d.dat): 0, or -1 (part records's: the start's) */
 #pragma code-name (push, "SW_start_CODE")
 #pragma rodata-name (push, "SW_start_RODATA")
 static int __fastcall__ kinds_load (const char* dir)
@@ -541,7 +541,7 @@ static unsigned char pclie;                     /* (At rest: asleep, or a long w
 static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
                                                 **   round; the referee's conditions) */
 /* (Dead or asleep feigned, 2026-11-10: lying still where it lay down to it, in its wait, pretend's; begun as it's seen
-** so, over as it isn't: then those fooled, by their Acting contest, part 24's crowd, take it for helpless, HOUSE.md's) */
+** so, over as it isn't: then those fooled, by their Acting contest, part minds_swayed's crowd, take it for helpless, HOUSE.md's) */
 static unsigned char pcfeign, fgon;
 static unsigned fgx, fgy;
 static unsigned char pcstay;                    /* (Its stay where it stands, since it came onto the square: its
@@ -655,7 +655,7 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     D.lrx = L.rx;
     D.lry = L.ry;
     D.attitude = hd.fatt[lf & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
-    D.contact = ll ? 200 : 64;                  /* (With its leader in its lair, often; else seldom: part 6's bonds) */
+    D.contact = ll ? 200 : 64;                  /* (With its leader in its lair, often; else seldom: part morale's bonds) */
     rx = 8 + ((unsigned char) (L.id * 5 ^ L.id >> 1) & 127);  /* (The band's age, weeks: by its number, not the dice, so the
                                                 **   populations' dice are as they were) */
     for (i = 0; i < L.n + (ll != 0) && (u = s_rec_new (0)) != 0xFF; ++i) {
@@ -795,7 +795,7 @@ static void __fastcall__ post (unsigned char kind, unsigned char who);
 static void trodden (void);
 static void kitted (void);
 
-#pragma code-name (push, "SW_placing_CODE")             /* (Part 3's since 2026-11-04: part 1's half that isn't populate's) */
+#pragma code-name (push, "SW_placing_CODE")     /* (Part placing's since 2026-11-04: part populations's half that isn't populate's) */
 #pragma rodata-name (push, "SW_placing_RODATA")
 
 void __fastcall__ s_place (unsigned char i)
@@ -914,7 +914,7 @@ void __fastcall__ s_place (unsigned char i)
 #pragma rodata-name (pop)
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
-** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 13 (2026-11-01:
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part lairs_near (2026-11-01:
 ** the main RAM's room, the tunnellers'; alone, small: cheap to swap in, as it's called each time round after a move) */
 #pragma code-name (push, "SW_lairs_near_CODE")
 #pragma rodata-name (push, "SW_lairs_near_RODATA")
@@ -973,7 +973,7 @@ static struct actor a;
 
 static unsigned char __fastcall__ deep_at (unsigned char sn, unsigned x, unsigned y)
 {
-    return at (sn, x, y) && WET_BIT (C, cx_, cy_) ? depth () : 0;     /* (Dry, at once: the water's depth part 8's) */
+    return at (sn, x, y) && WET_BIT (C, cx_, cy_) ? depth () : 0;     /* (Dry, at once: the water's depth part bodies's) */
 }
 
 /* Whether one of water ways w may go onto square x, y of stratum sn (no deeper than it wades, or it swims, flies; not
@@ -1010,7 +1010,7 @@ static unsigned char nnear;                     /* The denizens out near the cha
                                                 **   there are entries for): their squares, each time round */
 static unsigned nearx[NEAR], neary[NEAR];
 static unsigned char sense_gen = 1;            /* (Bumped as the character changes: where it is, its light, busy) */
-unsigned char __fastcall__ shoots (unsigned char k, unsigned char ag);   /* (Part 2's: slice 4.7's) */
+unsigned char __fastcall__ shoots (unsigned char k, unsigned char ag);   /* (Part sway's: slice 4.7's) */
 static unsigned wt;                             /* (The wait an actor's decided on, tenths) */
 static unsigned char dnow;                      /* (What it's decided on: roused's) */
 static unsigned dsx, dsy;                       /* (The square a cornered one darts to) */
@@ -1104,7 +1104,7 @@ static void settle (void)
 ** 2026-10-29, its theme's faction the robber's) placed on its stratum (RB_HOARD: the world puts the takings in the
 ** hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things (RB_HIDE), else
 ** lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
-#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW_bodies_CODE")      /* (Part bodies's since 2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW_bodies_RODATA")
 #pragma code-name (push, "SW_bodies_rare_CODE")
 #pragma rodata-name (push, "SW_bodies_rare_RODATA")
@@ -1149,10 +1149,10 @@ static void __fastcall__ act (unsigned char kind, unsigned char k)
 }
 
 /* Actor k roused: free w tenths from now at the latest (| ROUSE_SET: then, whenever it was), facing rface; asleep,
-** woken (up a while: upto, part 9's) */
+** woken (up a while: upto, part day's) */
 #define UP_T            24                      /* (Some ten minutes) */
 static unsigned char unf[NFACT];                /* (Each faction's bodies not found yet, since the task began: the
-                                                **   rounds look for them only while there are any, part 10's found) */
+                                                **   rounds look for them only while there are any, part day_kept's found) */
 #define DRUNK_T         140                     /* (Some hour) */
 static void __fastcall__ rouse (unsigned char k, unsigned w)
 {
@@ -1171,7 +1171,7 @@ static unsigned refx, refy;                     /* (The square step_for's S_AWAY
                                                 **   a foe's, the one an ally follows to) */
 
 /* The name the character gave denizen number id (its entry in the head's names; id 0: a free one), or NNAMES */
-#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW_bodies_CODE")      /* (Part bodies's since 2026-10-31: the main RAM's room) */
 unsigned char __fastcall__ s_name_of (unsigned id)
 {
     unsigned char n;
@@ -1185,7 +1185,7 @@ unsigned char __fastcall__ s_name_of (unsigned id)
 /* Denizen D (its kind's record K) first met, as it's first made an actor: its personal things made (I_KIT's
 ** KT_PURSE, the world's draw: its purse, its trinkets, its valuables by its standing, the user's answer 6: made as it's
 ** first met, then kept), folk's only, if it has any standing (kinds.txt's) */
-#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW_bodies_CODE")      /* (Part bodies's since 2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW_bodies_RODATA")
 void s_met (void)
 {
@@ -1223,7 +1223,7 @@ static void __fastcall__ write_back (unsigned char k)
     D.ready = a.ready;
     D.attitude = a.attitude;
     D.order = md.aorder[k];
-    D.serve = a.serve;                          /* (Its bonds: part 6's) */
+    D.serve = a.serve;                          /* (Its bonds: part morale's) */
     D.contact = a.contact;
     D.ate = md.aate[k];                            /* (Its want) */
     D.drank = md.adrank[k];
@@ -1256,8 +1256,8 @@ void __fastcall__ s_retire (unsigned char k)
 /* Denizen i made an actor, in free entry k (its time from now: the coarse moves have kept it while it wasn't one):
 ** its mind's fields written, its body given the world (I_ENTER: its place, its step, its time, bleeding or not); its
 ** sheet the referee's (RS_NEW_ACTOR, by its kind's key: made the first time, the same one after) */
-static unsigned char esl;                       /* (Asleep by its day as it comes: enlist_near's, part 9's) */
-static void __fastcall__ fresh (unsigned char k);  /* (Part 4's, after the arrays: below) */
+static unsigned char esl;                       /* (Asleep by its day as it comes: enlist_near's, part day's) */
+static void __fastcall__ fresh (unsigned char k);  /* (Part records's, after the arrays: below) */
 void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 {
     struct rs_summary* s = (struct rs_summary*) RS_NEW_ACTOR_SUMMARY (rq);
@@ -1295,7 +1295,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
                                                 **   square not in its record, following again) */
     strcpy (rq.text, K.key);
     RS_NEW_ACTOR_RECORD (rq) = i;
-    RS_NEW_ACTOR_WANT (rq) = want_fl (k);                         /* (Its want, and its fatigue levels, part 8's: the referee's) */
+    RS_NEW_ACTOR_WANT (rq) = want_fl (k);                         /* (Its want, and its fatigue levels, part bodies's: the referee's) */
     ask (RS_NEW_ACTOR, k + 1, 0);
     a.lead = s->lead;                           /* (Its influence and might, the referee's; its bonds its record's: part
                                                 **   6's morale) */
@@ -1332,7 +1332,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 #pragma rodata-name (pop)
 
 /* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
-#pragma code-name (push, "SW_enlist_near_CODE")          /* (Part 11's, 2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW_enlist_near_CODE") /* (2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW_enlist_near_RODATA")
 void s_enlist_near (void)
 {
@@ -1354,7 +1354,7 @@ void s_enlist_near (void)
             kind_get (D.kind);
             esl = sched (D.kind, D.id) == SC_SLEEP;
             enlist (i, k);                      /* (Its mind made fresh whole as it begins: then, as it's come near) */
-            md.aday[k] = md.upto[k] = (unsigned) (now >> 8);   /* (Its day asked as it first decides: part 9's; asleep by
+            md.aday[k] = md.upto[k] = (unsigned) (now >> 8);   /* (Its day asked as it first decides: part day's; asleep by
                                                 **   it, it comes asleep; no errand of its own, afetch and akeep fresh:
                                                 **   an errand isn't carried with it) */
             md.aact[k] = SC_ABOUT;
@@ -1393,7 +1393,7 @@ static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned 
 }
 
 /* A sleeper's senses dulled (actor q, its kind's record K, copied: the book's, Skills 11's Awareness at half asleep;
-** its eyes shut): its hearing halved, no sight (2026-10-31, part 9's day); one at leisure, not paying attention (the
+** its eyes shut): its hearing halved, no sight (2026-10-31, part day's day); one at leisure, not paying attention (the
 ** book's half Awareness, Skills 19's Legerdemain), its sight and hearing halved, at its cups quartered (the house's:
 ** HOUSE.md's leisure) */
 static void __fastcall__ doze (const struct actor* q)
@@ -1432,7 +1432,7 @@ static unsigned char __fastcall__ senses (unsigned char k)
     if (!loud) {
         md.slk[k] = HUB->dsense.slack;
         if (HUB->pc_hid) {
-            return hid_mind (k);                /* (The character hidden: its look tested, part 20's) */
+            return hid_mind (k);                /* (The character hidden: its look tested, part hiding's) */
         }
     }
     return (HUB->dsense.res & (SN_SEEN | SN_HEARD | SN_SMELT)) != 0;
@@ -1449,7 +1449,7 @@ static unsigned __fastcall__ toward (int dx, int dy)
     return (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
 }
 
-/* Actor a's diagonal d (4 to 7, dir_x's) worth slant's look (part 11's): within its own chunk, one of its corners
+/* Actor a's diagonal d (4 to 7, dir_x's) worth slant's look (part enlist_near's): within its own chunk, one of its corners
 ** cut, read there (the cheap tests first, the caller's: its cost on the commands' path) */
 static unsigned char __fastcall__ cut_by (unsigned char d)
 {
@@ -1482,7 +1482,7 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     s = random (2) ? a.face >> 1 : random (4);
     wlim = lim;
     if (how == S_TOWARD && md.aroute[k] == 1 && (d = way (k)) != 0xFF) {
-        return d;                               /* (On a way found: its field's step, part 17's; the dice as ever) */
+        return d;                               /* (On a way found: its field's step, part ways's; the dice as ever) */
     }
     bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
@@ -1521,7 +1521,7 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
 
 /* Actor a (the copy), out of the character's sight and not sensing it, moved coarsely (the turns pace's, catching
 ** up): a few squares' wander at a time, each a step of no time (I_STEP's STEP_COARSE: the world's), a while for them
-** after (stopped as it comes into the character's sight).  Part 10's (2026-10-31: the main RAM's room) */
+** after (stopped as it comes into the character's sight).  Part day_kept's (2026-10-31: the main RAM's room) */
 #pragma code-name (push, "SW_day_kept_CODE")
 #pragma rodata-name (push, "SW_day_kept_RODATA")
 void __fastcall__ s_coarse (unsigned char k, unsigned lim)
@@ -1557,7 +1557,7 @@ void __fastcall__ s_coarse (unsigned char k, unsigned lim)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW_bodies_CODE")             /* (Part 8's since 2026-10-31: part 4's room) */
+#pragma code-name (push, "SW_bodies_CODE")      /* (Part bodies's since 2026-10-31: part records's room) */
 #pragma rodata-name (push, "SW_bodies_RODATA")
 
 /* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
@@ -1575,7 +1575,7 @@ unsigned char __fastcall__ s_dart (unsigned char k)
 
 /* Actor k (the copy a, its kind K's) hungry or thirsty (wh, wd: its record's want now, decide's): it drinks standing
 ** in water, or at its lair (folk: their lair's water); eats at its lair (folk: their larder; and their meals, a slot in the
-** day: part 9's); a beast unaware of the character finds prey now and then (by its number and the clock, as
+** day: part day's); a beast unaware of the character finds prey now and then (by its number and the clock, as
 ** roam's), else ranges twice as far for it; a very hungry hunter (a nose for prey, or a killer) that senses the
 ** character hunts it (hostile).  Its record's want kept; its wandering's reach back */
 unsigned char __fastcall__ s_hungry (unsigned char k)
@@ -1908,7 +1908,7 @@ static unsigned char fought (void)
             }
         }
         if ((g = f & (att ? FF_D_DEAD | FF_D_DOWN : FF_A_DEAD | FF_A_DOWN)) != 0) {
-            dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
+            dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part morale's; bled to
                                                 **   death too, a fall all the same) */
         }
         if (E_FIGHT_OUT (m) != FO_BLED && E_FIGHT_OUT (m) != O_LETGO && !m.who) {   /* (Not a hold let go: HOUSE.md's
@@ -1918,7 +1918,7 @@ static unsigned char fought (void)
         }
         if (f & (att ? FF_D_DEAD : FF_A_DEAD)) {
             killed (k);
-            ++unf[HUB->actor[k].faction & (NFACT - 1)];   /* (A body of its faction's to be found: part 9's rounds) */
+            ++unf[HUB->actor[k].faction & (NFACT - 1)];   /* (A body of its faction's to be found: part day's rounds) */
         }
     }
     return n;
@@ -1960,7 +1960,7 @@ static unsigned char __fastcall__ feels (unsigned char k)
     return 0;
 }
 
-/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now).  Part 8's (2026-11-02:
+/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now).  Part bodies's (2026-11-02:
 ** the main RAM's room, the ways'; asked as feels has it) */
 #pragma code-name (push, "SW_bodies_CODE")
 #pragma rodata-name (push, "SW_bodies_RODATA")
@@ -2065,7 +2065,7 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
             a.doing = DO_COMING;                /* (At it, or to threaten it) */
         }
     } else if ((K.flags & K_SHY) && t <= AT_INDIFFERENT && dist < (was == DO_SHY ? 7 : 5)) {
-        d = shies (k);                          /* (Part 8's, 2026-11-02: the main RAM's room) */
+        d = shies (k);                          /* (Part bodies's, 2026-11-02: the main RAM's room) */
     } else if (t == AT_UNFRIENDLY && dist < 3) {
         a.doing = DO_SHY;                       /* (A few squares off, threatening) */
         d = step_for (k, 2 * K.range, S_AWAY);
@@ -2080,7 +2080,7 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
 ** on along it to the next: the step toward that (step_for's); or, an older trail, the world's to find (STEP_SCENT:
 ** the traces' store, which keeps it all, each square's scent the longer for its passings and the character's stays
 ** there: hub.h's TR_MORE), 0xFB, at once if the last one led it on, else once each ten seconds (sniffed: till then);
-** 0xFF, neither (part 5's, the main RAM's room: slice 4.5's) */
+** 0xFF, neither (part senses's, the main RAM's room: slice 4.5's) */
 #pragma code-name (push, "SW_senses_CODE")
 #pragma rodata-name (push, "SW_senses_RODATA")
 unsigned char __fastcall__ s_scent (unsigned char k)
@@ -2145,7 +2145,7 @@ static void __fastcall__ stayed (unsigned char k)
 /* Whether actor k shoots at the character it senses further off than beside it (slice 4.7's): a launcher of its own
 ** and its missiles (the world's agear, AG_SHOOTS) and a shot to be had (AG_NOSHOT, the world's: none from where it
 ** stands, but the character's moved since it last shot or meant to, shat's); 1, facing it, the world's to say if it
-** can.  Part 2's (the main RAM's room) */
+** can.  Part sway's (the main RAM's room) */
 #pragma code-name (push, "SW_sway_CODE")
 #pragma rodata-name (push, "SW_sway_RODATA")
 unsigned char __fastcall__ s_shoots (unsigned char k, unsigned char ag)
@@ -2190,7 +2190,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     ddy = pcy - a.y;
     dist = apart (ddx, ddy);
     a.doing = DO_ROAM;
-    doze (&HUB->actor[k]);                      /* (Asleep, or at leisure: its senses dulled, part 9's day's) */
+    doze (&HUB->actor[k]);                      /* (Asleep, or at leisure: its senses dulled, part day's day's) */
     if (md.sgen[k] != sense_gen || apart (a.x - md.sax[k], a.y - md.say[k]) > md.slk[k]) {
         md.sgen[k] = sense_gen;                    /* (Sensed again only as the character has changed, or it's gone
                                                 **   further than the senses' answer stands for) */
@@ -2204,7 +2204,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
         md.lsy[k] = pcy;
         md.asrch[k] = 0;
         md.drawn[k] = DRAWN_N;
-        md.upto[k] = (unsigned) (now >> 8) + UP_T; /* (Up: not back to sleep a while, part 9's) */
+        md.upto[k] = (unsigned) (now >> 8) + UP_T; /* (Up: not back to sleep a while, part day's) */
         if (feels (k)) {
             feel (k);
         }
@@ -2212,7 +2212,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     md.anear[k] = a.sn == pcs && dist <= 3;
     rng = K.flags & K_LAIR ? 2 : K.range;       /* (Its wandering's reach) */
     if ((unsigned char) (NOW_U - md.aate[k]) >= W_HUNGRY || (unsigned char) (NOW_U - md.adrank[k]) >= T_THIRSTY) {
-        rng = hungry (k);                       /* (Its want, those that eat: hungry or thirsty, part 8's, its eating,
+        rng = hungry (k);                       /* (Its want, those that eat: hungry or thirsty, part bodies's, its eating,
                                                 **   drinking, hunting, ranging further) */
     }
     if (foe && (pchelp || (pcfeign && md.fooled[k])) && !(K_HELP (K) & H_KILLS)) {   /* (Fooled: as helpless, 2026-11-10) */
@@ -2221,11 +2221,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   comes up to it and robs it, then goes; one that only defended
                                                 **   itself goes, unfriendly after: kinds.txt's ways) */
         if (md.sres[k] && !md.fled[k]) {
-            robs (k);                           /* (Part 8's, 2026-11-02: the main RAM's room) */
+            robs (k);                           /* (Part bodies's, 2026-11-02: the main RAM's room) */
         }
     }
     if (a.state > 1) {
-        d = hid_mind (k | HM_LURK);             /* (Hidden: still, or a blow from hiding, or out: part 20's) */
+        d = hid_mind (k | HM_LURK);             /* (Hidden: still, or a blow from hiding, or out: part hiding's) */
     } else if (md.fled[k]) {
         --md.fled[k];
         a.doing = DO_FLEE;                      /* (Fleeing: away; cornered beside the character, it fights, unless
@@ -2234,18 +2234,18 @@ static unsigned char __fastcall__ decide (unsigned char k)
             d = 0xFC;
         }
     } else if ((md.akeep[k] & AK_TAKE) && (d = homes (k)) != 0xFF) {
-                                                /* (Its takings home first: part 22's, 2026-11-23) */
+                                                /* (Its takings home first: part bodies_rare's, 2026-11-23) */
     } else if (md.sres[k] && foe && dist == 1) {
         a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes; the character at rest, unnoticed, a
-                                                **   robber robs it as it lies: part 20's) */
+                                                **   robber robs it as it lies: part hiding's) */
         d = pclie ? hid_mind (k | HM_FILCH) : 0xFC;
     } else if (md.sres[k] && foe && (ag & AG_SHOOTS) && a.sn == pcs && shoots (k, ag)) {
-        d = 0xFA;                               /* (A foe it senses further off, a shot: part 2's, slice 4.7's; asked
+        d = 0xFA;                               /* (A foe it senses further off, a shot: part sway's, slice 4.7's; asked
                                                 **   only of one with a launcher, the part's copy the dearer) */
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = md.sres[k] ? DO_WATCH : DO_ROAM;
     } else if (md.sres[k] && DO_UNAWARE (was) && (K_HELP (K) & H_ROBS) && hid_mind (k | HM_AMBUSH)) {
-        d = 0xFE;                               /* (A robber that's heard it coming lies in wait: part 20's) */
+        d = 0xFE;                               /* (A robber that's heard it coming lies in wait: part hiding's) */
         wt = 10;
     } else if (a.attitude == AT_ALLIED) {
         d = ally (k);
@@ -2256,11 +2256,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   goes; the world's, an older trail: DO_ROAM, if there's none) */
     } else if (foe && !(K.flags & K_SHY) && md.drawn[k] && ((d = draw_on (k)) != 0xFF ||
         (door_by () && (d = door_way (k | 0x80)) != 0xFF) || ((K.styles & (K_DIGS | K_MINES)) &&
-        (d = dig_way (k)) != 0xFF))) {          /* (A shut door the way nearer: worked, part 14's, Phase 3C's) */
-        a.doing = DO_COMING;                    /* (No way nearer: a tunneller digs one, part 12's, slice 4.11's) */                    /* (Drawn on to where it last sensed the character, heard it, a while:
-                                                **   slice 4.5's, HOUSE.md's: part 5's) */
+        (d = dig_way (k)) != 0xFF))) {          /* (A shut door the way nearer: worked, part doors's, Phase 3C's) */
+        a.doing = DO_COMING;                    /* (No way nearer: a tunneller digs one, part tunnellers's, slice 4.11's) */                    /* (Drawn on to where it last sensed the character, heard it, a while:
+                                                **   slice 4.5's, HOUSE.md's: part senses's) */
     } else if ((a.mood & AM_HURT) && a.attitude < AT_ALLIED && !foe) {
-        d = rests (k);                          /* (Hurt, and nothing after it: home to its lair, to rest: part 8's) */
+        d = rests (k);                          /* (Hurt, and nothing after it: home to its lair, to rest: part bodies's) */
     } else if (md.alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
         wt = 10 + random (20);
@@ -2277,7 +2277,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
         a.doing != DO_DOWN && (signed char) (NOW_T - md.alit[k]) >= 0) {
         md.alit[k] = NOW_T + 1;                 /* (One that wants light (kinds.txt's l, folk that carry their own), a
                                                 **   light of its own unlit, awake: lit where it's dark to it, the
-                                                **   world's (its rule the character's, part 114's), as it goes on with
+                                                **   world's (its rule the character's, part den_acts's), as it goes on with
                                                 **   what it decided; asked again in 25 seconds at most) */
         I_LIGHT_DOING (im) = I_LIGHT_FACE (im) = 0xFF;
         I_LIGHT_LIT (im) = 1;
@@ -2286,17 +2286,17 @@ static unsigned char __fastcall__ decide (unsigned char k)
     }
     if ((signed char) (NOW_T - md.aloot[k]) >= 0 && (w = take_way (d == 0xFF ? k | 0x80 : k)) != 0xFF) {
         d = w;                                  /* (A thing it wants lying in its reach taken up, the world's, as it
-                                                **   goes on with what it decided; idle, to one it saw: part 14's,
+                                                **   goes on with what it decided; idle, to one it saw: part doors's,
                                                 **   Phase 3C's; looked for once in four 25-second ticks at most) */
     }
     if ((d == 0xFF || d < 8) && door_by () && (w = door_way (d == 0xFF ? k | 0x80 : k)) != 0xFF) {
         d = w;                                  /* (A door beside it worked: opened toward its foe, shut against it,
-                                                **   one left open shut on its rounds: part 14's, Phase 3C's) */
+                                                **   one left open shut on its rounds: part doors's, Phase 3C's) */
     }
     if (d == 0xFF && foe && md.sres[k] && (K.styles & (K_DIGS | K_MINES))) {
         d = dig_way (k);                        /* (A tunneller kept from the character it senses by rock, a wall,
-                                                **   rubble: it digs its way through, part 12's, slice 4.11's; drawn
-                                                **   on, part 5's draw_on asks too.  Beside it, it struck, above: no
+                                                **   rubble: it digs its way through, part tunnellers's, slice 4.11's; drawn
+                                                **   on, part senses's draw_on asks too.  Beside it, it struck, above: no
                                                 **   dig) */
     }
     if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment; the
@@ -2336,7 +2336,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     }
     if (was >= DO_LEISURE) {
         dnow = d;
-        roused (k, was);                        /* (Its pastime let go if it rises to act, told: part 10's) */
+        roused (k, was);                        /* (Its pastime let go if it rises to act, told: part day_kept's) */
     }
     if (d < 8 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
@@ -2373,7 +2373,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
         w = md.fled[k];                            /* (Fleeing and cornered: at bay, it fights, its courage not asked again) */
         if (was != DO_FIGHT && !w) {
             heart (k);                          /* (Its heart as it engages: the field about it, its bonds; a beast's a
-                                                **   foe's might and its fellows' falls; part 6's.  Its courage tested on
+                                                **   foe's might and its fellows' falls; part morale's.  Its courage tested on
                                                 **   it, the user's, 2026-11-03: broken, no blow) */
         }
         if (w || !md.fled[k]) {
@@ -2431,7 +2431,7 @@ static unsigned char door_by (void)
 ** sensed, no one in the doorway): it shuts it (fleeing, slammed).  On its rounds (on watch), a door the character has
 ** handled (PP_KNOWN) left open: it shuts it, and stands alert a while.  Each actor's tries at a door kept in atry (its
 ** way, the stage, the count); a door's lock or bar it can't get past turns it round, its steps' own way (greedy, as
-** yet).  k's high bit: no step was found.  0xF8 (the intent posted), or 0xFF.  Part 14's */
+** yet).  k's high bit: no step was found.  0xF8 (the intent posted), or 0xFF.  Part doors's */
 #pragma code-name (push, "SW_doors_CODE")
 #pragma rodata-name (push, "SW_doors_RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
@@ -2727,14 +2727,14 @@ ask:
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static unsigned rhx, rhy, tx, ty;               /* (Part 9's room_at's: the home whose chunk it looks in, the square
-                                                **   found; part 12's dig at work, its face's stand) */
+static unsigned rhx, rhy, tx, ty;               /* (Part day's room_at's: the home whose chunk it looks in, the square
+                                                **   found; part tunnellers's dig at work, its face's stand) */
 static unsigned char dsn;
 #define SPELL           6000                    /* (Tenths: a spell of digging, ten minutes, the world's) */
 
 /* ---- The minds' other reasons to dig, and the builders (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and
-** builders; HOUSE.md's tunnellers and builders, for review): a digger at its work (part 9's sched, SC_WORK, by the
-** clock: never polled) works on its lair's own ways, within its home's chunk (made: part 9's target asks).  A miner
+** builders; HOUSE.md's tunnellers and builders, for review): a digger at its work (part day's sched, SC_WORK, by the
+** clock: never polled) works on its lair's own ways, within its home's chunk (made: part day's target asks).  A miner
 ** (K_MINES), its faction's builder, first puts up again a door broken down there; then walls up a way dug into a room
 ** there by others (way_in below); then, a pick among its things (an actor's the world's agear; a record's, its kind's
 ** miners' if they work, the house's), digs its faction's mine: from its lair's home straight across to the vein of its
@@ -2748,8 +2748,8 @@ static unsigned char dsn;
 ** portcullis let down, the chunk's edge) or runs out.  k: the actor, NACTORS a record (D, its kind's K); | 0x40, the
 ** face alone: its stand in tx, ty, its heading; | 0x80, the work posted there (I_KIT's KT_DIG, a spell of digging, or
 ** KT_BUILD, w1 w2 its face: an actor's by its own test, the world's wdig.c; a record's coarse, untested), an actor
-** stepped toward its stand first (a shut door on the way opened, part 14's), else 0xF9; a record beside a stand that's
-** another's 0xF8; 0xFF none.  Part 15's: its statics in the part, not the main RAM's (read again from its image as a
+** stepped toward its stand first (a shut door on the way opened, part doors's), else 0xF9; a record beside a stand that's
+** another's 0xF8; 0xFF none.  Part tunnel_work's: its statics in the part, not the main RAM's (read again from its image as a
 ** call of another part comes back: none used after it) */
 #define MINE_LEN        64                      /* (Squares a mine goes, its way across and along, at most) */
 #define BURROW          8                       /* (Squares a burrow goes from its home) */
@@ -2941,7 +2941,7 @@ stand:
                 refy = ty;
                 h = step_for (i, 2 * K.range + 8, S_TOWARD);
                 if (h == 0xFF && door_by ()) {
-                    a.doing = DO_COMING;        /* (A shut door the way to it: opened, the doors' own, part 14's) */
+                    a.doing = DO_COMING;        /* (A shut door the way to it: opened, the doors' own, part doors's) */
                     if ((h = door_way (i | 0x80)) == 0xFF) {
                         a.doing = SC_WORK + DO_SLEEP - SC_SLEEP;
                     }
@@ -2985,10 +2985,10 @@ stand:
 ** that brings it nearest (the four first, a diagonal only where it's nearer still: the diagonal ways' rules, its corners
 ** the world's to cut), within its reach of its home; the one it's digging kept while it's as near.  Posted (I_KIT's
 ** KT_DIG: a spell at a time, by the character's rules, the world's: dq0w/wdig.c, which judges what it's into): 0xF9;
-** 0xFF, none.  Part 12's */
+** 0xFF, none.  Part tunnellers's */
 #pragma code-name (push, "SW_tunnellers_CODE")
 #pragma rodata-name (push, "SW_tunnellers_RODATA")
-#pragma bss-name (push, "SW_tunnellers_RODATA")          /* (Its locals in the part: the main RAM's room, 2026-11-02) */
+#pragma bss-name (push, "SW_tunnellers_RODATA") /* (Its locals in the part: the main RAM's room, 2026-11-02) */
 /* Whether a burrower's claws bite tile t just looked at (C the chunk's): the stuff of a chunk's rock, or of a room's wall (a
 ** wall's room the first in the chunk with one of earth: the maker's walls are stone or masonry today): earth or soil,
 ** no rock of any kind (rubble is its caller's) */
@@ -3124,7 +3124,7 @@ typedef char rhead_fits[sizeof (struct rhead) <= RBASE - 0x8000 && RBASE - 0x800
     1 : -1];
 
 /* Actor k's (the copy a's) step on its way to refx, refy (step_for's: wlim its reach of home; S_TOWARD's): its own
-** field's, if it's for that mark and reaches it; else (part 18's wfind) another's that does, or (k's high bit: no
+** field's, if it's for that mark and reaches it; else (part way_find's wfind) another's that does, or (k's high bit: no
 ** greedy step nearer) one found, if it may have one now.  The step (0-7), 0xF8 (a shut door on it worked: door_way's
 ** I_PORTAL), or 0xFF (none: the greedy step's) */
 #pragma code-name (push, "SW_ways_CODE")
@@ -3193,11 +3193,11 @@ unsigned char __fastcall__ s_way (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Part 18's: a field found for actor k (the copy a) to refx, refy on its stratum (route), and wfind, the way's square
+/* Part way_find's: a field found for actor k (the copy a) to refx, refy on its stratum (route), and wfind, the way's square
 ** where it stands (way's: its own field no longer for its mark) */
 #pragma code-name (push, "SW_way_find_CODE")
 #pragma rodata-name (push, "SW_way_find_RODATA")
-#pragma bss-name (push, "SW_way_find_RODATA")          /* (A row of it read in: the part's own, while it runs) */
+#pragma bss-name (push, "SW_way_find_RODATA")   /* (A row of it read in: the part's own, while it runs) */
 static unsigned char rrow[RW_W], rdoor[RW_W];
 static signed char rerow[RW_W];
 #pragma bss-name (pop)
@@ -3409,7 +3409,7 @@ static unsigned char __fastcall__ rec_on (unsigned char sn, unsigned x, unsigned
 static unsigned long roam_at;                   /* (The soonest one's due) */
 #define NOW_HI          (((unsigned*) &now)[1]) /* (The clock's high word: 65536 tenths, near enough two hours) */
 #define DAY_HI          13                      /* (A day of them, near enough) */
-static unsigned aged;                           /* (The bonds aged to then, the high word: part 6's age) */
+static unsigned aged;                           /* (The bonds aged to then, the high word: part morale's age) */
 
 static unsigned char roam (void)
 {
@@ -3420,7 +3420,7 @@ static unsigned char roam (void)
         return 0;
     }
     if (NOW_HI - aged >= DAY_HI) {
-        age ();                                 /* (The bonds aged by the clock, a day at a time: part 7's) */
+        age ();                                 /* (The bonds aged by the clock, a day at a time: part succession's) */
     }
     roam_at = now + ROAM_T;
     for (i = 0; i < hd.ndens; ++i, ++q) {
@@ -3436,7 +3436,7 @@ static unsigned char roam (void)
         }
         if (held ()) {
             roam_at = now;                      /* (The UI's command in hand: the rest after its answer, as tend's
-                                                **   actors; their days are part 9's) */
+                                                **   actors; their days are part day's) */
             break;
         }
         den_get (i);
@@ -3448,9 +3448,9 @@ static unsigned char roam (void)
         lim = D.sn == D.lsn ? (K.flags & K_LAIR ? 2 : K.range) : 0;  /* (Come along with the character off its
                                                 **   lair's stratum: it stays where it is) */
         if ((unsigned char) (NOW_U - D.ate) >= W_HUNGRY || (unsigned char) (NOW_U - D.drank) >= T_THIRSTY) {
-            lim = fends (lim);                  /* (Its want, as it goes about its lair: part 8's) */
+            lim = fends (lim);                  /* (Its want, as it goes about its lair: part bodies's) */
         }
-        n |= wander (lim);                      /* (By its day: part 9's, 2026-10-31) */
+        n |= wander (lim);                      /* (By its day: part day's, 2026-10-31) */
         if (D.ready < roam_at) {
             roam_at = D.ready;
         }
@@ -3525,7 +3525,7 @@ static void tend (void)
     }
     if (fresh && !nonear && !held ()) {
         --fresh;
-        again |= nearby ();                     /* (Part 13's: not while the UI's command is in hand at the real
+        again |= nearby ();                     /* (Part lairs_near's: not while the UI's command is in hand at the real
                                                 **   paces; none left near to place, not asked again till the
                                                 **   character moves: no swap, the commands' answers' time, 2026-11-01) */
     }
@@ -3584,7 +3584,7 @@ static void tend (void)
     }
     if (owe && !held ()) {
         owe = 0;                                /* (The denizens near made actors: not while the UI's command is in hand
-                                                **   at the real paces, part 11's swap off its answer's path) */
+                                                **   at the real paces, part enlist_near's swap off its answer's path) */
         enlist_near ();
     }
 }
@@ -3613,7 +3613,7 @@ unsigned char __fastcall__ s_stalks (unsigned char k)
 }
 
 /* ---- Hiding oneself (A12, 2026-11-04: HOUSE.md's hiding oneself; the book's Stealth, Skills 9), a look at one hidden
-** by every actor's one test, part 20's.  A test of the hider's Stealth (the referee's, on the minds' own dice, a
+** by every actor's one test, part hiding's.  A test of the hider's Stealth (the referee's, on the minds' own dice, a
 ** creature's by its sheet) at its cover's steps and how near the looker is; a success
 ** hides it; a critical failure's found; a marginal failure tests the looker's Awareness (the book's) */
 #pragma code-name (push, "SW_hiding_CODE")
@@ -3775,7 +3775,7 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
 
 
 /* ---- An ally's errands and the character's gifts (slice 4.8, 2026-10-30: DENIZENS.md's fetching and influence;
-** HOUSE.md's fetching, gifts and reputation): part 5's */
+** HOUSE.md's fetching, gifts and reputation): part senses's */
 
 /* An ally's (actor k's, the copy's) turn: waiting where it was asked; fetching a thing (OR_FETCH: walked to where it
 ** lay, taken up there, the world's I_ROB FE_TAKE; brought back to where it last sensed the character, handed over
@@ -3975,7 +3975,7 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 ** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
 ** an insult (a step back, the gift refused: grade G_BADLY), as far as friendly (a gift doesn't make an ally); taken (but
 ** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
-#pragma code-name (push, "SW_gifts_CODE")            /* (Part 16's since 2026-11-02: part 5's room, the market's beside it;
+#pragma code-name (push, "SW_gifts_CODE")       /* (Part gifts's since 2026-11-02: part senses's room, the market's beside it;
                                                 **   a part of its own, seldom called) */
 #pragma rodata-name (push, "SW_gifts_RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
@@ -4178,7 +4178,7 @@ void __fastcall__ s_gift (unsigned char k)
                                                 **   1, its means 2, twice 3, four times 4) */
     if (sw.iy & 1) {
         g += 2 + fed (k, 0);                    /* (Food: to a beast, or the hungry, the more welcome; the hungrier
-                                                **   the more, part 8's) */
+                                                **   the more, part bodies's) */
     }
     st = (signed char) t - 3 + K.sway + g;      /* (Its attitude's steps, as words': hostile -3 ... friendly +1) */
     hub_map (0);
@@ -4210,7 +4210,7 @@ void __fastcall__ s_gift (unsigned char k)
         }
         if (g >= 2) {
             hub_map (0);
-            regard (HUB->actor[k].faction, g - 1);   /* (Part 5's, its stub: part 13's since 2026-11-02) */
+            regard (HUB->actor[k].faction, g - 1);   /* (Part senses's, its stub: part lairs_near's since 2026-11-02) */
         }
     }
     hub_map (0);
@@ -4226,7 +4226,7 @@ void __fastcall__ s_gift (unsigned char k)
 
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */
-#pragma bss-name (push, "SW_sway_RODATA")           /* (Its buffer the part's own: the main RAM's room, 2026-11-02) */
+#pragma bss-name (push, "SW_sway_RODATA")       /* (Its buffer the part's own: the main RAM's room, 2026-11-02) */
 static unsigned char __fastcall__ called (const char* n, const char* w)
 {
     static char b[12];
@@ -4286,7 +4286,7 @@ void __fastcall__ s_harmed (unsigned char k)
 
     hub_map (0);
     if ((fm.x[1] == O_HIT || fm.x[1] == O_BOTH_HIT) && !(fm.x[2] & FF_STOPPED)) {
-        q[k].mood |= AM_HURT;                   /* (Wounded, as its fellows see it: part 6's field) */
+        q[k].mood |= AM_HURT;                   /* (Wounded, as its fellows see it: part morale's field) */
     }
     f = q[k].faction;
     den_get (q[k].den);
@@ -4353,7 +4353,7 @@ static unsigned char __fastcall__ leads2 (unsigned char k)
 static const signed char att_steps[AT_ALLIED + 1] = { -3, -2, -1, 0, 1, 2 };
 static const unsigned char cap[SW_TAUNT + 1] = {
     0, AT_FRIENDLY, AT_ALLIED, AT_FRIENDLY, AT_WARY, AT_INDIFFERENT, AT_ALLIED,
-    0, 0                                        /* (SW_WAKE, SW_TAUNT: not influence's, part 24's provoke: a sleeper
+    0, 0                                        /* (SW_WAKE, SW_TAUNT: not influence's, part minds_swayed's provoke: a sleeper
                                                 **   woken, no test; one goaded only down, to hostile, 2026-11-10) */
 };
 
@@ -4454,8 +4454,8 @@ static void __fastcall__ order (unsigned char k)
     }
 }
 
-void __fastcall__ give_name (unsigned char k);  /* (Part 24's, below: s_sway's, part 2's room, 2026-11-23) */
-void __fastcall__ minded (unsigned char k);    /* (Part 24's, below: woken, goaded; to all in earshot) */
+void __fastcall__ give_name (unsigned char k);  /* (Part minds_swayed's, below: s_sway's, part sway's room, 2026-11-23) */
+void __fastcall__ minded (unsigned char k);    /* (Part minds_swayed's, below: woken, goaded; to all in earshot) */
 
 /* The UI's request answered */
 void s_sway (void)
@@ -4488,7 +4488,7 @@ void s_sway (void)
         }
         sw.result = n ? sw.result : SR_NONE;
     } else if (sw.order & SWO_ALL) {
-        minded (NACTORS);                       /* (To all in earshot: a speech, a pretence: part 24's crowd, 2026-11-10) */
+        minded (NACTORS);                       /* (To all in earshot: a speech, a pretence: part minds_swayed's crowd, 2026-11-10) */
     } else if ((k = n ? n - 1 : meant (sw.word)) == 0xFF) {   /* (The market's: the one the goods were found on) */
         sw.result = SR_NONE;
     } else {
@@ -4519,17 +4519,17 @@ void s_sway (void)
         case SW_ORDER:
             order (k);
             break;
-        case SW_ROB:                            /* (One robbed, the character's robbery: part 24's robbed, */
+        case SW_ROB:                            /* (One robbed, the character's robbery: part minds_swayed's robbed, */
         case SW_FILCH:                          /*   the one-path plan's stage 2, 2026-11-23; not roused, */
             minded (k);                         /*   asleep still or senseless, or woken by it if it's */
             goto unroused;                      /*   caught) */
-        case SW_WAKE:                           /* (A sleeper woken, one goaded: part 24's provoke, */
+        case SW_WAKE:                           /* (A sleeper woken, one goaded: part minds_swayed's provoke, */
         case SW_TAUNT:                          /*   2026-11-10) */
             minded (k);
             break;
         default:
             if (sw.kind >= SW_GIVE) {
-                gift (k);                       /* (A gift; the market, entertaining: part 13's, 2026-11-02) */
+                gift (k);                       /* (A gift; the market, entertaining: part lairs_near's, 2026-11-02) */
             } else {
                 influence (k);
             }
@@ -4548,7 +4548,7 @@ unroused:
 #pragma rodata-name (pop)
 
 /* ---- The minds, the verbs plan's batch B3 (2026-11-10, DECISIONS.md's "Words said, a knock, the minds swayed"):
-** s_sway's, part 24's (its own: part 2's room, part 16's swap area full) */
+** s_sway's, part minds_swayed's (its own: part sway's room, part gifts's swap area full) */
 #pragma code-name (push, "SW_minds_swayed_CODE")
 #pragma rodata-name (push, "SW_minds_swayed_RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
@@ -4574,7 +4574,7 @@ static signed char __fastcall__ said_test (unsigned char p, signed char st, cons
     return g;
 }
 
-/* The tongue actor k is spoken to in: common to a leader of its people (kinds.txt's rank, a warden: part 16's leads),
+/* The tongue actor k is spoken to in: common to a leader of its people (kinds.txt's rank, a warden: part gifts's leads),
 ** else its faction's ("" none) */
 static const char* __fastcall__ tongue_of (unsigned char k)
 {
@@ -4746,7 +4746,7 @@ static void crowd (void)
     }
 }
 
-/* A name given actor k (sw's word2, capitalised): a friend's or an ally's, kept in the head's names (s_sway's, part 2's
+/* A name given actor k (sw's word2, capitalised): a friend's or an ally's, kept in the head's names (s_sway's, part sway's
 ** till 2026-11-23: its room, the character's robbery's) */
 void __fastcall__ s_give_name (unsigned char k)
 {
@@ -4955,7 +4955,7 @@ int main (int argc, char* argv[])
     static unsigned char gone, g, act;
     unsigned char* p;
 
-    if (argc < 4 || ovl_load (argv[3]) || start (argv)) {   /* (Its banks, the hub, the kinds: part 23's) */
+    if (argc < 4 || ovl_load (argv[3]) || start (argv)) {   /* (Its banks, the hub, the kinds: part start's) */
         return 1;
     }
     wplace = HUB->eq_head;                      /* (Its events from now on) */
@@ -5060,9 +5060,9 @@ int main (int argc, char* argv[])
     return 0;
 }
 
-/* ==== The records paged (see its head), what every call wants: part 1's, with populate that calls them most (part
-** 3's till 2026-11-04, the swap study's: parts 1 and 3 and 4 put each other out, a third of this task's copies, a
-** tenth of part 3's bytes run); a region not in the table, and one put out to make room, part 21's */
+/* ==== The records paged (see its head), what every call wants: part populations's, with populate that calls them most (part
+** 3's till 2026-11-04, the swap study's: parts populations and placing and records put each other out, a third of this task's copies, a
+** tenth of part placing's bytes run); a region not in the table, and one put out to make room, part regions's */
 #pragma code-name (push, "SW_populations_CODE")
 #pragma rodata-name (push, "SW_populations_RODATA")
 
@@ -5089,8 +5089,8 @@ unsigned char s_reg_find (void)
     return f;
 }
 
-unsigned char reg_find (void);                  /* (Its stub: part 21's) */
-unsigned char make_room (void);                 /* (Part 21's) */
+unsigned char reg_find (void);                  /* (Its stub: part populations's) */
+unsigned char make_room (void);                 /* (Part regions's) */
 unsigned char __fastcall__ reg_load (unsigned char sn, unsigned char rx, unsigned char ry);
 
 /* A free record's place (lair 1: a lair's, else a denizen's), the first: its place (the records used up to it), or
@@ -5118,7 +5118,7 @@ unsigned char __fastcall__ s_rec_new (unsigned char lair)
 }
 
 /* Region sn, rx, ry wanted: in the cache (its file's records read in, if it has one, and it's not in the cache yet;
-** an entry for it in the table, one put out for it if it must: part 21's), its stamp the newest: 1, or 0 (no room) */
+** an entry for it in the table, one put out for it if it must: part regions's), its stamp the newest: 1, or 0 (no room) */
 unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     unsigned char k;
@@ -5150,14 +5150,14 @@ void s_dneed (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 21: a region not in the table, read in; one put out to make room (part 3's till 2026-11-04) */
+/* ==== Part regions: a region not in the table, read in; one put out to make room (part placing's till 2026-11-04) */
 #pragma code-name (push, "SW_regions_CODE")
 #pragma rodata-name (push, "SW_regions_RODATA")
 
 #pragma bss-name (push, "BSS")
 static struct rpk dn_kind;                      /* (Its versions counted: the main RAM's) */
 #pragma bss-name (pop)
-#pragma bss-name (push, "SW_regions_RODATA")           /* (rp.inc's block, the part's own) */
+#pragma bss-name (push, "SW_regions_RODATA")    /* (rp.inc's block, the part's own) */
 #define RP_STATIC       static
 #define RP_KIND         dn_kind
 #include "../dq0/rp.inc"
@@ -5304,11 +5304,11 @@ unsigned char __fastcall__ s_reg_load (unsigned char sn, unsigned char rx, unsig
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 4: the regions round the character wanted, and the records kept */
+/* ==== Part records: the regions round the character wanted, and the records kept */
 #pragma code-name (push, "SW_records_CODE")
 #pragma rodata-name (push, "SW_records_RODATA")
 
-/* (Part 3's, a copy of its own) */
+/* (Part placing's, a copy of its own) */
 /* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
 static void den_region4 (void)
 {
@@ -5323,7 +5323,7 @@ static void den_region4 (void)
     }
 }
 
-/* (Part 8's since 2026-10-31: part 4's room, then the main RAM's) The places kept lit (the hub's KEPT_AT) written to the
+/* (Part bodies's since 2026-10-31: part records's room, then the main RAM's) The places kept lit (the hub's KEPT_AT) written to the
 ** save's dens.dat, after the records' bank (fd), a piece at a time through the main RAM; or read back (back: nothing
 ** there, none) */
 #pragma code-name (push, "SW_bodies_CODE")
@@ -5416,7 +5416,7 @@ void __fastcall__ s_keep (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 6: morale (HOUSE.md's morale, for review; DECISIONS.md's the user's of 2026-10-29: "any intelligent
+/* ==== Part morale: morale (HOUSE.md's morale, for review; DECISIONS.md's the user's of 2026-10-29: "any intelligent
 ** creature should modify the morale field around itself").  Each intelligent actor (a mind low, average or cunning:
 ** no beast, nothing mindless) sways the courage of those about it by its influence: its rank in its faction (kinds.txt's:
 ** the rank and file, a captain, a lord or a spiritual leader) and its influence skill (the referee's summary's lead:
@@ -5436,7 +5436,7 @@ void __fastcall__ s_keep (unsigned char back)
 ** its record's D_LOST; one that doesn't know of it keeps its bond, the fall unfelt till it's known: told, the hook). */
 #pragma code-name (push, "SW_morale_CODE")
 #pragma rodata-name (push, "SW_morale_RODATA")
-#pragma bss-name (push, "SW_morale_RODATA")            /* (Its locals the part's own: the main RAM's room) */
+#pragma bss-name (push, "SW_morale_RODATA")     /* (Its locals the part's own: the main RAM's room) */
 #pragma register-vars (push, on)                /* (Its records' pointers in the zero page) */
 
 #define FIELD_R         8                       /* Squares an actor's influence reaches (all of it beside one, half at
@@ -5832,7 +5832,7 @@ void __fastcall__ s_told (unsigned char j)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 7 again: the bonds aged (part 6's room, 2026-10-30; not part 5, the hunters' own, copied in at every scent) */
+/* ==== Part succession again: the bonds aged (part morale's room, 2026-10-30; not part senses, the hunters' own, copied in at every scent) */
 #pragma code-name (push, "SW_succession_CODE")
 #pragma rodata-name (push, "SW_succession_RODATA")
 #pragma bss-name (push, "SW_succession_RODATA")
@@ -5883,7 +5883,7 @@ void s_age (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 7: succession (the user's, 2026-10-30: part 6's room) */
+/* ==== Part succession: succession (the user's, 2026-10-30: part morale's room) */
 #pragma code-name (push, "SW_succession_CODE")
 #pragma rodata-name (push, "SW_succession_RODATA")
 #pragma bss-name (push, "SW_succession_RODATA")
@@ -5897,10 +5897,10 @@ void s_age (void)
 ** bonds, but to its own band); an actor at its post rallies its fellows, told (I_GOTO where it stands: DE_RALLY, a
 ** shout, the UI's words).  The post a successor left (a captain's made king) is filled the same way, from its own
 ** band, and so on down the chain.  Those who know of the death know of the successors; those who don't, not till
-** they're told.  Part 7's (part 6's room): its kinds' ranks its own */
+** they're told.  Part succession's (part morale's room): its kinds' ranks its own */
 void __fastcall__ s_succeed (unsigned char x)
 {
-    static const unsigned char rankw7[3] = { 2, 5, 10 };   /* (Part 6's rankw) */
+    static const unsigned char rankw7[3] = { 2, 5, 10 };   /* (Part morale's rankw) */
     static unsigned char i, r, n, ob, lev, llev, fac, top, best, ba, k, key, bkey, mt, bmt, ties, pass, kmind[SND_KINDS], kr[SND_KINDS];
     static unsigned lid;
 
@@ -5997,7 +5997,7 @@ next:                                           /* (Post r, left by x: its facti
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 9: the day (DENIZENS.md's daily life, 2026-10-31; HOUSE.md's, for review): what each denizen does by the
+/* ==== Part day: the day (DENIZENS.md's daily life, 2026-10-31; HOUSE.md's, for review): what each denizen does by the
 ** game's clock and its kind's day (kinds.txt's day and work: a diurnal one asleep at night, a nocturnal one by day, a
 ** crepuscular one at midday and midnight; a lair that keeps watches by thirds, each third on watch four hours,
 ** asleep four, about four, by turns, so a third's always on watch, walking its rounds, relieved by the next as the
@@ -6016,7 +6016,7 @@ static unsigned long snow;                      /* (sched's: the clock it last r
                                                 **   the day's number, dday) */
 static unsigned m0, dday;
 
-/* Entry k made fresh for the denizen enlisted into it (s_enlist's, as it begins, part 4's; GAME-CRITIQUE.md's 3.5 and
+/* Entry k made fresh for the denizen enlisted into it (s_enlist's, as it begins, part records's; GAME-CRITIQUE.md's 3.5 and
 ** E15, 2026-11-19): every field of its mind (struct mind's, MIND_FIELDS: a field left out of it, and the build stops),
 ** so nothing's its last actor's; then s_enlist and enlist_near set what's its record's and its enlisting's.  Its
 ** target the character; its next look for a thing to loot as it first decides.  Before, a list of the arrays made fresh, the rest each set by hand */
@@ -6068,7 +6068,7 @@ unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
 
     kx_get (k);
     if (!hset) {
-        hour ();                                /* (The hour the game began, its first: part 10's) */
+        hour ();                                /* (The hour the game began, its first: part day_kept's) */
     }
     if (hour0 & 0x80) {
         return SC_ABOUT;                        /* (No day: a test's scene, every one about as ever) */
@@ -6197,7 +6197,7 @@ static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsi
     tx = rhx;
     ty = rhy;
     if (s == SC_WORK) {                         /* (A digger's work its lair's dig, if it has one to go on with: its
-                                                **   face's, part 12's, j the actor or NACTORS, a record, its home's
+                                                **   face's, part tunnellers's, j the actor or NACTORS, a record, its home's
                                                 **   chunk made; else its work's room) */
         if (K.styles & (K_DIGS | K_MINES)) {
             hy_bank (pb);
@@ -6225,7 +6225,7 @@ static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsi
 }
 
 /* Actor k (the copy a; D its record) on its lair's stratum: its day's doing (aact: SC_*) and its place (atx, aty), till
-** what it does changes (aday), its rounds' room by its pway; else about.  Part 10's daily asks it (as its day changes,
+** what it does changes (aday), its rounds' room by its pway; else about.  Part day_kept's daily asks it (as its day changes,
 ** and at each room of its rounds) */
 unsigned char __fastcall__ s_plan (unsigned char k)
 {
@@ -6263,7 +6263,7 @@ static void __fastcall__ meal (unsigned char k)
 }
 
 /* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
-** else by the game's seed (the user's, 2026-11-03: "vary by game"), dq0 -E's dusk, the tests'.  Part 3's (part 9's room,
+** else by the game's seed (the user's, 2026-11-03: "vary by game"), dq0 -E's dusk, the tests'.  Part placing's (part day's room,
 ** and 10's) */
 #pragma code-name (push, "SW_placing_CODE")
 #pragma rodata-name (push, "SW_placing_RODATA")
@@ -6292,8 +6292,8 @@ void s_hour (void)
 ** on its stratum, within 4 squares), not found before (its record's D_MET, every dead one's as it was an actor,
 ** cleared), found: 1, the alarm raised (the caller's shout).  Its faction's attitude to the character a step worse
 ** (the house's: the intruder suspected), and each of its faction's actors' too, each woken, alerted (facing the
-** shout, sensing again: a while still); a leader's body, each told of its leaders' deaths (part 6's hook, told: known
-** lost, its courage tested).  K its own after.  Part 10's (asked only while its faction has a body not found: unf) */
+** shout, sensing again: a while still); a leader's body, each told of its leaders' deaths (part morale's hook, told: known
+** lost, its courage tested).  K its own after.  Part day_kept's (asked only while its faction has a body not found: unf) */
 #pragma code-name (push, "SW_day_kept_CODE")
 #pragma rodata-name (push, "SW_day_kept_RODATA")
 #pragma code-name (push, "SW_body_found_CODE")
@@ -6352,7 +6352,7 @@ unsigned char __fastcall__ s_found (unsigned char k)
 ** it's no actor), each of its faction's records about the body (RF_R squares, out, not actors) roused and gathered to
 ** it, on a square of its own about it, each a step less well disposed to the character, staying there a while
 ** (RF_STAY), their day after; a leader's body (its rank), each known lost to them (D_LOST: their bonds to it gone as
-** they next reckon, part 6's), the finder's too.  Part 19's (part 10's room; asked only while its faction has a body not found: unf) */
+** they next reckon, part morale's), the finder's too.  Part body_found's (part day_kept's room; asked only while its faction has a body not found: unf) */
 #define RF_R            24                      /* (The gathering's reach: an actor's, ACT_R) */
 #define RF_STAY         6000                    /* (Ten minutes there, at least) */
 #pragma code-name (push, "SW_body_found_CODE")
@@ -6473,14 +6473,14 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
         y = ty + head_y[(j + D.id) & 7];
     }
     if (s == SC_WATCH && unf[D.fac & (NFACT - 1)]) {
-        rfound ();                              /* (A body of its faction's on its rounds: part 10's, 2026-11-02) */
+        rfound ();                              /* (A body of its faction's on its rounds: part day_kept's, 2026-11-02) */
     }
     x = pcrest ? 10 * ROAM_T : ROAM_T;          /* (The character resting: ten times the while, the long durations'
                                                 **   coarser ticks) */
     D.ready = now + (s == SC_SLEEP || s == SC_MEAL || s >= SC_LEISURE ? (unsigned long) smins * 600 : x + random (x));
     if (s == SC_WORK && (K.styles & (K_DIGS | K_MINES)) && work_dig (0x80 | NACTORS) != 0xFF) {
         D.ready = now + SPELL;                  /* (At its lair's dig's face: a spell of it, the world's, coarse:
-                                                **   part 12's) */
+                                                **   part tunnellers's) */
     }
     return n;
 }
@@ -6502,7 +6502,7 @@ unsigned char __fastcall__ s_daily (unsigned char k)
     was = q->doing;
     if ((int) (md.aday[k] - (unsigned) (now >> 8)) <= 0) {
         den_get (a.den);
-        plan (k);                               /* (Its day, and its place: part 9's, as it changes) */
+        plan (k);                               /* (Its day, and its place: part day's, as it changes) */
     }
     if ((s = md.aact[k]) == SC_ABOUT || (s == SC_SLEEP && (int) (md.upto[k] - (unsigned) (now >> 8)) > 0)) {
         return 0xFF;                            /* (About; or woken a while, up) */

@@ -4,8 +4,8 @@
 ** apply.  The room's floor cut into blocks of three squares by three, each block a stop: the ring of blocks along the
 ** walls first, clockwise from the corner nearest it (a wall on its left hand all the way), then the rings inside them.
 ** At a stop: each thing in the block in turn (RSW_THING as it's begun, RSW_END, what came of it, as its time's up: the
-** UI asks the things then, part 46's; a heap poked through, a thing that holds things gone through, the rest looked
-** over), then the block itself, its time, then its tests: the hidden doors and traps within reach (part 83's, wroom.c's),
+** UI asks the things then, part seek's; a heap poked through, a thing that holds things gone through, the rest looked
+** over), then the block itself, its time, then its tests: the hidden doors and traps within reach (part room_tests's, wroom.c's),
 ** the things hidden there (RSW_FLOOR: the things', asked by the UI, the same).  Told as it goes, finds told as they're
 ** found.  A stop done is kept: a change record, a hole's (DUG: the world's to read, nothing in the chunk) on the wall
 ** square at the room's northwest corner, its elev RS_MARK and the corner it set out from, its tile how many stops are
@@ -65,7 +65,7 @@ static void rs_rec (void)
 
 /* The block of stop rs_k (i, j among the blocks), the ring's side it lies on: 0 to 3, the north's on clockwise; 4 inside
 ** the outer ring */
-#pragma bss-name (push, "SW_room_search_RODATA")            /* (Its own, wanted only while it runs: no part called) */
+#pragma bss-name (push, "SW_room_search_RODATA") /* (Its own, wanted only while it runs: no part called) */
 #pragma static-locals (push, on)
 static unsigned char __fastcall__ rs_block (unsigned char* pi, unsigned char* pj)
 {
@@ -169,7 +169,7 @@ static unsigned char __fastcall__ rs_leg (unsigned char i, unsigned char j)
     if (cut) {
         path_ways (tx_, ty_);
         on_way ();                              /* (A trap on its way, hidden: noticed as it comes to it, at a search's
-                                                **   chance, or set off: part 8's) */
+                                                **   chance, or set off: part traps's) */
         rs_on = RP_TRAP;
     } else {
         path_ways (tx, ty);
@@ -199,7 +199,7 @@ static unsigned char __fastcall__ rs_leg (unsigned char i, unsigned char j)
 }
 
 /* "search the room" begun (go 1: door_work's, I_PORTAL's PA_SEARCH, SF_ROOM), where it left off if it's been at it before;
-** or the character's next as it's free (the main loop's, part 48's searched): the walk to the next stop, each thing there,
+** or the character's next as it's free (the main loop's, part work_done's searched): the walk to the next stop, each thing there,
 ** the block's own time; or the search's end, stopped or done.  2 busy, 0 over */
 unsigned char __fastcall__ s_room_on (unsigned char go)
 {

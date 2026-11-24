@@ -68,7 +68,7 @@ static unsigned char __fastcall__ rk_mix (unsigned char what, unsigned rx, unsig
     return rk_next ();
 }
 #else
-/* (ROCK_LEAN's, the denizens' part 12's: the same dice, by shifts, adds and single shifts their main RAM links
+/* (ROCK_LEAN's, the denizens' part tunnellers's: the same dice, by shifts, adds and single shifts their main RAM links
 ** already, no multiplying, xoring nor triple shift of the runtime's added to it) */
 static unsigned rk_t = 0, rk_u = 0;
 

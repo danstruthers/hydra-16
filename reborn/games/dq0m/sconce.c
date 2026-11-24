@@ -8,7 +8,7 @@
 ** a cold one, part burnt (the lights'), or none.  Each room's own dice (place.c's, DP_SCONCE's key), so nothing else
 ** moves for them; a row of place.c's placers, put_sconce its hook.
 **
-** (Swapped part 3's, the maker's: ../dq0/swap.inc, dq0m.cfg's SW3, overlay 6's bank; called through bank.s's stub.)
+** (Swapped part sconces's, the maker's: ../dq0/swap.inc, dq0m.cfg's SW_sconces, overlay 6's bank; called through bank.s's stub.)
 */
 
 #pragma code-name ("SW_sconces_CODE")

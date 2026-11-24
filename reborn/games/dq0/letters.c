@@ -26,7 +26,7 @@
 ** capitals (CW_DEN), given before the things' in a look, so those seen first are A, B ...
 **
 ** Its code: the main RAM's what the main code reads (ldes, capb); overlay 22's the rest of the line's
-** (o_letters_in, o_what_ask, o_des_find, o_des_low, o_des_req) and the capitals' (o_cap_of, o_around); part 22's the
+** (o_letters_in, o_what_ask, o_des_find, o_des_low, o_des_req) and the capitals' (o_cap_of, o_around); part dungeon_dir's the
 ** save's.  A line's letters made its things' names as it's posted to the parser and only then (main.c's cq_st): a line
 ** with no word that may be a letter (one letter, or two an a's, a count before perhaps) let be at once.
 */
@@ -741,7 +741,7 @@ unsigned __fastcall__ o_des_add (const char* w, unsigned n)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
-/* ==== Part 22's (seldom: the save, its start) */
+/* ==== Part dungeon_dir's (seldom: the save, its start) */
 #pragma code-name (push, "SW_dungeon_dir_CODE")
 #pragma rodata-name (push, "SW_dungeon_dir_RODATA")
 #pragma bss-name (push, "SW_dungeon_dir_RODATA")
@@ -779,7 +779,7 @@ void __fastcall__ s_letters_keep (int fd, unsigned char back)
 }
 
 /* The names given, the shortcuts and the letters read back from the save (after its header; fd -1: none, a new game's:
-** main.c's, part 1's room) */
+** main.c's, part start_end's room) */
 void __fastcall__ s_keeps_back (int fd)
 {
     names_keep (fd, 1);

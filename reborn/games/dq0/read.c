@@ -1,5 +1,5 @@
 /*
-** read.c - (parts 25, 26) Dingus Quest Zero's writings read and copied, and their clues kept (the plan for the game between dungeons,
+** read.c - (parts read, clue) Dingus Quest Zero's writings read and copied, and their clues kept (the plan for the game between dungeons,
 ** its steps 9 and 10; HOUSE.md's reading and clues).  A writing is a theme's kind with a read rule (a plaque, a slab, a ledger,
 ** a pillar, a stand-in's tablet or scroll), or a thing that carries one: an old writing carried out of its own dungeon, a copy
 ** (items.h's KI_WRITING, KI_COPY: its clue by its fuel, life.h's).  Each has its clue (life.h's struct clue): its people's tongue
@@ -14,7 +14,7 @@
 ** Copied onto a sheet (paper or parchment, with charcoal, a pencil, or a quill and ink: the map's own things), by Drawing's
 ** test, the copy's quality its condition for a later reading.  The clues kept in clues.dat in the dungeon's folder (a record
 ** a rule: as it's read or copied, and every writing as the dungeon's left alive); dq0life carries them out (life.h's).
-** Part 25's (the reading), part 26's (the clues made, and a reading's other words), both overlay 21's bank: stubs read_cmd,
+** Part read's (the reading), part clue's (the clues made, and a reading's other words), both overlay 21's bank: stubs read_cmd,
 ** clue_make, clues_kept, more_said, swapped.  A part's data is its own and copied in afresh as it's called again (swap.inc's):
 ** what outlives a call to the other part is on the C stack or in the clues' files.
 */
@@ -33,7 +33,7 @@
 #include "life.h"
 #include "rs.h"
 
-/* ==== Part 26: the clues made, a reading's other words */
+/* ==== Part clue: the clues made, a reading's other words */
 
 #pragma code-name (push, "SW_clue_CODE")
 #pragma rodata-name (push, "SW_clue_RODATA")
@@ -307,7 +307,7 @@ void __fastcall__ s_swapped (unsigned char r)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
-/* ==== Part 25: the reading */
+/* ==== Part read: the reading */
 
 #pragma code-name (push, "SW_read_CODE")
 #pragma rodata-name (push, "SW_read_RODATA")
@@ -376,7 +376,7 @@ static void __fastcall__ clue_place_said (unsigned char wr)
 }
 
 /* Clue id (K) read, at the steps cond (its apparent condition app's words first): the referee's test, the grade's words, the
-** clue kept as it's been read.  Its locals on the C stack: part 26's words called (a critical success's, a critical failure's) */
+** clue kept as it's been read.  Its locals on the C stack: part clue's words called (a critical success's, a critical failure's) */
 #pragma static-locals (push, off)
 static void __fastcall__ read_it (unsigned id, signed char cond, signed char app)
 {
@@ -415,7 +415,7 @@ static void __fastcall__ read_it (unsigned id, signed char cond, signed char app
         return;
     }
     K.state = g == G_FAIL ? CL_PIECE : g == G_BADLY ? CL_WRONG : g == G_WELL ? CL_RIGHT | CL_MORE : CL_RIGHT;
-    clue_io (id, 1);                            /* (Kept first: part 26 called, this part's K is its image's again) */
+    clue_io (id, 1);                            /* (Kept first: part clue called, this part's K is its image's again) */
 told:
     if (g == G_FAIL) {                            /* (A piece of it: its first half, to a word's end) */
         strcpy (lb, K.words);
@@ -483,7 +483,7 @@ static unsigned char __fastcall__ reading (struct cmd* c)
             msg ("You have nothing to copy it onto: a sheet, and charcoal, a pencil, or a quill and ink.");
             return Q_TOLD;
         }
-        clue_make (x);                          /* (Made if it isn't: part 26's; this part's statics afresh after it) */
+        clue_make (x);                          /* (Made if it isn't: part clue's; this part's statics afresh after it) */
         x = othings_x;
         clue_io (CLUE_HERE | x, 0);
         g = RS_TEST_GRADE (*ask_b (RS_TEST, P_DRAW, 0));  /* (The book's Drawing, its Cartography first: the referee's) */

@@ -8,14 +8,14 @@
 # dq0d.cfg).  "stub NAME PART": a part's stub that the C doesn't show (its assembly's).
 populations   1      The populations, the records paged: what every call wants
 sway          1      The character's ways with a denizen (the UI's sway), and harmed
-placing       2      The placing (part 1's till 2026-11-04)
+placing       2      The placing (part populations's till 2026-11-04)
 records       2      The records kept; the start (the kinds read in, popgen loaded); an actor made, retired, killed, an ally come along
 senses        3      The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
 morale        3      Morale: the field and the bonds, an actor's kin dismayed (2026-10-30)
 succession    3      Succession (2026-10-30)
 bodies        4      Their bodies: their want, the water, a hurt one's rest, a cornered one's dart (2026-10-31); a lair's home room, a robber's way, one first met
 day           4      The day: schedules, sleep, meals, work, watches, leisure (2026-10-31); the records by it, an actor's plan
-day_kept      5      The actors' day kept (their plan, part 9's), their coarse moves, a body found on the rounds, a pastime let go (2026-10-31)
+day_kept      5      The actors' day kept (their plan, part day's), their coarse moves, a body found on the rounds, a pastime let go (2026-10-31)
 enlist_near   7      The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap to swap in, not while the UI's command is in hand)
 tunnellers    5      The tunnellers: a way dug (slice 4.11's, 2026-11-01); their work's, the builders' (overlay 6's, 2026-11-02)
 lairs_near    5      The lairs near placed (2026-11-01: the main RAM's room; small, cheap to swap in, each time round after a move)
@@ -26,8 +26,8 @@ ways          5      The ways followed (2026-11-02)
 way_find      7      A way found (2026-11-02)
 body_found    6      A body found on a record's rounds (2026-11-02)
 hiding        7      Hiding oneself (2026-11-04)
-regions       2      A region read in, one put out (part 3's till 2026-11-04)
-bodies_rare   4      Their bodies' rarer: a lair's home room, a robber's way, a dart, rest, depth, what they've eaten, one first met (part 8's till 2026-11-04)
-start         2      The task's start (the kinds read in, popgen loaded: part 4's till 2026-11-04)
+regions       2      A region read in, one put out (part placing's till 2026-11-04)
+bodies_rare   4      Their bodies' rarer: a lair's home room, a robber's way, a dart, rest, depth, what they've eaten, one first met (part bodies's till 2026-11-04)
+start         2      The task's start (the kinds read in, popgen loaded: part records's till 2026-11-04)
 stub slant enlist_near
-minds_swayed  7      The minds swayed by words to them all, a sleeper woken, one goaded (the verbs plan's B3, 2026-11-10: part 2's room)
+minds_swayed  7      The minds swayed by words to them all, a sleeper woken, one goaded (the verbs plan's B3, 2026-11-10: part sway's room)

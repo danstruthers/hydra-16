@@ -373,5 +373,5 @@ SWSTART     = __SWAP_START__
 .else
             .rodata
 .endif
-swtab:                                     ; (The parts' records follow it: SWPART ..., the first part 1)
+swtab:                                     ; (The parts' records follow it: SWPART ..., the first part start_end)
             .code

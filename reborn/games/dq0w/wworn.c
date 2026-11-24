@@ -1,5 +1,5 @@
 /*
-** wworn.c - (dq0w, swapped part 107: ../dq0/swap.inc) where a thing's worn (the user's, 2026-11-10: "Wearing should
+** wworn.c - (dq0w, swapped part worn: ../dq0/swap.inc) where a thing's worn (the user's, 2026-11-10: "Wearing should
 ** extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should keep track of where worn (as
 ** should all worn items that can be worn in more than one place)"; HOUSE.md's worn places).  A thing of a kind worn in
 ** more than one place (kinds.c's wplaces) is worn at a place, its record's sn (items.h's WP_*: a place on the body,

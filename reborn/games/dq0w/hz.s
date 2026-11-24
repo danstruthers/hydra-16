@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; hz.s - (dq0w) body bd's step, its hazards (wbody.h's den_hz: the one path's step, every actor's, step1's, 2026-11-23):
-; the cheap test, the main RAM's, before part 120 (wstep.c's den_trap) or part 99 (time_kept, the pools') is swapped
+; the cheap test, the main RAM's, before part step (wstep.c's den_trap) or part time_drift (time_kept, the pools') is swapped
 ; in: its way d, before it, the pit it's in (a round's climb out) or a set trap on the square ahead (noticed: 1, it
 ; goes no further); DT_ON, on its square after, a set trap there set off, lamp oil slipped in (1: dead of it); a winged
 ; body none of them (the user's, 2026-11-23: it passes over a floor's traps, pits and spilt oil).  In C in
@@ -40,7 +40,7 @@ _den_hz:
             bra         none
 :           cmp         #DT_ON
             bne         @step
-            jsr         atbd                ; (On its square: a set trap there set off, part 120's)
+            jsr         atbd                ; (On its square: a set trap there set off, part step's)
             jsr         trapsq
             beq         @pool
             lda         #DT_SPRING
@@ -71,7 +71,7 @@ _den_hz:
             jsr         pusha
             lda         hzk
             jmp         _den_trap
-@ahead:     ldy         hzk                 ; (A set trap on the square ahead: noticed, or not, part 120's)
+@ahead:     ldy         hzk                 ; (A set trap on the square ahead: noticed, or not, part step's)
             lda         _head_x,y
             sta         hdx
             lda         _head_y,y

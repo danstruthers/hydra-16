@@ -20,9 +20,9 @@
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
 ** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
-** asker rung with the reply (hub.h's protocol).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
+** asker rung with the reply (hub.h's protocol).  hmchar's file read and written, and the creatures' sheets kept, are swapped part sheets's (../dq0/swap.inc: run
 ** in the main RAM's top, a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names
-** part 2's (harnname.c), with the tool a dig takes.  And a test's, RS_DICE: its dice fixed (its unit tests').
+** part names's (harnname.c), with the tool a dig takes.  And a test's, RS_DICE: its dice fixed (its unit tests').
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -54,12 +54,12 @@ typedef char pb_harn_fit[PB_HEAD == HARN_SKULL && PB_FACE == HARN_FACE && PB_NEC
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
-void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
+void __fastcall__ load_pc (struct req* r);      /* (Part sheets's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
-void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
+void __fastcall__ dig_answer (struct req* r);   /* (Part dig_tool's) */
 void __fastcall__ dice_set (struct req* r);
-void __fastcall__ read_test (struct req* r);    /* (Part 4's: a writing read) */
-void hello_words (void);                        /* (Part 4's: RS_HELLO's words) */
+void __fastcall__ read_test (struct req* r);    /* (Part read_tongues's: a writing read) */
+void hello_words (void);                        /* (Part read_tongues's: RS_HELLO's words) */
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
@@ -119,7 +119,7 @@ static void __fastcall__ dig_of (struct req* r);
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
-** Masonry, glass Glassworking, the rock where it lies Mining (part 2's, the main RAM's room, 2026-10-29) */
+** Masonry, glass Glassworking, the rock where it lies Mining (part names's, the main RAM's room, 2026-10-29) */
 static const unsigned char appraiser[NAP + 4] = {
     HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
     HARN_MSN, HARN_GLA, HARN_MIN,
@@ -129,7 +129,7 @@ static const unsigned char appraiser[NAP + 4] = {
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
 ** craft that knows the thing) */
-unsigned char __fastcall__ speaks (const char* t);    /* (Part 4's: part 3's room, the one-path plan's digging, 2026-11-23) */
+unsigned char __fastcall__ speaks (const char* t);    /* (Part read_tongues's: part dig_tool's room, the one-path plan's digging, 2026-11-23) */
 void __fastcall__ s_dig_answer (struct req* r)
 {
     unsigned char sk, m;
@@ -149,7 +149,7 @@ void __fastcall__ s_dig_answer (struct req* r)
             RS_TEST_GRADE (*r) = test_sk (&pc, sk, RS_TEST_STEPS (*r));
         }
     } else if (RS_TEST_PURPOSE (*r) == P_READ) {
-        read_test (r);                          /* (A writing read: part 4's, step 9's) */
+        read_test (r);                          /* (A writing read: part read_tongues's, step 9's) */
     } else if (RS_TEST_PURPOSE (*r) != P_DIG && RS_TEST_PURPOSE (*r) != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
             RS_TEST_CANT (*r) = 2;
@@ -250,7 +250,7 @@ signed char __fastcall__ grade (unsigned char level)
     return g[level & 3];
 }
 
-#pragma code-name (push, "OV5CODE")            /* (Overlay 5's, beside part 2's image: 2026-10-27) */
+#pragma code-name (push, "OV5CODE")            /* (Overlay 5's, beside part names's image: 2026-10-27) */
 #pragma rodata-name (push, "OV5RODATA")
 
 /* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less its group's
@@ -301,7 +301,7 @@ unsigned char o_draw_learn (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* A purpose's test (RS_TEST's, part 3's): overlay 10's, its stub test (the main RAM's room, speed12, 2026-11-22: no hub in
+/* A purpose's test (RS_TEST's, part dig_tool's): overlay 10's, its stub test (the main RAM's room, speed12, 2026-11-22: no hub in
 ** it) */
 #pragma code-name (push, "OV10CODE")
 #pragma rodata-name (push, "OV10RODATA")
@@ -480,7 +480,7 @@ void rf_after (void)
 
 static unsigned char gait = GA_WALK, watch;
 static const char k_name[] = "name ", k_occ[] = "occupation ", k_dealt[] = "dealt ", k_dressed[] = "dressed ",
-    k_time[] = "timesense";                    /* (Its lines' keys, read and written: once, part 1's room, 2026-11-18) */
+    k_time[] = "timesense";                    /* (Its lines' keys, read and written: once, part sheets's room, 2026-11-18) */
 
 static void __fastcall__ own_line (char* l)
 {
@@ -523,7 +523,7 @@ void __fastcall__ s_load_pc (struct req* r)
     if (r->kind == RS_HELLO) {
         RS_HELLO_ROUND (*r) = 100;                            /* (A round: 10 seconds, Combat 7) */
         put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's; its
-                                                **   words after them, part 4's: rf_answer's) */
+                                                **   words after them, part read_tongues's: rf_answer's) */
         return;
     }
     RS_LOAD_PC_GAIT (*r) = gait;                                /* (Its file's pace and watchfulness: the world's to set) */
@@ -626,11 +626,11 @@ void __fastcall__ sheet_put (unsigned char n)
     bwrite (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
 }
 
-#pragma code-name (push, "SW_names_CODE")             /* (Part 2's: part 1's room, 2026-10-27) */
+#pragma code-name (push, "SW_names_CODE")       /* (Part sheets's room, 2026-10-27) */
 #pragma rodata-name (push, "SW_names_RODATA")
 
 /* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared): the
-** skeleton's rf_sheets (../dq0/referee.h's; the file opened by its sheets_open, rfsheets.c's, part 2's too) */
+** skeleton's rf_sheets (../dq0/referee.h's; the file opened by its sheets_open, rfsheets.c's, part names's too) */
 void __fastcall__ s_rf_sheets (unsigned char back)
 {
     unsigned off;
@@ -676,8 +676,8 @@ void __fastcall__ s_rf_sheets (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part 2's,
-** the main RAM's room, 2026-10-31; part 4's since the one-path plan's digging, 2026-11-23, part 3's room): 0, or its
+/* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part names's,
+** the main RAM's room, 2026-10-31; part read_tongues's since the one-path plan's digging, 2026-11-23, part dig_tool's room): 0, or its
 ** mastery in it (its own its Language's; 100 if it has none open) */
 #pragma code-name (push, "SW_read_tongues_CODE")
 #pragma rodata-name (push, "SW_read_tongues_RODATA")
@@ -698,12 +698,12 @@ unsigned char __fastcall__ s_speaks (const char* t)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ---- A writing read (RS_TEST's P_READ, rs.h's: the plan for the game between dungeons, its step 9): part 4's */
+/* ---- A writing read (RS_TEST's P_READ, rs.h's: the plan for the game between dungeons, its step 9): part read_tongues's */
 #pragma code-name (push, "SW_read_tongues_CODE")
 #pragma rodata-name (push, "SW_read_tongues_RODATA")
 
 /* RS_HELLO's words after its generator's (rs.h's): the state C_STUNNED is, the book's shock (Combat 14); its own stance,
-** D_OWN, the counterstrike, and that stance told (part 1's s_load_pc's, its room's: 2026-11-12) */
+** D_OWN, the counterstrike, and that stance told (part sheets's s_load_pc's, its room's: 2026-11-12) */
 void s_hello_words (void)
 {
     put ("\nin shock\ncounter\nYou will strike back first.");
@@ -753,7 +753,7 @@ struct pstate ps;
 void __fastcall__ pace_set (unsigned char a);
 void __fastcall__ stress (struct req* r);
 void age_get (void);
-#pragma code-name (push, "SW_dig_tool_CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma code-name (push, "SW_dig_tool_CODE")    /* (The main RAM's room, 2026-11-03) */
 #pragma rodata-name (push, "SW_dig_tool_RODATA")
 
 /* Its age, for the sheet (the plan for the game between dungeons, its step 8): by the life's record (life.h's, at the
@@ -837,7 +837,7 @@ static unsigned char dk, drep;                  /*   the next, and the face afte
 static unsigned char dlog[DFIX], dl;            /* The sides of the first dice rolled, how many kept */
 static unsigned drolled;                        /* The dice rolled */
 
-int __fastcall__ fixed (unsigned sides);        /* (Its stub, bank.s's: part 2's since 2026-10-31, the main RAM's room;
+int __fastcall__ fixed (unsigned sides);        /* (Its stub, bank.s's: part names's since 2026-10-31, the main RAM's room;
                                                 **   a test's alone) */
 
 #pragma code-name (push, "SW_names_CODE")
@@ -881,7 +881,7 @@ static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for
 /* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
 ** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
 signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps);
-#pragma code-name (push, "SW_dig_tool_CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma code-name (push, "SW_dig_tool_CODE")    /* (The main RAM's room, 2026-11-03) */
 #pragma rodata-name (push, "SW_dig_tool_RODATA")
 signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char steps)
 {
@@ -903,7 +903,7 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
 
 /* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's QUIET_IN's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
-** creature's by its sheet (a hunter's stalk, the denizens'); part 2's, the main RAM's room */
+** creature's by its sheet (a hunter's stalk, the denizens'); part names's, the main RAM's room */
 #pragma code-name (push, "SW_dig_tool_CODE")
 #pragma rodata-name (push, "SW_dig_tool_RODATA")
 void __fastcall__ s_quiet_test (struct req* r)
@@ -983,8 +983,8 @@ fights:
         status_now ();                          /* (Its own summary in the reply, the rest after it) */
         rf_later = 1;
         break;
-    case RS_HELLO:                              /* (Part 1's, as the game's begun: the main RAM's room, 2026-11-02;
-                                                **   its words part 4's, part 1's room) */
+    case RS_HELLO:                              /* (Part sheets's, as the game's begun: the main RAM's room, 2026-11-02;
+                                                **   its words part read_tongues's, part sheets's room) */
         load_pc (r);
         hello_words ();
         break;
@@ -998,7 +998,7 @@ fights:
         if (r->actor || RS_TEST_PURPOSE (*r) == P_DIG || RS_TEST_PURPOSE (*r) == P_STEALTH || RS_TEST_PURPOSE (*r) == P_APPRAISE || RS_TEST_PURPOSE (*r) == P_SWIM) {   /* (A creature's
                                                 **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
-                                                **   knows the thing: part 3's) */
+                                                **   knows the thing: part dig_tool's) */
 parted:
             dig_answer (r);
             break;
@@ -1020,7 +1020,7 @@ parted:
         }
         if (((unsigned char) (RS_TEST_PURPOSE (*r) - P_READ) <= P_INTIMIDATE - P_READ || RS_TEST_PURPOSE (*r) == P_DECEIVE) && r->text[0]) {   /* (Words in a
                                                 **   tongue: one it speaks, or nothing; a writing read, its tongue and
-                                                **   its script (P_READ, P_LORE with words; P_TRACK never has any): part 3's) */
+                                                **   its script (P_READ, P_LORE with words; P_TRACK never has any): part dig_tool's) */
             goto parted;
         }
         if (RS_TEST_PURPOSE (*r) <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
@@ -1077,10 +1077,10 @@ parted:
         } else if (RS_DESCRIBE_WHAT (*r) == RD_DEITY) {
             *tp = 0;                            /* (None worshipped: "") */
             if (pc.att[HARN_DTY] < HARN_NODEITY) {
-                put (harn_deity_name (pc.att[HARN_DTY]));   /* (Its deity's name: part 2's, harnname.c) */
+                put (harn_deity_name (pc.att[HARN_DTY]));   /* (Its deity's name: part names's, harnname.c) */
             }
         } else {
-            age_get ();                         /* (Its age: part 3's, the life's record) */
+            age_get ();                         /* (Its age: part dig_tool's, the life's record) */
             sheet ();
         }
         break;

@@ -362,8 +362,8 @@ static void room (void)
             goto told;
         }
     } else {
-    if (S->size != S_PART) {                    /* (Where in it, its size and shape: slice 4.0's, part 8's) */
-        art = lbe + room_where ();              /* (Its words put in lb, at its end: part 8's) */
+    if (S->size != S_PART) {                    /* (Where in it, its size and shape: slice 4.0's, part where's) */
+        art = lbe + room_where ();              /* (Its words put in lb, at its end: part where's) */
         lbe += strlen (lbe);
     } else {
         add ("You can see part of a");

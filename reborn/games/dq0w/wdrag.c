@@ -12,8 +12,8 @@
 ** door_on), till it's moved away.  Tasted (DG_TASTE): the thing named to hand, its kind and what's in it (its first
 ** thing), that one's wear (water's: from still water), for the UI to word; nothing used up.
 **
-** All of it swapped part 109's (../dq0/swap.inc: dq0w.cfg's SW109), through things.c's s_serve; a door braced too (wdoor.c's
-** part 5 and dq0w.c's part 33 call it).  Its locals the part's own (static, in its image): what lasts across a call to
+** All of it swapped part drag's (../dq0/swap.inc: dq0w.cfg's SW_drag), through things.c's s_serve; a door braced too (wdoor.c's
+** part doors and dq0w.c's part across call it).  Its locals the part's own (static, in its image): what lasts across a call to
 ** another part (pick's, weight_of's: the first it calls) is in the request's copy, iq, the main RAM's.
 */
 
@@ -33,9 +33,9 @@ void __fastcall__ put (const char* s);          /* (tlist.s's: its words after t
 extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
-unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's) */
+unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part ui_requests's) */
 unsigned __fastcall__ at_hand (const char* name);
-unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
+unsigned __fastcall__ weight_of (unsigned i);   /* (Part things's) */
 #define HW_SEEN         2                       /* (things.c's pick: lying about, seen) */
 #define D_SN            iq.craft                /* (The request's copy's own fields, past their use: the stratum, */
 #define D_N             iq.item                 /*   the thing, */

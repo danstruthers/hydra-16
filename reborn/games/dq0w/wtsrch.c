@@ -1,8 +1,8 @@
 /*
-** wtsrch.c - (dq0w) a search about the character or an actor (wtrap.c's till 2026-11-23: part 8's room, the
+** wtsrch.c - (dq0w) a search about the character or an actor (wtrap.c's till 2026-11-23: part traps's room, the
 ** one-path plan's step): the referee's test against each hidden door and trap within its reach, each found known (a
 ** door, a trap the character finds, for every one; a trap underfoot an actor finds, to its faction: the user's,
-** 2026-11-23, "another's known only once found").  Swapped part 123's, tsearch called through its stub (the
+** 2026-11-23, "another's known only once found").  Swapped part tsearch's, tsearch called through its stub (the
 ** character's work, dq0w.c's; an actor's, wsearch.c's); its own copy of the work's helpers (workpart.h).
 */
 

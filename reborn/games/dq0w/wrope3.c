@@ -1,5 +1,5 @@
 /*
-** wrope3.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part 95's: the drop a rope goes down or a
+** wrope3.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part rope_set's: the drop a rope goes down or a
 ** grapple's thrown up, a rope put in place by the R_*'s (wrope.h's), a grapple tied on, thrown up.
 */
 
@@ -10,8 +10,8 @@
 #define RP_THROWN
 #include "wrope.h"
 
-void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
-void __fastcall__ grow_below (unsigned char n); /* (Part 3's) */
+void __fastcall__ make_own (unsigned i);        /* (Part item_store's) */
+void __fastcall__ grow_below (unsigned char n); /* (Part dungeon_begin's) */
 unsigned __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);
 
 #define ROPE_REACH      9                       /* (Feet: an end hanging lower than that's in reach, dq0w.c's SHAFT_REACH) */
@@ -157,7 +157,7 @@ static unsigned char __fastcall__ rp_drop (unsigned char up)
     int d;
 
     if (!r && !up) {
-        r = well (WL_ROPE);                     /* (Down a well within reach: part 103's, 2026-11-06) */
+        r = well (WL_ROPE);                     /* (Down a well within reach: part well's, 2026-11-06) */
     }
     if (r == 2) {
         r = up ? R_TSN : R_FSN;
@@ -243,7 +243,7 @@ static unsigned char rp_up (void)
         return rp_no (SA_TOO_HIGH);
     }
     handled = R_M;                              /* (The grapple never put away to free a hand for its rope: the hands'
-                                                **   rule's, part 90's, 2026-11-17) */
+                                                **   rule's, part hands_free's, 2026-11-17) */
     if (reach_step (R_N, RS_TOOL)) {
         return IR_NO;
     }

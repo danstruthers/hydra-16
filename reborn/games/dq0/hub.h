@@ -148,7 +148,7 @@ struct trail {
 #define TR_HEAVY        6                       /* (A scent's strength that hangs heavy, the words') */
 enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL, TRC_WALL };    /* I_TRACE's how: the floor looked at (sight, no test), the
                                                 **   Tracking test, a smell (a notice test of smell); the wall ahead
-                                                **   looked at (its rock, slice 4.10's: dq0w.c's part 1, wall_look) */
+                                                **   looked at (its rock, slice 4.10's: dq0w.c's part dig_spell, wall_look) */
 enum { TRR_OK, TRR_DARK, TRR_NOSE, TRR_NONE };  /* Its result: read; too dark to see the floor; no sense of smell;
                                                 **   nothing found */
 enum { TP_ONE, TP_FEW, TP_SEVERAL, TP_MANY };   /* (A trail's passings: one, two or three, up to eleven, more) */
@@ -395,7 +395,7 @@ enum {
     I_SWEPT,                                    /* (The denizens', who 0) A chunk kept swept (a lair of a kind that
                                                 **   sweeps its floors, K_SWEEPS, placed): w1 w2 a square in it, x[2]
                                                 **   its stratum */
-    I_KIT,                                      /* (The denizens', who 0, after I_SWEPT: part 14's test) A denizen's things made as its lair's placed
+    I_KIT,                                      /* (The denizens', who 0, after I_SWEPT: part den_bodies's test) A denizen's things made as its lair's placed
                                                 **   (the outfits' gear, 2026-10-27: games/dq0/outfits.txt's role
                                                 **   by its kind, the world's draw): x[1] its kind, t its number (the
                                                 **   denizens' id), w1 w2 its lair's home square, x[2] its stratum;
@@ -443,7 +443,7 @@ enum {
                                                 **   word said, 6 a yell), b what it is, w1 w2 its square (0: the
                                                 **   character's); heard by its loudness, sleepers woken, others turned
                                                 **   to it, a foe come to look (b NZ_VOICE, NZ_KNOCK).  The world's: its
-                                                **   E_NOISE, two seconds' work (part 37's, 2026-11-10) */
+                                                **   E_NOISE, two seconds' work (part intent_more's, 2026-11-10) */
     NINTENTS
 };
 #define AIM_HARD        0x10                    /* (I_ATTACK's b: a throw, thrown hard: twice as far, 10 less) */
@@ -1065,7 +1065,7 @@ enum { SM_NEW = 0x40, SM_OLD = 0x80, SM_OTHER = 0xC0 };   /* (A step's words' wo
 #define SV_AT_START(k)  (((k) & ~SM_ALL) == SV_DIP || ((k) & ~SM_ALL) == SV_HONE || ((k) & ~SM_ALL) == SV_KINDLE || \
                          ((k) & ~SM_ALL) == SV_BLOWDARK)   /* (A step's words told as it begins: a work set to ("You set
                                                 **   to dipping the torch.", "You strike a spark."), a question; the rest
-                                                **   as it's done, its change made (part 86's RO_END): a stop part way
+                                                **   as it's done, its change made (part reach_do's RO_END): a stop part way
                                                 **   leaves it undone and untold, the game telling nothing that didn't
                                                 **   happen, reach1's, 2026-11-20) */
 #define MN_CAREFUL      0x01                    /* (struct cmd's manner: carefully, slowly, quickly, quietly, hard, */
@@ -1492,8 +1492,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** the referee says it's fallen, or got up: POS_*).  Its pace (gait, rs.h's GA_*) and its position (pc_pos) are its
     ** body's, actor 0's, the bodies' above */
     unsigned char   watch;                      /* WA_* */
-    unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part 85, PL_*) */
-    unsigned        rs_out[2], rs_home[2], rs_place;   /* (The tools a use got out, the world's, part 87's, each where it came from, 0 anywhere;
+    unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part reach_steps, PL_*) */
+    unsigned        rs_out[2], rs_home[2], rs_place;   /* (The tools a use got out, the world's, part reach_more's, each where it came from, 0 anywhere;
                                                 **   the place a thing's being put away in: A25's, 2026-11-03) */
     unsigned char   rs_nout;
     unsigned char   ropes;                      /* (Ropes in place in the dungeon, the world's: 0, none looked for as a climb starts:
@@ -1502,7 +1502,7 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   or a rope's first wanted them: wrope.c's, the start's time, 2026-11-04) */
     const char*     ldir;                       /* (The game's lib folder, the world's argument: its own memory) */
     unsigned char   rlo, rhi;                   /* (The climb's rope's help: the feet above the foot it runs between; rhi 0, none:
-                                                **   dq0w.c's part 97) */
+                                                **   dq0w.c's part climb_on) */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel; not moving, GOING_BOLD, a pace said outright in the dark */
     /* A fight: the character's blow, posted by the world (I_ATTACK) as it takes the round for it, and struck (the
@@ -1537,7 +1537,7 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   under 720) */
         unsigned    unc;                        /*   and how far off it knows it may be, either way (0: it knows;
                                                 **   TB_LOST or more: it has no idea) */
-        unsigned long due;                      /* The clock (tenths) of its next reckoning (the world's part 76: an hour
+        unsigned long due;                      /* The clock (tenths) of its next reckoning (the world's part time_believed: an hour
                                                 **   on, five minutes where the sky may be seen, a minute while it's gone;
                                                 **   or at once, the burning's burn_ask: a light's change, a wait begun
                                                 **   or ended, a black-out, another stratum, the way out opened) */
@@ -1563,11 +1563,11 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char how;                      /* What last clouded it (TG_*: TG_HOURS the hours, or a fix since) */
         unsigned char sun;                      /* The daylight's reach now, squares (0 night; 2 dawn, dusk; 4 day: the
                                                 **   lamps' at the skylights, the windows and the shafts, the senses',
-                                                **   as the true clock has it: part 76's, at the parts' edges) */
-        unsigned char nsky;                     /* The sky's openings near it, as it last moved (part 17's: the emitters */
+                                                **   as the true clock has it: part time_believed's, at the parts' edges) */
+        unsigned char nsky;                     /* The sky's openings near it, as it last moved (part item_pages's: the emitters */
         unsigned    skx[SKY_LAMPS], sky_[SKY_LAMPS];    /*   of the daylight falling in: their squares, the senses' lamps) */
         unsigned char nigh;                     /* The sky's opening it's come by since the last reckoning, SKS_*, as a
-                                                **   move ended or a look went by it (0 none; part 17's) */
+                                                **   move ended or a look went by it (0 none; part item_pages's) */
     } tb;
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
@@ -2146,7 +2146,7 @@ struct wsave {
 **   own hub.dq_head world                                      (The denizens' events: the world's)
 **   own hub.way_open world                                     (The puzzle's: the world's, by the theme's rules)
 **   own hub.sway denizens +ui
-**   own hub.rs_out world                                       (The tools a use got out, part 87's, 90's: 2026-11-03)
+**   own hub.rs_out world                                       (The tools a use got out, part reach_more's, hands_free's: 2026-11-03)
 **   own hub.rs_home world
 **   own hub.rs_place world
 **   own hub.rs_nout world

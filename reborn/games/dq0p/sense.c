@@ -22,7 +22,7 @@
 ** sound layer's, no shut door on it; past it, a line the air passes: line.inc's).  A far one (beyond all of them) is
 ** answered coarsely, no line cast: how far it may go with the answer standing (slack).  The character hidden (the hub's
 ** pc_hid: HOUSE.md's hiding oneself): still, no sound of it; in sight's reach, SN_LOOK, not seen: its mind's to test the
-** look (dq0d's part 20); smelt all the same.  Another actor the target: its body and its light (the hub's sens),
+** look (dq0d's part hiding); smelt all the same.  Another actor the target: its body and its light (the hub's sens),
 ** its steps heard while it's busy along the straight line, the air's (no rock nor shut door on it: the user's,
 ** 2026-11-17; exact, the sound layer's way, whenever the character is at either end), smelt the same.  Seen only
 ** before its eyes, as the character's look is (none behind it but beside it: REL_BEHIND), its face the way its mind's
@@ -51,7 +51,7 @@ unsigned char __fastcall__ snd_cost (unsigned x, unsigned y);
 unsigned char __fastcall__ s_snd_mask (unsigned x, unsigned y, unsigned char k);
 signed char __fastcall__ snd_wind (int dx, int dy);
 
-#pragma code-name (push, "SW_den_senses_CODE")             /* (Part 6's, with the layer's readers: once a denizen's turn, the main
+#pragma code-name (push, "SW_den_senses_CODE")  /* (With the layer's readers: once a denizen's turn, the main
                                                 **   RAM's room) */
 #pragma rodata-name (push, "SW_den_senses_RODATA")
 

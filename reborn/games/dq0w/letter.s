@@ -1,16 +1,16 @@
 ; ****************************************************************************
 ; letter.s - (dq0w) the letters of what the character carries (hub.h's designators, the user's, 2026-11-06), in
-; assembly (the parts' room): each thing its letter as what it carries is made for the UI (part 102's, things.c's
-; ix_make), and a thing's put in the inventory's words (part 11's, things.c's contents).
+; assembly (the parts' room): each thing its letter as what it carries is made for the UI (part tell_apart's, things.c's
+; ix_make), and a thing's put in the inventory's words (part things_listed's, things.c's contents).
 ;
-;   void __fastcall__ ix_letters (unsigned* low);   (Part 102's) each of the ixl_n things in ixd (their keys: an id,
+;   void __fastcall__ ix_letters (unsigned* low);   (Part tell_apart's) each of the ixl_n things in ixd (their keys: an id,
 ;                                               or a record's number | LT_REC) its letter, into ixc's let (its place
 ;                                               in low plus 1, 0 none): its own, or by its record's number till it has
 ;                                               an id (that letter its id's now); one with none, of a ... z the first
 ;                                               free, else the one whose thing was let go of the longest ago (by low's
 ;                                               stamps after it, lowt, ixl_t now), then of aa ... az the same; each
 ;                                               carried stamped ixl_t.  The UI bank in the window (low its table)
-;   void __fastcall__ lput (unsigned key, unsigned* low);   (Part 11's) the letter of the thing whose key is key,
+;   void __fastcall__ lput (unsigned key, unsigned* low);   (Part things_listed's) the letter of the thing whose key is key,
 ;                                               "(c) ", put (tlist.s's put: the hub's header in the window after);
 ;                                               none, nothing.  The UI bank in the window
 ; ****************************************************************************

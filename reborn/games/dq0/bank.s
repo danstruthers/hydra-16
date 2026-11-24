@@ -20,9 +20,9 @@ OVL_DOT     = 12                    ;   twelve, the screen's silence under its 3
 _dnum       = _num
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = OVLS                  ; dq0.cfg's overlays, the build's count (the twelfth part 6's image, then seen.c; the
-                                    ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's;
-                                    ;   the 25th part 27's; the 26th part 28's, 2026-11-10; the
+OVMAX       = OVLS                  ; dq0.cfg's overlays, the build's count (the twelfth part names_said's image, then seen.c; the
+                                    ;   thirteenth part aliases's; the fourteenth part map's, the map: slice 4.2's;
+                                    ;   the 25th part self_verbs's; the 26th part minds's, 2026-11-10; the
                                     ;   27th the status line, 2026-11-11; the 28th the phrase table's rows,
                                     ;   said.txt's, 2026-11-11: said_b; the 29th
                                     ;   their second bank, stage 3; the 30th their third,

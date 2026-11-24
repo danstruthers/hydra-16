@@ -1,5 +1,5 @@
 /*
-** wcloth.c - (dq0w, swapped part 108: ../dq0/swap.inc) the textiles (HOUSE.md's bandages, the user's, 2026-11-10: "'rip'
+** wcloth.c - (dq0w, swapped part textiles: ../dq0/swap.inc) the textiles (HOUSE.md's bandages, the user's, 2026-11-10: "'rip'
 ** and 'tear up' verbs should be allowed to turn a garment, bed sheet, towel, etc. into bandages"): a cloth the
 ** character has to hand torn up for bandages where it is (the things' IO_RIP: its kind made KI_BANDAGES, a lot of so
 ** many, its material, its make and its cleanliness kept), and one washed at running water or a well (IO_WASH: soiled or
@@ -17,7 +17,7 @@
 #include "world.h"
 #include "things.h"
 
-unsigned __fastcall__ at_hand (const char* name);   /* (Part 4's stub: to hand, carried or within reach) */
+unsigned __fastcall__ at_hand (const char* name);   /* (Part ui_requests's stub: to hand, carried or within reach) */
 unsigned char __fastcall__ on_pc (unsigned i);
 void __fastcall__ put (const char* s);          /* (tlist.s's: the hub's text, the words put after what's there) */
 extern char* tp;

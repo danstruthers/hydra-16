@@ -9,7 +9,7 @@
 
 #include "activity.h"
 
-/* ---- dq0w.c's digging (the character's, parts 1, 19, 25, 84; a tunneller's spell by part 1's too, wdig.c's: the
+/* ---- dq0w.c's digging (the character's, parts dig_spell, game_files, engage_test, pc_dig; a tunneller's spell by part dig_spell's too, wdig.c's: the
 ** one-path plan's digging, 2026-11-23) */
 struct dig {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
@@ -27,8 +27,8 @@ struct dig {
     char            key[8];
 };
 extern struct dig dig;
-void dig_on (void);                             /* (Part 1's) */
-signed char __fastcall__ dig_spell (unsigned char who);  /* (Part 1's, dq0w.c's) A spell of digging, every actor's:
+void dig_on (void);                             /* (Part dig_on's) */
+signed char __fastcall__ dig_spell (unsigned char who);  /* (Part dig_spell's, dq0w.c's) A spell of digging, every actor's:
                                                 **   who 0 the character, an actor's entry plus 1, DIG_RECORD a
                                                 **   record's; its grade, DS_ROOF, DS_CANT */
 #define DIG_RECORD      (NACTORS + 1)           /* (dig_spell's who: a record's spell, away from the character; */
@@ -38,24 +38,24 @@ signed char __fastcall__ dig_spell (unsigned char who);  /* (Part 1's, dq0w.c's)
 #define DS_CANT         (-128)                  /*   nothing it has bites into it) */
 extern unsigned wear_did;                       /* (things.c's wear: the thing worn an actor's, its did; 0 the
                                                 **   character's) */
-void __fastcall__ wear (const char* key, unsigned char by);  /* (Part 40's: things.c) A tool worn by a spell of work */
+void __fastcall__ wear (const char* key, unsigned char by);  /* (Part look_more's: things.c) A tool worn by a spell of work */
 
 /* ---- store.c: the change records (world.h's), the world's alone to write */
 void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);                        /* Kept, and made in its chunk (the window moved) */
 void stocks (void);                             /* The chunks the maker stocked marked so (STOCKED) */
-void __fastcall__ kept_wait (unsigned char n);  /* (Part 28's) Stratum n's populations waited for (the denizens') */
-void __fastcall__ kept_late (unsigned char sn);  /* (Part 71's, wkept.c) Its populations done late: its stocked kept rooms lit */
-unsigned char __fastcall__ sconce_lights (unsigned char reach);  /* (Part 28's: wkept.c) The rooms' lights by their
+void __fastcall__ kept_wait (unsigned char n);  /* (Part sconces's) Stratum n's populations waited for (the denizens') */
+void __fastcall__ kept_late (unsigned char sn);  /* (Part kept_late's, wkept.c) Its populations done late: its stocked kept rooms lit */
+unsigned char __fastcall__ sconce_lights (unsigned char reach);  /* (Part sconces's: wkept.c) The rooms' lights by their
                                                 **   sconces' (the chunks round the character, reach 0xFF; the chunk just
                                                 **   stocked, SL_STOCKED, its first square rec's; else those within
                                                 **   reach): 1 if one changed */
 #define SL_STOCKED      0xFE
-void answer (void);                             /* The hub's wreq answered (part 4's) */
-void world_keep (void);                         /* (Part 16's: wgame.c) The world's part of the save, world.dat */
-void pc_asked (void);                           /* (Part 16's) The hub's wreq, WQ_START's or WQ_SET's, answered */
-void __fastcall__ store_begin (unsigned char resume);   /* The game's generation, its stamps (part 18's: wfile.c) */
-void store_put (void);                          /* (The record in rec kept: part 38's, as change is) */
+void answer (void);                             /* The hub's wreq answered (part ui_requests's) */
+void world_keep (void);                         /* (Part game_rules's: wgame.c) The world's part of the save, world.dat */
+void pc_asked (void);                           /* (Part game_rules's) The hub's wreq, WQ_START's or WQ_SET's, answered */
+void __fastcall__ store_begin (unsigned char resume);   /* The game's generation, its stamps (part game_files's: wfile.c) */
+void store_put (void);                          /* (The record in rec kept: part change_put's, as change is) */
 
 /* ---- The work: what's to be done (dq0w.c's work () sets it), and what came of it (the parts') */
 struct work {
@@ -110,13 +110,13 @@ extern struct work wk;
 /* (act.cut, activity.h's: the character's long task stopped, hard or by the player; a battering's blows given up,
 ** wblow.c's) */
 
-void doors (void);                              /* (Part 5's) A door worked, or a window's shutters */
-void blows (void);                              /* (Part 6's) A portal broken by blows: begun, or its next blow */
-void portals (void);                            /* (Part 7's) A portcullis or a window worked */
-void traps (void);                              /* (Part 8's) A trap stepped onto, disarmed; a door gone over */
-void tsearch (void);                            /* (Part 123's: wtsrch.c) A search (PA_SEARCH: the character's, an
+void doors (void);                              /* (Part doors's) A door worked, or a window's shutters */
+void blows (void);                              /* (Part blows's) A portal broken by blows: begun, or its next blow */
+void portals (void);                            /* (Part portals's) A portcullis or a window worked */
+void traps (void);                              /* (Part traps's) A trap stepped onto, disarmed; a door gone over */
+void tsearch (void);                            /* (Part tsearch's: wtsrch.c) A search (PA_SEARCH: the character's, an
                                                 **   actor's) */
-void revealed (void);                           /* (Part 41's: dq0w.c) An opening told, with what it shows beyond */
+void revealed (void);                           /* (Part revealed's: dq0w.c) An opening told, with what it shows beyond */
 
 /* dq0w.c's: the world's events told the UI, its one sender (the hub's header in the window after): kind, who, w1 and
 ** evb its b (then 0); the work's (wk.m: a, its w2 the character's y, E_NOISE's w1 its x) */

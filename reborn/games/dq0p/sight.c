@@ -12,7 +12,7 @@
 #include "eyes.h"
 #include "view.h"
 
-#pragma code-name ("SW_perceive_CODE")                   /* (Part 2's, all of it: swapped, bank.s's stubs, once a look) */
+#pragma code-name ("SW_perceive_CODE")                   /* (Part perceive's, all of it: swapped, bank.s's stubs, once a look) */
 #pragma rodata-name ("SW_perceive_RODATA")
 #pragma local-strings (on)
 #pragma static-locals (on)                      /* (Its locals static: quicker, the code the less; none of it called
@@ -173,7 +173,7 @@ static void __fastcall__ door_add (unsigned char i, unsigned char j, const struc
     ++e_;
 }
 
-#pragma code-name (push, "SW_den_senses_CODE")             /* (Part 6's since 2026-11-02: part 2's room, a dark look's touch) */
+#pragma code-name (push, "SW_den_senses_CODE")  /* (Part den_senses's since 2026-11-02: part perceive's room, a dark look's touch) */
 #pragma rodata-name (push, "SW_den_senses_RODATA")
 
 static int __fastcall__ abs6 (int v)
@@ -258,7 +258,7 @@ void __fastcall__ s_zones_seen (struct room* rp, unsigned char mine, unsigned ch
 #pragma rodata-name (pop)
 
 void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
-    unsigned char ly);                          /* (Its stub: part 6's) */
+    unsigned char ly);                          /* (Its stub: part den_senses's) */
 
 unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face,
     unsigned char light, unsigned char first)
@@ -349,7 +349,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
         }
     }
-    some_ = e_ = kn_ = 0;                       /* (The part's own: after part 6's zones_seen, its image copied back) */
+    some_ = e_ = kn_ = 0;                       /* (The part's own: after part den_senses's zones_seen, its image copied back) */
     fzz = myz;
     fox = x - lx;
     foy = y - ly;

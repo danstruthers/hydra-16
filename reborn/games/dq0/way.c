@@ -1,7 +1,7 @@
 /*
 ** way.c - Dingus Quest Zero's looking one way, and listening and sniffing one way (HOUSE.md's slice 4.0: "look
 ** north", "look left", "look at the door", "look through the window"; "listen at the door", "sniff at the grating"):
-** the command carried out (part 17), and a look one way's words (overlay 11).  The way is the one said, or the one a
+** the command carried out (part look_way), and a look one way's words (overlay 11).  The way is the one said, or the one a
 ** door, a window, a portcullis, a passage, the stairs the character sees lies (as it faces, never the compass); it
 ** turns to face it first (the turn's look), then looks, listens or sniffs, 3 seconds:
 **
@@ -42,10 +42,10 @@
                                                 **   OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_WAY_OUT,
                                                 **   OB_WINDOW, OB_PORTC: pick's) */
 
-/* ==== Part 17: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
+/* ==== Part look_way: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
 ** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL; and VB_TRACK, the traces read, slice 4.1's) */
 
-#pragma code-name (push, "SW_look_way_CODE")           /* (Part 17's: part 6's till 2026-11-01) */
+#pragma code-name (push, "SW_look_way_CODE")    /* (Part names_said's till 2026-11-01) */
 #pragma rodata-name (push, "SW_look_way_RODATA")
 
 unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (main.c's) */
@@ -55,7 +55,7 @@ extern struct portal viewed;
 /* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
 ** wreq, WQ_EXAMINE: a doorway has none), in words (overlay 4), its aspects as ex asks (EX_*: 0 its plain features;
 ** its quality, judged by the craft that knows its material, the referee's test, P_APPRAISE: AP_WOOD, AP_METAL,
-** AP_STONE; its lock, its condition, plain); a few seconds' looking (main.c's part 2's once, its room) */
+** AP_STONE; its lock, its condition, plain); a few seconds' looking (main.c's part commands's once, its room) */
 extern unsigned long xs_seed;
 static unsigned long judge_was;
 
@@ -237,7 +237,7 @@ static unsigned char examine (void)
 ** (resolve.c's: asked which, of several, its square in cmd.obj), else the nearest of that name (the world's IO_LOOK,
 ** LM_GO).  Walked to by the world's walk, stopping beside it (I_TAKE's a 2, walked on as it gets nearer: through a door
 ** it's seen through; a denizen, I_CLOSE's w1 1: up to it, as it moves, no blow); refused only for what it hasn't seen */
-#pragma code-name (push, "SW_missiles_CODE")           /* (Part 13's, called by its s_missiles: part 17's room) */
+#pragma code-name (push, "SW_missiles_CODE")    /* (Called by its s_missiles: part look_way's room) */
 #pragma rodata-name (push, "SW_missiles_RODATA")
 void go_thing (void)
 {
@@ -367,7 +367,7 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
         if (lsn & 3) {
             bg_words (heard_at != 0);           /* (Nothing told as it listened, main.c's heard, or something: the
-                                                **   background behind it, the sound layer's: part 11's) */
+                                                **   background behind it, the sound layer's: part news's) */
         }
         lsn = 0;
         return 0;
@@ -444,7 +444,7 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
             sayf ("\nYou sniff toward the %s.", way_noun[cmd.obj.kind & 15]);   /* ("Smell the stairs": named, its
                                                 **   answer the air's that way: 2026-11-07, dq0sweep's) */
         }
-        bg_words (2);                           /* (The draught, the air's: part 11's, slice 4.5's) */
+        bg_words (2);                           /* (The draught, the air's: part news's, slice 4.5's) */
         intend2 (I_TRACE, I_TRACE_W1 (TRC_SMELL, h), WAY_T);   /* (The world's: the smell read, worded, then
                                                 **   its time) */
         return 0;
@@ -473,7 +473,7 @@ void __fastcall__ s_look_ov (unsigned char action)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Overlay 13 (after part 9's image): a look one way's words (words.c's o_words, as its look's E_VIEW is V_LOOKED:
+/* ==== Overlay 13 (after part aliases's image): a look one way's words (words.c's o_words, as its look's E_VIEW is V_LOOKED:
 ** look.c's look (8)), from the senses' record (sight_copy) and their look one way's own (WAY_SEEN, copied into lb's
 ** end, words.c's not begun yet): the place it's in not told again; its own sentences said as they're made (none a
 ** glance says), the things' and the denizens' (those ahead, the record's then) in the glance's words, streamed

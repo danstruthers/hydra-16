@@ -9,7 +9,7 @@
 ** those dead of it told.  And a robber's way with the character helpless beside it (I_ROB: what it holds and its
 ** pennies taken off to its lair).
 **
-** All of it swapped part 15's (../dq0/swap.inc: dq0w.cfg's SW15), called through its stubs (bank.s's).
+** All of it swapped part fight_blows's (../dq0/swap.inc: dq0w.cfg's SW_fight_blows), called through its stubs (bank.s's).
 */
 
 #include <stddef.h>
@@ -26,10 +26,10 @@
 
 #define LOUD_FIGHT      5
 
-unsigned char fring;                            /* (The fights' ring's next: part 106's too) */
+unsigned char fring;                            /* (The fights' ring's next: part grapple's too) */
 unsigned char grip;                             /* (wbody.h's: the actor the character holds, plus 1, | GH_PIN) */
 unsigned char gchoke;                           /* (The rounds it's been choked, the hold as it stands: the referee's) */
-struct gleft glf;                               /* (wbody.h's: a blow's, for part 106's grip_left) */
+struct gleft glf;                               /* (wbody.h's: a blow's, for part grapple's grip_left) */
 struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
 extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
 #pragma bss-name (push, "SW_fight_blows_RODATA")
@@ -48,7 +48,7 @@ extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the char
 extern unsigned char flast;                     /* (dq0w.c's: who struck at the character last; act.fight fighting on's) */
 extern unsigned char pc_ko;                     /* (dq0w.c's: the character knocked senseless, main's to see) */
 extern unsigned char pc_waited;                 /* (dq0w.c's: its eyes and the time it believes looked to as it's free) */
-unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's: what's on the character
+unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part things's, things.c's: what's on the character
                                                 **   weighs, quarter pounds) */
 
 /* A blow told (E_FIGHT): attacker att, defender def (0 the character, else an actor's entry plus 1; body bd the one in
@@ -93,7 +93,7 @@ static void died (void)
     if (GRIP_OF (grip) == bk + 1) {
         grip = 0;                               /* (Held: let go, dead: the hub's pc_grip den_strip's) */
     }
-    den_strip (lay_body (bd.remains, bd.sn, bd.x, bd.y));     /* (Its things on its body: part 51's) */
+    den_strip (lay_body (bd.remains, bd.sn, bd.x, bd.y));     /* (Its things on its body: part den_limbs's) */
     den_saw = 1;
 }
 
@@ -147,7 +147,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     const struct rs_effect* e;
 
     me = bk + 1;
-    ra = me == att && bd.arm && den_reach ();   /* (Its weapon let fall, in its reach: taken up, its turn, part 51's.
+    ra = me == att && bd.arm && den_reach ();   /* (Its weapon let fall, in its reach: taken up, its turn, part den_limbs's.
                                                 **   Body bd the attacker, or the defender: a stray's at an actor,
                                                 **   shot by another, both actors, 2026-10-30) */
     hub_map (0);
@@ -201,7 +201,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   strike no shooter's: nobody gets up for it) */
     }
     if (HUB->pc_hid || bd.state > 1) {
-        hid_op (me == att ? HO_BLOW : HO_BLOWN);   /* (Out of hiding: part 94's) */
+        hid_op (me == att ? HO_BLOW : HO_BLOWN);   /* (Out of hiding: part hide_self's) */
         hub_map (0);
     }
     r = hub_ask (SLOT_WORLD);
@@ -211,7 +211,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     if (out == O_REARM) {
         r->state = REQ_FREE;
-        den_took ();                            /* (Its weapon in hand again, told: part 51's) */
+        den_took ();                            /* (Its weapon in hand again, told: part den_limbs's) */
         return 0;
     }
     if (out == O_RISE) {                        /* (The attacker got up, its turn spent; or tried and is still down,
@@ -241,7 +241,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     for (cd = dh = i = 0, e = (const struct rs_effect*) RS_ATTACK_EFFECTS (*r); i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_DROP) {
             if (e->target) {
-                cd = 1 + e->x[1];               /* (The creature's weapon let fall: part 51's; broken, x[1]: 1 its weapon, 2 its shield) */
+                cd = 1 + e->x[1];               /* (The creature's weapon let fall: part den_limbs's; broken, x[1]: 1 its weapon, 2 its shield) */
             } else {
                 dh |= e->x[0];                  /* (The character's hands' things let go of, fumbled: slice 4.1b's; | 0x80 broken) */
             }
@@ -264,7 +264,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     bd.pos = me == att ? pa : pd;
     if (cd) {
-        den_word (r->text, !att);               /* (Its weapon's word, the reply's: part 51's) */
+        den_word (r->text, !att);               /* (Its weapon's word, the reply's: part den_limbs's) */
     }
     ff = RS_ATTACK_LEFT (*r);
     c = RS_ATTACK_AF (*r);
@@ -329,7 +329,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bleeds |= 1 << bk;
     }
     if (g | grip) {
-        glf.att = att;                          /* (The hold as it left it: part 106's) */
+        glf.att = att;                          /* (The hold as it left it: part grapple's) */
         glf.def = def;
         glf.z = z;
         glf.ff = ff;
@@ -355,8 +355,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
     }
     if (cd) {
-        look_more (0, LM_ROPES);                      /* (Part 91 read in, the first time: things.c's) */
-        den_drop (cd - 1);                            /* (Its weapon on the floor, told: part 51's) */
+        look_more (0, LM_ROPES);                      /* (Part den_drop read in, the first time: things.c's) */
+        den_drop (cd - 1);                            /* (Its weapon on the floor, told: part den_limbs's) */
     }
     if (ff & (me == att ? FF_A_DEAD : FF_D_DEAD)) {
         died ();
@@ -364,7 +364,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     return 0;
 }
 
-/* The bodies' time (part 70's body_ask: the referee told the minutes gone, the bleeding's bloodloss, the character's
+/* The bodies' time (part tend's body_ask: the referee told the minutes gone, the bleeding's bloodloss, the character's
 ** body's, slice 4.3's); those dead of it told, and those that bound their bleeding (as the UI says, as the character
 ** sees them: the ring's name theirs) */
 void s_bled (void)
@@ -391,8 +391,8 @@ void s_bled (void)
     hub_map (0);
 }
 
-/* A blow struck by body bd (entry bk) at def (0 the character), its aim z (its intent, I_ATTACK: part 14's); a shot,
-** AIM_SHOT, part 65's (slice 4.7's) */
+/* A blow struck by body bd (entry bk) at def (0 the character), its aim z (its intent, I_ATTACK: part den_bodies's); a shot,
+** AIM_SHOT, part missiles's (slice 4.7's) */
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
     hub_map (0);
@@ -405,28 +405,28 @@ void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
         return;                                 /* (The character dead of a blow this round: no more blows at its body) */
     }
     if (z & AIM_SHOT) {
-        pc_shot (PS_DEN);                       /* (Its shot or its throw: part 67's, 2026-10-30) */
+        pc_shot (PS_DEN);                       /* (Its shot or its throw: part shots's, 2026-10-30) */
         return;
     }
     if (z & AIM_GRAPPLE) {
         blow (bk + 1, def, z);                  /* (Held, its try to break free: no weapon drawn for it) */
         return;
     }
-    if (z & AIM_FIRE) {                         /* (A missile's blow, mshot set: wshoot.c's, part 65's; the character's
+    if (z & AIM_FIRE) {                         /* (A missile's blow, mshot set: wshoot.c's, part missiles's; the character's
                                                 **   at actor def, else body bd's at the character; how it came out
                                                 **   bev's, told: 0xFF none) */
         bev.x[1] = 0xFF;
         blow (mshot.flags & MS_STRAY ? bev.who : def ? 0 : bk + 1, def, z & ~AIM_FIRE);    /* (A stray's: its
-                                                **   shooter bev's, part 67's) */
+                                                **   shooter bev's, part shots's) */
         mshot.kind = 0;
         return;
     }
     hub_map (0);
     if (HUB->agear[bk] & AG_SHOOTS) {
-        pc_shot (PS_UNBOW);                     /* (A launcher in its hands let fall first: part 67's, asked only of one
+        pc_shot (PS_UNBOW);                     /* (A launcher in its hands let fall first: part shots's, asked only of one
                                                 **   with a launcher or a thing to throw, the part's copy the dearer) */
     }
-    if (!den_draw (0)) {                        /* (Its weapon drawn first, its hands empty: its round's, part 60's) */
+    if (!den_draw (0)) {                        /* (Its weapon drawn first, its hands empty: its round's, part den_things's) */
         blow (bk + 1, def, z);
     }
 }
@@ -442,7 +442,7 @@ void s_pc_blow (void)
     k = (HUB->pc_foe - 1) & 7;
     HUB->pc_foe = 0;
     if (pshoot) {
-        pc_shot (k);                            /* (A shot, fought on as a blow is: part 67's) */
+        pc_shot (k);                            /* (A shot, fought on as a blow is: part shots's) */
         return;
     }
     BD_GET (k);
@@ -454,7 +454,7 @@ void s_pc_blow (void)
     ++HUB->den_seq;                             /* (Changed: the world looks again at what the character sees) */
 }
 
-/* ==== Part 106 (2026-11-09: part 15's room): grappling (HOUSE.md's grappling, the user's "full HarnMaster grappling":
+/* ==== Part grapple (2026-11-09: part fight_blows's room): grappling (HOUSE.md's grappling, the user's "full HarnMaster grappling":
 ** the hold the character has on a denizen, grip, kept as the blows leave it, a held one's intents its tries to break
 ** free, the hold let go) */
 #pragma code-name (push, "SW_grapple_CODE")
@@ -525,7 +525,7 @@ void __fastcall__ s_grip_left (unsigned char out)
     HUB->pc_grip = grip;                        /* (The one held, the minds' to know: a robbery's, 2026-11-23) */
 }
 
-/* Body bd's intent m (part 14's), if it's the one the character holds: gone, or apart, let go; else anything but a
+/* Body bd's intent m (part den_bodies's), if it's the one the character holds: gone, or apart, let go; else anything but a
 ** wait, or a blow while it isn't pinned, made its try to break free, its round */
 void __fastcall__ s_grip_held (struct msg* m)
 {
@@ -546,11 +546,11 @@ void __fastcall__ s_grip_held (struct msg* m)
     }
 }
 
-#pragma code-name (push, "SW_intent_more_CODE")              /* (Part 37's, the intents': part 106's room in its bank) */
+#pragma code-name (push, "SW_intent_more_CODE") /* (The intents': part grapple's room in its bank) */
 #pragma rodata-name (push, "SW_intent_more_RODATA")
 /* The hold let go (the player's "let go", or the character moved apart from the one it holds): told t 1 (E_FIGHT
 ** O_LETGO, its defender the one let go, the ring's record its name alone; none held, none: "You aren't holding
-** anyone."), else quietly.  Its event as told's (part 15's), no blow at the character in it */
+** anyone."), else quietly.  Its event as told's (part fight_blows's), no blow at the character in it */
 void __fastcall__ s_grip_off (unsigned char t)
 {
     unsigned char k = GRIP_OF (grip);
@@ -592,7 +592,7 @@ void __fastcall__ s_grip_off (unsigned char t)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 69's (part 15's room, 2026-10-29; part 67's till 2026-10-30, the missiles' room: dq0w.cfg's SW69): a robbery */
+/* ==== Part robbery's (part fight_blows's room, 2026-10-29; part shots's till 2026-10-30, the missiles' room: dq0w.cfg's SW_robbery): a robbery */
 #pragma code-name ("SW_robbery_CODE")
 #pragma rodata-name ("SW_robbery_RODATA")
 
@@ -734,7 +734,7 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
 }
 
 #define WSLOT           (HUB->slot[SLOT_WORLD])
-/* The character robbed by body bd (its intent, I_ROB: part 14's; a robber's, kinds.txt's ways r, the character
+/* The character robbed by body bd (its intent, I_ROB: part den_bodies's; a robber's, kinds.txt's ways r, the character
 ** helpless beside it): what it holds (but a light lit: the robber leaves it its light) and its pennies (wherever it
 ** keeps them that it can get into, by their compartments' rules: den_pry's, 2026-11-17), carried off on the robber's
 ** body (the user's C10, 2026-11-23: by the carry every actor's, wthings.c's, coins its purse, its pack, a hand; else
@@ -746,9 +746,9 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
 ** b the robber plus 1), if anything was taken.  Or (x[3] RB_PURSE, 2026-11-06) the character at rest robbed unawares,
 ** its coins alone; or caught at it (RB_CAUGHT), nothing taken, its long task stopped hard; told either way, w1's high
 ** byte the how */
-unsigned char __fastcall__ den_carry (unsigned n, unsigned char hand_first);    /* (Part 114's: wthings.c) */
+unsigned char __fastcall__ den_carry (unsigned n, unsigned char hand_first);    /* (Part den_acts's: wthings.c) */
 void __fastcall__ den_hold (unsigned n, const struct actor* a, unsigned char f);
-void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+void den_equip (void);                          /* (Part den_things's, wlimbs.c's: body bd's things told the referee) */
 extern unsigned char den_eq_all;
 void __fastcall__ s_den_rob (const struct msg* q)
 {
@@ -757,7 +757,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
     unsigned char kind, f, pur;
 
     if (I_ROB_ERRAND (*q)) {
-        den_fetch (q);                          /* (An ally's errand, a gift: part 72's, slice 4.8's) */
+        den_fetch (q);                          /* (An ally's errand, a gift: part errands's, slice 4.8's) */
         return;
     }
     pur = I_ROB_PURSE (*q);                     /* (The character at rest robbed unawares: its coins alone, a purse cut;

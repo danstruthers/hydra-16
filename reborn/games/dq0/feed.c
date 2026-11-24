@@ -1,5 +1,5 @@
 /*
-** feed.c - (dq0, swapped part 16: swap.inc) eating and drinking, the UI's part (slice 4.9: HOUSE.md's water, hunger and
+** feed.c - (dq0, swapped part feed: swap.inc) eating and drinking, the UI's part (slice 4.9: HOUSE.md's water, hunger and
 ** thirst): "eat", "drink", the world's things asked (IO_USE, IO_FIND), the referee told (rf/want.c's)
 */
 

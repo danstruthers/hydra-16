@@ -15,7 +15,7 @@
 **
 ** Every reader looks for things lying about only near the character (a look's, a search's, a thing named: twenty
 ** squares at most), so what's out is never wanted; the things a reader holds by number (the senses' record's, the
-** UI's request's, a thing walked over to) are near it, and keep their numbers.  Swapped part 17's (the table) and
+** UI's request's, a thing walked over to) are near it, and keep their numbers.  Swapped part item_pages's (the table) and
 ** 20's (the files: ../dq0/swap.inc, bank.s's stubs).
 */
 
@@ -36,10 +36,10 @@
 extern char path[56];                           /* (store.c's) */
 extern struct change buf[8];                    /* (store.c's: 64 bytes) */
 
-/* ==== Part 17: the table */
+/* ==== Part item_pages: the table */
 #pragma code-name (push, "SW_item_pages_CODE")
 #pragma rodata-name (push, "SW_item_pages_RODATA")
-#pragma bss-name (push, "SW_item_pages_RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma bss-name (push, "SW_item_pages_RODATA") /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #pragma bss-name (push, "BSS")
 static unsigned char esn;                       /* (The chunk at hand: the main RAM's, wanted after a part's called) */
@@ -135,7 +135,7 @@ static unsigned char __fastcall__ kept_k (unsigned char k)
 }
 
 /* A record made free, or a place in the table: the chunk least lately wanted that isn't round the character (nor the
-** chunk at hand, nor an actor's things') put out (part 20's it_out), its entry free: 1, or 0 (none to put out, or no
+** chunk at hand, nor an actor's things') put out (part item_page_io's it_out), its entry free: 1, or 0 (none to put out, or no
 ** folder) */
 #pragma bss-name (push, "BSS")                  /* (Its locals the main RAM's: it calls a part, which puts this one
                                                 **   out and in again, its own data as its image has it) */
@@ -177,7 +177,7 @@ unsigned char s_it_room (void)
                                                 **   put down, stocked) */
 }
 
-/* Chunk cx, cy of stratum sn's things in the store: read in if they aren't (part 20's it_in; a place in the table
+/* Chunk cx, cy of stratum sn's things in the store: read in if they aren't (part item_page_io's it_in; a place in the table
 ** first: one put out, if it must), and it wanted now: 1, or 0 if they can't be */
 unsigned char __fastcall__ s_it_need (unsigned char sn, unsigned cx, unsigned cy)
 {
@@ -252,7 +252,7 @@ void s_it_near (void)
     pc_chunk ();
     own ();
     if (IPG->lsn == pcs + 1 && IPG->lcx == pcx && IPG->lcy == pcy) {
-        hub_map (0);                            /* (The sky's opening come by, by its square's mark: part 89's, 2026-11-03;
+        hub_map (0);                            /* (The sky's opening come by, by its square's mark: part shaft's, 2026-11-03;
                                                 **   in a chunk it's in already, none made for it: the look's order) */
         if (pcs <= SKY_DEEP && at (pcs, HUB->pc_x, HUB->pc_y) && (C->tile[cy_][cx_] & T_HOLE)) {
             sky_note ();
@@ -274,7 +274,7 @@ void s_it_near (void)
             }
         }
     }
-    sky_list ();                          /* (The daylight's emitters near it: part 89's; last, this part's own data
+    sky_list ();                          /* (The daylight's emitters near it: part shaft's; last, this part's own data
                                                 **   as it was, copied back) */
     hub_map (0);
 }
@@ -284,7 +284,7 @@ void s_it_near (void)
 #pragma rodata-name (pop)
 #pragma bss-name (pop)
 
-/* ==== Part 20: the files */
+/* ==== Part item_page_io: the files */
 #pragma code-name (push, "SW_item_page_io_CODE")
 #pragma rodata-name (push, "SW_item_page_io_RODATA")
 #pragma bss-name (push, "SW_item_page_io_RODATA")

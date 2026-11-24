@@ -22,9 +22,9 @@
 ** told seen (E_BEAT WB_LIGHTS: "The bandit lights its torch."), the hub's alight made again, the light layer near it out
 ** of date (E_LIGHT), the character's look made again if it's near.  Put out: each lit light it carries, told (WB_DOUSE,
 ** the character's rest's words), the act table's douse row's time each (an I_LIGHT's; a rest's, at once, as the
-** character's rest_dark is).  Its lights burn down as any light does (part 27's burns_now, its own told as they go out).
+** character's rest_dark is).  Its lights burn down as any light does (part burning's burns_now, its own told as they go out).
 **
-** Swapped part 119's; the flight wflight.c's, part 118.
+** Swapped part den_lights's; the flight wflight.c's, part flight.
 */
 
 #include <stddef.h>

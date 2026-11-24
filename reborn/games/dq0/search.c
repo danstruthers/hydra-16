@@ -1,5 +1,5 @@
 /*
-** search.c - (swapped part 10) a search, by its form (HOUSE.md's traps, searching and hiding; the user's, 2026-10-22):
+** search.c - (swapped part search) a search, by its form (HOUSE.md's traps, searching and hiding; the user's, 2026-10-22):
 ** "search" (about the character, as far as it sees), "search nearby", "search around" (within reach: its own square and
 ** the eight round it), "search the east wall", "search the wall ahead" (that wall's squares, for what's hidden in it),
 ** "search the floor", "search around on the floor" (the floor nearby), "search for the key", "search around for a
@@ -104,7 +104,7 @@ unsigned char s_search_go (void)
         k = things (IO_SEEK | IO_STEPS | IO_GO, w);
         if (k == IR_GONE || k == IR_NO) {
             return 0;                           /* (Out of reach: walked over to it first, then again, the one path for
-                                                **   things; a step of the reach first: part 19's) */
+                                                **   things; a step of the reach first: part reach_steps's) */
         }
         if (k != IR_OK) {
             if (d) {

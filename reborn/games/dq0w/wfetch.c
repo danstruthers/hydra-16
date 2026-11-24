@@ -1,13 +1,13 @@
 /*
 ** wfetch.c - (dq0w) an ally's errands and the character's gifts (slice 4.8, 2026-10-30: DENIZENS.md's fetching and
 ** influence; HOUSE.md's fetching and gifts), the world's part of them (the thing the UI names found, IO_FETCH, is
-** things.c's part 10's): what a denizen's mind says its body does with things (I_ROB's a: FE_TAKE, the thing fetched taken up where it lies,
+** things.c's part things's): what a denizen's mind says its body does with things (I_ROB's a: FE_TAKE, the thing fetched taken up where it lies,
 ** if it's still there, within its reach, light enough and its hands free; FE_GIVE, handed to the character, into its
 ** hand or pack, else set down at its feet; FE_GIFT, the character's thing given it, taken, a count of a lot split
 ** off), each told the UI (E_TASK TE_FETCHED).  What an actor carries for the character is its own while it does (the
 ** item store's IW_DEN, filed at its lair's home as its things are).
 **
-** All of it swapped part 72's (../dq0/swap.inc: dq0w.cfg's SW72), called through its stubs (bank.s's).
+** All of it swapped part errands's (../dq0/swap.inc: dq0w.cfg's SW_errands), called through its stubs (bank.s's).
 */
 
 #include <stddef.h>
@@ -25,22 +25,22 @@
 #pragma code-name ("SW_errands_CODE")
 #pragma rodata-name ("SW_errands_RODATA")
 
-unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
-unsigned char __fastcall__ take_rule (unsigned n);  /* (Part 81's, wtake.c: the take rule, tk_x, tk_y) */
+unsigned __fastcall__ weight_of (unsigned i);   /* (Part things's) */
+unsigned char __fastcall__ take_rule (unsigned n);  /* (Part take_rule's, wtake.c: the take rule, tk_x, tk_y) */
 extern unsigned tk_x, tk_y;
-unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's) */
-unsigned char __fastcall__ den_got (unsigned i, unsigned char tell);   /* (Part 114's: wthings.c, a thing taken by body
+unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part things's) */
+unsigned char __fastcall__ den_got (unsigned i, unsigned char tell);   /* (Part den_acts's: wthings.c, a thing taken by body
                                                 **   bd, its time and its carry, the character's rules) */
-void light_now (void);                          /* (Part 10's) */
-unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
-void __fastcall__ mix_join (unsigned i, unsigned n);   /* (Part 64's: two piles of coins' mints) */
+void light_now (void);                          /* (Part serve's) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part things's) */
+void __fastcall__ mix_join (unsigned i, unsigned n);   /* (Part mints's: two piles of coins' mints) */
 
 #define FETCH_HANDS     200                     /* (Quarter pounds: the most a folk denizen fetches in its hands, 50 lb;
                                                 **   one without hands, in its mouth, 3 lb: HOUSE.md's fetching) */
 #define FETCH_MOUTH     12
 
 #pragma bss-name (push, "SW_errands_RODATA")
-static struct item rec;                         /* (A lot's part split off, a gift's count: part 72's image's, no part
+static struct item rec;                         /* (A lot's part split off, a gift's count: part errands's image's, no part
                                                 **   called as it's used; the main RAM's room) */
 #pragma bss-name (pop)
 
@@ -48,7 +48,7 @@ static struct item rec;                         /* (A lot's part split off, a gi
 ** sender (dq0w.c's event: its copy here gone, 2026-11-11) */
 #define told(how, kind) (evb = E_TASK_FETCHED_B (bk + 1, (how)), event (E_TASK, 0, E_TASK_FETCHED_W1 (kind)), ++HUB->den_seq)
 
-void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+void den_equip (void);                          /* (Part den_things's, wlimbs.c's: body bd's things told the referee) */
 extern unsigned char den_eq_all;                /* (wlimbs.c's: told though nothing's left) */
 
 /* Thing n body bd's own, held (filed at its lair's home, as its things are: items.h's IW_DEN) */
@@ -205,7 +205,7 @@ void __fastcall__ s_den_fetch (const struct msg* q)
 ** things left out, the heaviest first (a lot's one at a time: two spare torches), till it weighs that at most or nothing's left
 ** to leave: never what it wears for clothes and shoes, its pack, its belt and what hangs from it (a waterskin, full), a
 ** container with something in it, its light lit, its fire-maker, its food.  Not refunded: left at home */
-#pragma bss-name (push, "SW_errands_RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_errands_RODATA")    /* (Its own data, wanted only while it runs: not the main RAM's) */
 static void fit (void)
 {
     static const unsigned char keep[] = { KI_CLOTHES, KI_SANDALS, KI_SHOES, KI_TINDERBOX, KI_RATIONS };

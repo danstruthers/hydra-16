@@ -19,7 +19,7 @@ static unsigned char shut_ok (void);
 extern unsigned char at_sn;                     /* (at.s's: at ()'s quick way, the stratum it found last: 0xFF none) */
 
 #ifndef CHUNK_READER
-#pragma code-name (push, "SW_dungeon_begin_CODE")             /* (The world's: its start's alone, part 3's, s_start's: the main RAM's
+#pragma code-name (push, "SW_dungeon_begin_CODE") /* (The world's: its start's alone, part dungeon_begin's, s_start's: the main RAM's
                                                 **   room, 2026-10-30) */
 #endif
 void __fastcall__ chunks_init (unsigned char who)

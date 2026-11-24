@@ -5,7 +5,7 @@
 ** stamps), and the game begun (its generation; a new game's folder rid of an old game's region files; a session's
 ** stamps, the save's kept, so a crash between a write-back and the next save loses nothing the save had and reads
 ** nothing it didn't); and the item store's (ipage.c's) kept with the game, items.dat, read back as it's begun.  And a
-** square's record of a kind looked up (store_get: a hole dug part way, DUG, as a dig begins).  Swapped part 18's (the
+** square's record of a kind looked up (store_get: a hole dug part way, DUG, as a dig begins).  Swapped part change_files's (the
 ** regions' files, the save), and 19's (the game begun, the item store kept, a record looked up: ../dq0/swap.inc,
 ** bank.s's stubs).
 */
@@ -25,7 +25,7 @@
 
 #pragma code-name (push, "SW_change_files_CODE")
 #pragma rodata-name (push, "SW_change_files_RODATA")
-#pragma bss-name (push, "SW_change_files_RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma bss-name (push, "SW_change_files_RODATA") /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #pragma bss-name (push, "BSS")
 static struct rpk rg_kind;                      /* (Its versions counted: the main RAM's) */
@@ -35,7 +35,7 @@ static struct rpk rg_kind;                      /* (Its versions counted: the ma
 #include "../dq0/rp.inc"
 
 void stocks (void);
-void store_in (void);                           /* (Part 18's, through its stub: part 19's store_get) */
+void store_in (void);                           /* (Part change_files's, through its stub: part game_files's store_get) */
 extern unsigned char rsn, rrx, rry;             /* (store.c's: the region wanted, */
 extern struct change rec;                       /*   the record written, */
 extern struct change buf[8];                    /*   records through the main RAM, */
@@ -163,7 +163,7 @@ void s_store_in (void)
 #pragma bss-name (push, "BSS")                  /* (Its locals the main RAM's: it calls a part, which puts this one
                                                 **   out and in again, its own data as its image has it) */
 /* The save (the UI's request: the hub's savedir): the chunks stocked marked, each region's pages that have changed
-** written to its file (its last step, part 19's store_commit) */
+** written to its file (its last step, part game_files's store_commit) */
 void s_store_save (void)
 {
     struct cpage* q;
@@ -191,7 +191,7 @@ void s_store_save (void)
 #pragma rodata-name (pop)
 #pragma bss-name (pop)
 
-/* ==== Part 19: the game begun, the item store kept */
+/* ==== Part game_files: the game begun, the item store kept */
 #pragma code-name (push, "SW_game_files_CODE")
 #pragma rodata-name (push, "SW_game_files_RODATA")
 #pragma bss-name (push, "SW_game_files_RODATA")
@@ -229,8 +229,8 @@ static unsigned char look (void)
 }
 
 /* The record of rec's square and kind (its stratum, its square; its link, a kind of its own: DUG ...) found, its
-** region wanted as store_put wants it (read in from its file, if it has one: part 18's): copied into rec, 1; or 0,
-** rec as it was (the hub's header in the window after; called from part 19's own code) */
+** region wanted as store_put wants it (read in from its file, if it has one: part change_files's): copied into rec, 1; or 0,
+** rec as it was (the hub's header in the window after; called from part game_files's own code) */
 unsigned char store_get (void)
 {
     struct stratum* s = &STRATUM (rec.sn);
@@ -287,7 +287,7 @@ static void stamps_kept (void)
 }
 
 /* The save's last step (the change records, the things' and the world's own kept): every version written so far made
-** the save's, changes.dat's stamps (part 19's) */
+** the save's, changes.dat's stamps (part game_files's) */
 void s_store_commit (void)
 {
     hub_map (0);

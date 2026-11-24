@@ -23,10 +23,10 @@
 ** intent for the world when the character's free (the world says so: E_READY); the world's events are worded into
 ** the story.  Escape pauses the game and goes on again.
 **
-** Its start and its end (part 1) and the commands (part 2) are swapped parts (swap.inc: run in the main RAM's top,
-** one at a time, copied in as they're called), between #pragma code-name (push, "SWnCODE") and its pop: each called
+** Its start and its end (part start_end) and the commands (part commands) are swapped parts (swap.inc: run in the main RAM's top,
+** one at a time, copied in as they're called), between #pragma code-name (push, "SW_name_CODE") and its pop: each called
 ** from outside its part only through its stub (bank.s's SWFN: begin, finish, save_game; command, take).  A line
-** typed goes first to pace.c's (part 4: the pace, the watchfulness, the state, small moves).
+** typed goes first to pace.c's (part pace: the pace, the watchfulness, the state, small moves).
 */
 
 #include <fcntl.h>
@@ -94,25 +94,25 @@ static const char* tfile;                       /* (dq0 -t: a theme written by h
 static const char* wname;                       /* (dq0 -w: the world, WORLDS.md's; none given, the save's, or the default) */
 unsigned char hard;                             /* (Hard mode: dq0 -H's, the save's pace's top bit) */
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
-unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
-void gear_look (void);                          /* (Part 11: a denizen's things made out) */
-void __fastcall__ came (const struct msg* m);    /* (Part 6's: come into a stratum, told and kept) */
-void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
+unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part names_said's) */
+void gear_look (void);                          /* (Part map: a denizen's things made out) */
+void __fastcall__ came (const struct msg* m);    /* (Part names_said's: come into a stratum, told and kept) */
+void __fastcall__ news (const struct msg* m);    /* (Part news's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
 void hand_said (void);
 void limbs_cmd (void);
-void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
-void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
+void __fastcall__ pose_words (unsigned w);      /* (Part tend's: the body's position, worded) */
+void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part positions's: a denizen's sound, told) */
 unsigned char hold_first (void);
-unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
-unsigned char __fastcall__ hide (const char* w);   /* (Part 18's) */
-unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
-void __fastcall__ dig_used (unsigned bk);        /* (Part 14's) */
+unsigned char errand (void);                    /* (Part errands's: an ally's errand, a gift, slice 4.8's) */
+unsigned char __fastcall__ hide (const char* w);   /* (Part door_words's) */
+unsigned char missiles (void);                  /* (Part missiles's: the missiles, slice 4.7's) */
+void __fastcall__ dig_used (unsigned bk);        /* (Part positions's) */
 char dug_with[16];                              /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
                                                 **   search.c's too) */
 struct ireq judged;                             /* (A thing looked at closely: what it is, for the appraiser: way.c's,
-                                                **   part 6's, examine) */
+                                                **   part names_said's, examine) */
 struct portal viewed;                           /* (A portal looked at closely: the world's record of it) */
 char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
                                                 **   out; one the world's walk found fixed: E_TAKEN's) */
@@ -126,7 +126,7 @@ unsigned char shand;                            /* (The hand that holds it, if i
                                                 **   blow; the hand a thing's to go in, a hold's: slice 4.1b's) */
 char nil[1];                                    /* ("", in the main RAM: an overlay's name for othings) */
 char hold_w[16];                                /* (A blow's thing to take in hand first, its target found: resolve.c's,
-                                                **   part 11's hold_first) */
+                                                **   part news's hold_first) */
 static unsigned char pc_gait, pc_watch;         /* (The character's file's pace and watchfulness: the referee's) */
 
 struct pc P;
@@ -247,13 +247,13 @@ void __fastcall__ consctl (const char* what)
 ** 65,536 or more, or dq0 -t's) its region's history and its theme made by themegen from the game's seed, in the
 ** save's folder (or /ram/dq0): theme.txt, and its record, theme.dat; a hand-written theme's (dq0 -t) filled out.  The
 ** theme to read (theme.c's): 0xFF the game's own; else a stand-in's, the save's or the seed's second byte's (a small
-** seed's, or themegen can't be run, or it failed).  (Part 7's, part 1 full: its arguments in lb, nothing the game's
-** yet; its own spawn, hub_run being part 1's) */
+** seed's, or themegen can't be run, or it failed).  (Part game_args's, part start_end full: its arguments in lb, nothing the game's
+** yet; its own spawn, hub_run being part start_end's) */
 static unsigned char resumed;
 static unsigned long seed;
 static struct save sv;                          /* (The save's head, below: its world, -w's) */
 static char spath[56];                          /* (A path in the dungeon's folder, itself sdl bytes of it, with -d: dq0life's,
-                                                **   s_life's; save_path's, part 14's save_at's, part 19's; "../" the save's) */
+                                                **   s_life's; save_path's, part positions's save_at's, part reach_steps's; "../" the save's) */
 static unsigned char sdl;
 unsigned char __fastcall__ s_history (unsigned long seed)
 {
@@ -520,11 +520,11 @@ static unsigned char __fastcall__ life (unsigned char given)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW_map_CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
-                                                **   path the longer for it, part 13's copied in at every command) */
+#pragma code-name (push, "SW_map_CODE")         /* (The map's: part start_end's room, slice 4.4's; none of the commands'
+                                                **   path the longer for it, part missiles's copied in at every command) */
 #pragma rodata-name (push, "SW_map_RODATA")
 
-/* The character's sheet (0), the referee's words; or the map (1), with its side's lines (part 2's room, 2026-11-03) */
+/* The character's sheet (0), the referee's words; or the map (1), with its side's lines (part commands's room, 2026-11-03) */
 void __fastcall__ s_sheet_map (unsigned char what)
 {
     struct req* r;
@@ -546,7 +546,7 @@ void __fastcall__ s_sheet_map (unsigned char what)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW_positions_CODE")            /* (Part 14's since 2026-11-03: overlay 19's bank's room) */
+#pragma code-name (push, "SW_positions_CODE")   /* (Part positions's since 2026-11-03: overlay 19's bank's room) */
 #pragma rodata-name (push, "SW_positions_RODATA")
 
 static char* __fastcall__ save_at (const char* name)
@@ -623,7 +623,7 @@ static void __fastcall__ load_names (void)
     if (fd >= 0) {
         read (fd, &sv, sizeof sv);
     }
-    keeps_back (fd);                            /* (The names, the shortcuts, the letters: letters.c's, part 22's) */
+    keeps_back (fd);                            /* (The names, the shortcuts, the letters: letters.c's, part dungeon_dir's) */
     if (fd >= 0) {
         close (fd);
     }
@@ -652,7 +652,7 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 ** for the sound's: the game goes on silent) */
 static void __fastcall__ start (const char* name, unsigned char t, const char* more)
 {
-#pragma bss-name (push, "SW_start_end_RODATA")              /* (The part's own: no other part called while it's needed; the
+#pragma bss-name (push, "SW_start_end_RODATA")  /* (The part's own: no other part called while it's needed; the
                                                 **   main RAM's room, 2026-11-11) */
     static char path[56];
 #pragma bss-name (pop)
@@ -837,7 +837,7 @@ static void world_words (void)
     HUB->cq.state = REQ_FREE;
 }
 
-#pragma code-name (push, "SW_game_args_CODE")             /* (Part 7's: part 1 full) */
+#pragma code-name (push, "SW_game_args_CODE")   /* (Part start_end full) */
 #pragma rodata-name (push, "SW_game_args_RODATA")
 /* Another world's deities' names (WORLDS.md: lib/worlds/NAME/gods.txt, spaces between) into the parser's words at n,
 ** the commands' bank mapped after */
@@ -1019,7 +1019,7 @@ static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
 unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
 struct cmd cmd;                                 /* The command being carried out (the parser's, cq_cmd's) */
 unsigned char reach;                            /* (5: a step of the reach under way, the command kept and asked again as
-                                                **   it's up, 6; part 19's step_go.  1: walking over, the command kept (the UI bank's) to carry out
+                                                **   it's up, 6; part reach_steps's step_go.  1: walking over, the command kept (the UI bank's) to carry out
                                                 **   again as it's free; 2: carried out again; 0 again as a long task's
                                                 **   stopped, task.c's, or a line's command begun; 3: a thing's timed
                                                 **   work under way, words.c's, the command kept the same, 4: carried
@@ -1132,7 +1132,7 @@ static void heard (void)
         }
         if (m.kind == E_BEAT) {
             if ((E_BEAT_BEAT (m) == WB_DRAWS || actor_seen (E_BEAT_WHOSE (m))) && (!out_told || !E_BEAT_WHOSE (m))) {
-                news (&m);                      /* (A fight's limbs' news, after its blow's words: part 11's, a thing
+                news (&m);                      /* (A fight's limbs' news, after its blow's words: part news's, a thing
                                                 **   let go of, a fall; another's only if it's seen, not in the dark
                                                 **   or out of sight; a weapon drawn to strike, beside it, as its blow
                                                 **   is, the outfits' gear; senseless, its own alone: its torch
@@ -1145,8 +1145,8 @@ static void heard (void)
         }
         if (m.kind == E_DEN && E_DEN_LOUD (m) && !(E_DEN_SEEN (m) && E_DEN_DE (m) < DE_RALLY) && E_DEN_SN (m) == HUB->pc_stratum &&
             (rel = den_heard (&m)) < 8) {       /* (Weighed: caps.c's, the main RAM's room; a rally told seen too: its
-                                                **   words, part 14's; a snore, a word on watch, the day's) */
-            noise_told (&m, rel);               /* (Told: part 14's, from the main code, the hub in the window after) */
+                                                **   words, part positions's; a snore, a word on watch, the day's) */
+            noise_told (&m, rel);               /* (Told: part positions's, from the main code, the hub in the window after) */
         }
     }
 }
@@ -1194,7 +1194,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_ARRIVE:
             if (m.who == 0) {
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
-                    came (&m);                  /* (Come into a stratum: told and kept, part 6's) */
+                    came (&m);                  /* (Come into a stratum: told and kept, part names_said's) */
                 }
                 k = E_ARRIVE_HOW (m);
                 if (k == A_CROSSED) {
@@ -1226,7 +1226,7 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   light of the same name: a torch lit from another, one of two put out
                                                 **   or burnt out, a candle lit by a torch; no look, its own words said, the
                                                 **   user's, 2026-11-14: look.c's.  Asked of a light's change and a turn's
-                                                **   look alone, the rest never the same (its part 8's copy not in a stir's
+                                                **   look alone, the rest never the same (its part where's copy not in a stir's
                                                 **   way, nor a turn's or a step's first words', 2026-11-17)) */
             }
             if (out_told) {                     /* (Senseless: nothing seen; a look owed (its light changed, out_told 2) as
@@ -1280,7 +1280,7 @@ static unsigned char events (void)          /* (How many there were) */
                 }
             }
             break;
-        case E_BEAT:                            /* (A walk's, as it goes; the limbs', part 11's: slice 4.1b's; the walk's
+        case E_BEAT:                            /* (A walk's, as it goes; the limbs', part news's: slice 4.1b's; the walk's
                                                 **   too since 2026-11-11, said.txt's BEAT rows, beat_words' before) */
             if (m.who == 0) {
                 news (&m);
@@ -1301,7 +1301,7 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         case E_BEARING:                         /* (Its bearings lost, or set right: slice 4.2's) */
-        case E_DIG:                             /* (The rarer news, its words part 11's: the main RAM's room, slice
+        case E_DIG:                             /* (The rarer news, its words part news's: the main RAM's room, slice
                                                 **   4.1b's) */
         case E_LEDGE:
         case E_CLIMB:
@@ -1331,7 +1331,7 @@ static unsigned char events (void)          /* (How many there were) */
         if (given) {
             hub_map (0);
             HUB->ui_cmd = owed = 0;             /* (Its answer given: as its words are told, not before, the world's
-                                                **   held jobs (the denizens' intents, part 14) not let in beside the
+                                                **   held jobs (the denizens' intents, part den_bodies) not let in beside the
                                                 **   telling, the menacing sit's 2026-11-19) */
         }
     }
@@ -1340,7 +1340,7 @@ static unsigned char events (void)          /* (How many there were) */
 
 /* The character come down or up a way between strata (E_ARRIVE's A_DOWN, A_UP: the link's kind in w1's high four bits:
 ** a ladder, a stairway, a shaft, a long slope, slice 4.10's), told, and the game kept (main's events' till 2026-11-02:
-** the main RAM's room; part 6's, its room) */
+** the main RAM's room; part names_said's, its room) */
 #pragma code-name (push, "SW_names_said_CODE")
 #pragma rodata-name (push, "SW_names_said_RODATA")
 void __fastcall__ s_came (const struct msg* m)
@@ -1367,7 +1367,7 @@ void __fastcall__ s_came (const struct msg* m)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a dig, a ledge, a climb, a harm, a
+/* ==== Part news: the rarer news of the world's, worded (events()'s, the character's: a dig, a ledge, a climb, a harm, a
 ** portal worked; its own part, the main RAM's room: slice 4.1b's) */
 #pragma code-name (push, "SW_news_CODE")
 #pragma rodata-name (push, "SW_news_RODATA")
@@ -1471,7 +1471,7 @@ void __fastcall__ s_news (const struct msg* m)
             search_said (m);                    /* (A room searched whole's: search.c's) */
             break;
         }
-        if (E_BEAT_BEAT (*m) == WB_POSED) {     /* (The body's position as it said, slice 4.6's: part 14's) */
+        if (E_BEAT_BEAT (*m) == WB_POSED) {     /* (The body's position as it said, slice 4.6's: part positions's) */
             pose_words (m->w1);
             break;
         }
@@ -1486,7 +1486,7 @@ void __fastcall__ s_news (const struct msg* m)
                                                 **   rows, limb_words' and water_words' before, 2026-11-11) */
         said_n = BD_TWO;                        /* (The character's body: its rows every actor's, 2026-11-11) */
         if ((k = E_BEAT_WHOSE (*m)) & 0x80 && actor_seen (k) == 2) {
-            c.w1 = SAID_BEAT_UNSEEN;            /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
+            c.w1 = SAID_BEAT_UNSEEN;            /* (A fall unseen, near: the world's b | 0x80, part traps's, 2026-10-30) */
         } else if (k) {
             k = HUB->actor[(k - 1) & 7].body;   /* (A creature's getting up, failing to, falling, worded by its body:
                                                 **   "The cave adder coils itself up again", kinds.txt's) */
@@ -1582,7 +1582,7 @@ void __fastcall__ s_news (const struct msg* m)
 
 
 /* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
-** well (its difficulty, in steps); part 10's, the search's (part 11's room, part 2's before it).  No thing said, the
+** well (its difficulty, in steps); part search's, the search's (part news's room, part commands's before it).  No thing said, the
 ** character itself (HOUSE.md's hiding oneself: the world's I_RISE, POS_HIDE): behind or in a thing said, one within
 ** reach, walked over to first; in the shadows, a doorway, the world's to say.  And its words as they're told
 ** (pose_words', E_BEAT WB_POSED's HW_WORDS: w no string, its address past the RAM) */
@@ -1678,7 +1678,7 @@ again:  HUB->ireq.to = reach == 4 ? IO_DONE : 0;
             if (HUB->ireq.y >= 0xFD) {
                 intend2 (I_WAIT, 1, I_WAIT_W2 (0, 0, 1));   /* (The reach's steps to come: the UI waits for them) */
             }
-        } else if (d != IR_NO && d != IR_GONE) {    /* (IR_NO: a step of the reach first, part 19's) */
+        } else if (d != IR_NO && d != IR_GONE) {    /* (IR_NO: a step of the reach first, part reach_steps's) */
             say_no (A_HAVE_NO, w);
         }
     }
@@ -1718,7 +1718,7 @@ void s_hand_said (void)
 ** ...": not struck with another instead) */
 /* A denizen's things as the eyes make them out from here (the world's IO_GEAR: examined, or assessed, cmd's aux),
 ** after how it seems (deal's): HOUSE.md's three levels, the user's, 2026-10-27 */
-#pragma code-name (push, "SW_map_CODE")             /* (Part 3's since 2026-11-04, overlay 15's room) */
+#pragma code-name (push, "SW_map_CODE")         /* (Part map's since 2026-11-04, overlay 15's room) */
 #pragma rodata-name (push, "SW_map_RODATA")
 void s_gear_look (void)
 {
@@ -1764,7 +1764,7 @@ unsigned char s_hold_first (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 13 (slice 4.7's): the missiles (overlay 1's bank, after its own) */
+/* ==== Part missiles (slice 4.7's): the missiles (overlay 1's bank, after its own) */
 #pragma code-name (push, "SW_missiles_CODE")
 #pragma rodata-name (push, "SW_missiles_RODATA")
 
@@ -2010,8 +2010,8 @@ void __fastcall__ s_intend (unsigned char kind, unsigned char a)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* (Part 2's own calls of them straight; part 24's through their stubs; the handlers' files', cmds.h's) */
-void __fastcall__ lift (const char* name);      /* (Part 24's: the commands' rarer, part 2's till 2026-11-04, the swap study's) */
+/* (Part commands's own calls of them straight; part rare_commands's through their stubs; the handlers' files', cmds.h's) */
+void __fastcall__ lift (const char* name);      /* (Part rare_commands's: the commands' rarer, part commands's till 2026-11-04, the swap study's) */
 #define work    s_work
 #define intend  s_intend
 
@@ -2062,7 +2062,7 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     hub_call (q, T_WORLD);                      /* (Asleep till the world rings with the reply) */
     q->state = REQ_FREE;
     if (q->kind == IO_STEP) {
-        step_go ();                             /* (A step of the reach begun, HOUSE.md's: part 19's) */
+        step_go ();                             /* (A step of the reach begun, HOUSE.md's: part reach_steps's) */
     }
     op = q->result;
     if (go) {
@@ -2107,7 +2107,7 @@ void to_hand (void)
     referee (RS_EQUIP, 2)->state = REQ_FREE;
 }
 
-/* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part 14's, s_news's
+/* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part positions's, s_news's
 ** alone, through its stub: the main RAM's room); bk an E_DIG's b, its how (D_*) times 256.  And the rock a spell's
 ** into (rock.h's RK_*: the b's high four bits, slice 4.10's), told as it's come to (its first spell, or the b's 8: a
 ** new rock): how it looks and how it goes, its name too after a spell that went well (Mining's eye: D_GOOD), and at
@@ -2270,7 +2270,7 @@ void __fastcall__ s_take (const char* name)
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
-unsigned char news_due;                         /* (The body's news held as it sleeps: part 12's) */
+unsigned char news_due;                         /* (The body's news held as it sleeps: part tend's) */
 
 /* The character's way with a denizen (how: hub.h's SW_*, the command's verb's: commands.verbs' aux; its things, the
 ** one meant and a name or a thing, and its request): asked of the denizens' task (the hub's sway: it lends the UI's
@@ -2326,7 +2326,7 @@ static unsigned char __fastcall__ at_once (const char* l)
 ** be carried out as it comes round; "ignore input or not allow it at all when knocked out").  But the quit (held till
 ** it comes round, as any line typed as it's busy; the game's end if it dies) and the help (at once).  Come round (the
 ** world's pc_out), the lines as ever (out_told let go as the events come round, numb's).
-** Part 2's: the parser's own */
+** Part commands's: the parser's own */
 void s_out_line (void)
 {
     hub_map (0);
@@ -2344,7 +2344,7 @@ void s_out_line (void)
     say_no (A_OUT, 0);                          /* ("You lie senseless.") */
 }
 
-/* Nothing: part 2 copied in (main's, while no line's in hand: the next command's part there for it, its copy's 50,000
+/* Nothing: part commands copied in (main's, while no line's in hand: the next command's part there for it, its copy's 50,000
 ** cycles not between its Enter and its answer) */
 void s_ready (void)
 {
@@ -2465,7 +2465,7 @@ void __fastcall__ s_command (char* l)
     }
     if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && cmd.how != HOW_ACROSS &&
         (!cmd.obj.kind || cmd.obj.kind == OB_ROOM || cmd.obj.kind == OB_WAY_OUT) && travel_go (l)) {
-        return;                                 /* (A place it knows gone to, "go back to the Mausoleum": part 4's) */
+        return;                                 /* (A place it knows gone to, "go back to the Mausoleum": part pace's) */
     }
     if (!d && (cmd.flags & CF_STRANGE) && *l != '#') {   /* (A verb the game doesn't know: the grammar's, not done
                                                 **   yet ("grapple"); or none of its ("bribe") */
@@ -2485,7 +2485,7 @@ void __fastcall__ s_command (char* l)
         return;
     }
     if (cmd.hand) {
-        hand_said ();                           /* (A hand said, the parser's: part 23's, slice 4.1b's) */
+        hand_said ();                           /* (A hand said, the parser's: part limb_news's, slice 4.1b's) */
     }
     place_said ();                              /* ("From the floor", "on the ground": sway.c's, overlay 14) */
     if (((cmd.flags & CF_UNSAID) && what_ask ()) || resolve () != RV_ON) {
@@ -2509,7 +2509,7 @@ again:
     h = verb_row (cmd.action);                  /* (Its row of the dispatch table: its handler, the kinds it takes, times
                                                 **   256; actions.c's, overlay 11, §5.2's step L) */
     d = h;                                      /* (Its group's entry, by the number: cmds.h's, each where its pragma puts
-                                                **   it, part 2 all so far) */
+                                                **   it, part commands all so far) */
     if (d >= H_SELF) {
         self_do (h);                            /* (The body's, the meta commands: hself.c) */
     } else if (d >= H_DENS) {
@@ -2529,22 +2529,22 @@ again:
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The game's arguments (s_begin's: part 7's, part 1 full; the defaults' words in the main RAM) */
+/* The game's arguments (s_begin's: part game_args's, part start_end full; the defaults' words in the main RAM) */
 static unsigned long seed;                      /* (Its seed: the clock's, as the task starts, but for -s's) */
 static const char* file = "";                   /* (-c's: the character's file) */
 static const char* rules = "harn";              /* (The ruleset, if none's given: HarnMaster's) */
 
-#pragma code-name (push, "SW_missiles_CODE")           /* (Part 13's since 2026-11-02: part 7's room) */
+#pragma code-name (push, "SW_missiles_CODE")    /* (Part missiles's since 2026-11-02: part game_args's room) */
 #pragma rodata-name (push, "SW_missiles_RODATA")
 
 #pragma code-name (push, "SW_reach_steps_CODE")
 #pragma rodata-name (push, "SW_reach_steps_RODATA")
 #pragma local-strings (push, on)
 
-#pragma code-name (push, "SW_dungeon_dir_CODE")            /* (Part 22's: seldom, overlay 15 full) */
+#pragma code-name (push, "SW_dungeon_dir_CODE") /* (Seldom, overlay 15 full) */
 #pragma rodata-name (push, "SW_dungeon_dir_RODATA")
 #pragma static-locals (push, on)
-#pragma bss-name (push, "SW_dungeon_dir_RODATA")           /* (Wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_dungeon_dir_RODATA") /* (Wanted only while it runs: not the main RAM's) */
 
 /* The save's folder's dungeon, by the record of the life (life.h's: its head left in lb): its folder in spath (sdl), or d1 */
 void s_life_dir (void)
@@ -2573,10 +2573,10 @@ void s_life_dir (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW_life_record_CODE")            /* (Part 21's: seldom, overlay 15 full) */
+#pragma code-name (push, "SW_life_record_CODE") /* (Seldom, overlay 15 full) */
 #pragma rodata-name (push, "SW_life_record_RODATA")
 #pragma static-locals (push, on)
-#pragma bss-name (push, "SW_life_record_RODATA")           /* (Wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_life_record_RODATA") /* (Wanted only while it runs: not the main RAM's) */
 
 static char* ap;
 static void __fastcall__ arg (const char* s)
@@ -2585,7 +2585,7 @@ static void __fastcall__ arg (const char* s)
     ap += strlen (ap) + 1;
 }
 
-/* dq0life's path (lb + 300) and arguments (lb), life's, part 1's: its folder, the game's lib folder; given, the seed said (dq0 -s), else the
+/* dq0life's path (lb + 300) and arguments (lb), life's, part start_end's: its folder, the game's lib folder; given, the seed said (dq0 -s), else the
 ** clock's its own.  Given 2, as it ends in a death (s_finish's): dq0end's, hard mode's -h, its name and occupation (dead with nothing saved, there's no
 ** sheet in the folder to say): the life's account */
 void __fastcall__ s_between (unsigned char given)
@@ -2658,7 +2658,7 @@ void s_step_go (void)
         if (SV_AT_START (k)) {
             task_words (TE_BEGUN | (unsigned) k << 8, n);
         } else {
-            step_k = k;                         /* (Its words as it's done, the world's (part 86's RO_END), not now: the
+            step_k = k;                         /* (Its words as it's done, the world's (part reach_do's RO_END), not now: the
                                                 **   step under way noted for a stop's words, "You stop taking off the
                                                 **   backpack.", reach1's, 2026-11-20) */
             step_n = n | 0x80;
@@ -2843,8 +2843,8 @@ unsigned char __fastcall__ s_feature (unsigned char obj, unsigned char how)
 }
 
 /* A thing gone up to or through (H_GO's, hmove.c's do_go: go_after 2, through a door or a passage; 1, up to it): found,
-** walked up to, its first words; then the walk.  As the command's last step, from the main RAM (act's): part 2 not copied
-** back over this part for it (speed9, 2026-11-22: a walk to a door, part 13 copied in, then part 2 again, some 45,000 cycles
+** walked up to, its first words; then the walk.  As the command's last step, from the main RAM (act's): part commands not copied
+** back over this part for it (speed9, 2026-11-22: a walk to a door, part missiles copied in, then part commands again, some 45,000 cycles
 ** before its first letter) */
 unsigned char go_after;
 void s_go_up_to (void)
@@ -2907,7 +2907,7 @@ unsigned char __fastcall__ s_args (int argc, char* argv[])
     unsigned char i, given = 0;
     char* l;
 
-    seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, part 7's, not main's: the main
+    seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, part game_args's, not main's: the main
                                                 **   RAM's room) */
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
@@ -3056,7 +3056,7 @@ void s_finish (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* A command carried out (part 2's), and its last step if it left one (a thing gone up to: go_after, part 13's go_up_to),
+/* A command carried out (part commands's), and its last step if it left one (a thing gone up to: go_after, part missiles's go_up_to),
 ** called from here after the command's part has returned, so its part isn't copied back over the step's for nothing */
 static void act (char* l)
 {
@@ -3135,7 +3135,7 @@ int main (int argc, char* argv[])
                                                 **   during a reach, 2026-11-06; dq0reachstop's, 2026-11-07) */
             HUB->ui_giving = 1;                /* (Being given, as a line's command: "take all"'s next thing's two
                                                 **   intents falling with the clock moved between them or not, 2026-11-04) */
-            when_free ();                       /* (A door barred, a thing lifted out: part 14's) */
+            when_free ();                       /* (A door barred, a thing lifted out: part positions's) */
             hub_map (0);
             HUB->ui_giving = 0;
             hub_ring (T_WORLD);
@@ -3151,7 +3151,7 @@ int main (int argc, char* argv[])
             hub_ring (T_WORLD);
         }
         if (out_told && t_next ()) {
-            out_line ();                        /* (Senseless: the line not taken, part 2's) */
+            out_line ();                        /* (Senseless: the line not taken, part commands's) */
         }
         if (held & 2) {
             held = 0;                           /* (That line let go, parts.c's: its parse with it) */
@@ -3214,7 +3214,7 @@ int main (int argc, char* argv[])
                                                 **   owed, the world's news) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
                                                 **   copied in only for a line that may be its; an ordinary
-                                                **   command's only part 2, the commands') */
+                                                **   command's only part commands, the commands') */
             k = (alias_wait || alias_said (l)) && alias_line (l) ? NL_DONE :    /* (The shortcuts': alias.c's) */
                 f & NI_LINE ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the names') */
             if (k == NL_NONE && pacing (l) > (HUB->gait == GA_WALK && !paced) && (cq_cmd (l), pace_cmd (l))) {
@@ -3247,7 +3247,7 @@ int main (int argc, char* argv[])
                 cq_drop ();                     /* (The command parser's reply, if the line wasn't a command's: not
                                                 **   left there) */
             }
-            cq_st = 0;                          /* (Taken already, cq_cmd's: let go here, cq_drop's part 2 not copied
+            cq_st = 0;                          /* (Taken already, cq_cmd's: let go here, cq_drop's part commands not copied
                                                 **   in for it after a part's own command, the pace's, its intent's
                                                 **   answer to come, 2026-11-17) */
             held = 0;
@@ -3312,16 +3312,16 @@ int main (int argc, char* argv[])
     return 0;
 }
 
-/* ==== Part 14: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 15's bank, the main
+/* ==== Part positions: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 15's bank, the main
 ** RAM's room) */
 #pragma code-name (push, "SW_positions_CODE")
 #pragma rodata-name (push, "SW_positions_RODATA")
 
-/* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's; part 14's,
-** part 2's room, 2026-10-29; part 12's, overlay 3 full, 2026-10-31) */
+/* What waited for the character to be free (main's, seldom: part commands's, the main RAM's room, slice 4.2's; part positions's,
+** part commands's room, 2026-10-29; part tend's, overlay 3 full, 2026-10-31) */
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW_positions_CODE")            /* (Part 14's since 2026-11-04, overlay 15's room) */
+#pragma code-name (push, "SW_positions_CODE")   /* (Part positions's since 2026-11-04, overlay 15's room) */
 #pragma rodata-name (push, "SW_positions_RODATA")
 void s_when_free (void)
 {
@@ -3352,7 +3352,7 @@ void s_when_free (void)
 ** told: seen, said.txt's DEN row (its actor swapped into the row's words: "The dwarf opens the door.", the character's
 ** own words for it the same row's, @open); heard, in the sound's words, the sound task's if it's put them there, else
 ** the DEN row's (its arg 1: the words left in lb, said_q, "a door opening"); its long task paused at the first (part
-** 14's: seldom, the main RAM's room; main.c's door_words, part 18's, and its own strings before, 2026-11-11) */
+** 14's: seldom, the main RAM's room; main.c's door_words, part door_words's, and its own strings before, 2026-11-11) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
     unsigned char d = E_DEN_DE (*m);
@@ -3404,7 +3404,7 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 
 
 /* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already).
-** Part 12's since 2026-10-31 (part 14's bank, overlay 3, full) */
+** Part tend's since 2026-10-31 (part positions's bank, overlay 3, full) */
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #pragma code-name (push, "SW_tend_CODE")
@@ -3414,7 +3414,7 @@ void __fastcall__ s_pose_words (unsigned w)
     struct msg c;
 
     if ((w & HW_WORDS) == HW_WORDS) {
-        hide ((const char*) w);                 /* (Hiding oneself's: part 10's) */
+        hide ((const char*) w);                 /* (Hiding oneself's: part search's) */
         return;
     }
     c.kind = UK_SELF;                           /* (Its words said.txt's SELF rows, pose and posed, 2026-11-15) */

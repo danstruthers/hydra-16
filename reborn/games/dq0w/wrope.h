@@ -1,5 +1,5 @@
 /*
-** wrope.h - (dq0w) what rope and grapples' two parts share (wrope.c, part 96's; wrope2.c, part 98's; a copy each): a drop's
+** wrope.h - (dq0w) what rope and grapples' two parts share (wrope.c, part rope_tie's; wrope2.c, part rope_untie's; a copy each): a drop's
 ** place, in the request's copy's own fields (things.c's iq: its reply's, not used by these requests, the main RAM's, so
 ** they last across a stub's swap and cost no room there), and the small things said and looked for.
 */
@@ -29,7 +29,7 @@ extern struct ireq iq;
 #define R_END           iq.osel                 /* (Its end, feet above the foot) */
 #define R_SLIP          iq.count                /* (Its grapple to give) */
 
-unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part things's) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: its words after the text) */
 extern char* tp;
 extern char* tpe;

@@ -45,7 +45,7 @@ extern unsigned char sgen;                    /* (sound.c's: bumped as the world
 static unsigned char face, light, sight, dark, sn, own, range;
 static unsigned x, y;
 
-void sens_pc (void);                            /* (Part 7's, below) */
+void sens_pc (void);                            /* (Part way_near's, below) */
 
 /* The character as the hub has it */
 static void pc (void)
@@ -109,14 +109,14 @@ static void look (void)
     if (v_nom) {
         wfar = 0;                               /* (Its openings held only for a chunk not made: way.c's seen_on) */
     }
-    sens_pc ();                                 /* (Its senses kept: part 7's, the lamps' after it) */
+    sens_pc ();                                 /* (Its senses kept: part way_near's, the lamps' after it) */
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
     if (!v_way) {
-        kept (3);                               /* (What it keeps of it: each chunk's memory, part 4's, and a passage's
+        kept (3);                               /* (What it keeps of it: each chunk's memory, part kept's, and a passage's
                                                 **   ways' runs for its words; a look one way's memory after its
                                                 **   reply, its words the sooner, 2026-11-18: kept_owed; its runs
-                                                **   none, a glance's words not its own, part 4 not copied in for
+                                                **   none, a glance's words not its own, part kept not copied in for
                                                 **   them: 140,000 cycles of the look across's pause, 2026-11-19) */
     }
     kept_owed = v_way;
@@ -125,7 +125,7 @@ static void look (void)
     if (wn) {
         felt (sn, wx, wy, wd, wn);              /* (The squares walked, remembered: felt in the dark; drawn, mapping
                                                 **   as it goes in the light, the view's run_d: after it, with what
-                                                **   it perceives, part 2's, one copy of the part a look) */
+                                                **   it perceives, part perceive's, one copy of the part a look) */
     }
     first = perceive (sn, x, y, face, own, first);
     sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
@@ -196,10 +196,10 @@ static void apart (void)
     }
 }
 
-/* ==== Part 7 (swapped: a look one way's near part's, its far check; the main RAM's room, 2026-11-17) */
+/* ==== Part way_near (swapped: a look one way's near part's, its far check; the main RAM's room, 2026-11-17) */
 #pragma code-name (push, "SW_way_near_CODE")
 #pragma rodata-name (push, "SW_way_near_RODATA")
-#pragma bss-name (push, "SW_way_near_RODATA")            /* (Its statics its own: none kept from one call to the next) */
+#pragma bss-name (push, "SW_way_near_RODATA")   /* (Its statics its own: none kept from one call to the next) */
 
 /* The squares g0 ... g1 of a way from square v on it: the nearest, gn, and the farthest, gf (255 at most) */
 static unsigned g0, g1;
@@ -218,7 +218,7 @@ static void __fastcall__ span (unsigned v)
 
 /* The character's senses kept, as every actor's (the hub's sens[0]: ONE-PATH.md's 2.2), as it looks: its sight's reach
 ** lit and by its darkvision (none asleep or blind), its hearing in the one formula's scale (the UI's own), its nose a
-** quarter of its smell (HOUSE.md's), its own light, listening as it goes (part 7's, the look's lamps' after it: the
+** quarter of its smell (HOUSE.md's), its own light, listening as it goes (part way_near's, the look's lamps' after it: the
 ** main RAM's room) */
 void s_sens_pc (void)
 {
@@ -455,7 +455,7 @@ static unsigned char sense_held (void)
     return gw_held (&gsense, 0);
 }
 
-void lit_ask (void);                            /* (sense.c's, part 6's) */
+void lit_ask (void);                            /* (sense.c's, part den_senses's) */
 
 int main (int argc, char* argv[])
 {

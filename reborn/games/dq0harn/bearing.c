@@ -10,7 +10,7 @@
 ** the other, or a north astray anywhere).
 */
 
-#pragma code-name ("OV5CODE")                 /* (Overlay 5's, beside part 2's image: 2026-10-27, overlay 3's room */
+#pragma code-name ("OV5CODE")                 /* (Overlay 5's, beside part names's image: 2026-10-27, overlay 3's room */
 #pragma rodata-name ("OV5RODATA")             /*   for the denizens' gear) */
 
 #include <dice.h>

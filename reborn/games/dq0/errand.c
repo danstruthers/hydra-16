@@ -4,8 +4,8 @@
 ** (IO_FETCH): for "tell Grub to fetch the key", one seen lying about (its item and where it lies, the sway's item,
 ** ix, iy); for "give the bandit 5 pennies" ("give the pennies to the bandit", "offer the orc my dagger"), one the
 ** character carries (its item, its worth as a local takes it times the count, whether it's food), the one meant the
-** command's thing then, the gift its other; for "follow me at 3 squares", the distance (ix).  Swapped part 20's, the
-** market part 15's.
+** command's thing then, the gift its other; for "follow me at 3 squares", the distance (ix).  Swapped part errands's, the
+** market part trade's.
 */
 
 #include <stdlib.h>
@@ -23,9 +23,9 @@
 ** named, or any, that has them), each side's pennies, then the denizens asked (the sway: they decide, and the one
 ** traded with takes and hands over by the character's own way with things, the world's), its outcome worded here, the
 ** world telling the things changing hands (E_TASK's TE_FETCHED).  Its data the part's own (zeros as it's copied in) */
-unsigned char trade (void);                     /* (Part 15's stub) */
+unsigned char trade (void);                     /* (Part trade's stub) */
 
-#pragma code-name (push, "SW_trade_CODE")            /* (Part 15's, the market's; the rest part 20's: its room, 2026-11-03) */
+#pragma code-name (push, "SW_trade_CODE")       /* (The market's; the rest part errands's: its room, 2026-11-03) */
 #pragma rodata-name (push, "SW_trade_RODATA")
 #pragma bss-name (push, "SW_trade_RODATA")
 static char gd[16], wh[16], nm[16], nl[16];
@@ -259,7 +259,7 @@ unsigned char s_errand (void)
 
     walk_says ((const char*) W_SWAY);           /* (Its first words at once, the denizens the background: sway.c's) */
     if (cmd.action == VB_TRADE) {
-        return trade ();                        /* (The market, entertaining: part 15's, 2026-11-02) */
+        return trade ();                        /* (The market, entertaining: part trade's, 2026-11-02) */
     }
     hub_map (0);
     HUB->sway.item = HUB->sway.ix = HUB->sway.iy = 0;

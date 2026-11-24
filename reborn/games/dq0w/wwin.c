@@ -9,7 +9,7 @@
 ** pane worked out and a window climbed through timed work (HOUSE.md's long tasks): begun (wk.plan: the time and the
 ** long task's kind given, nothing told), then done at its time's end (dq0w.c's work_done: the test made then).
 **
-** All of it swapped part 7's (../dq0/swap.inc: dq0w.cfg's SW7), portals () called through its stub (bank.s's).
+** All of it swapped part portals's (../dq0/swap.inc: dq0w.cfg's SW_portals), portals () called through its stub (bank.s's).
 */
 
 #include <string.h>

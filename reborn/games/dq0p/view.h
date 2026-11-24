@@ -30,7 +30,7 @@ unsigned char __fastcall__ way_stop (unsigned x, unsigned y);  /* (dq0p.c's: 2, 
 #define VP_COVER        6                       /*   its spy-hole's cover on the far side: nothing seen through it.
                                                 **   The user's, 2026-11-14: way.c's to tell) */
 void __fastcall__ way_seen (unsigned char sn, unsigned char face);  /* A look one way's own record (WAY_SEEN),
-                                                **   after the look's, and its denizens' (part 3's, way.c); its near
+                                                **   after the look's, and its denizens' (part way_record's, way.c); its near
                                                 **   part's (WAY_NEAR: dq0p.c's wnear), from the last whole look's,
                                                 **   what the far part may change held back */
 void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n);   /* A walk's
@@ -39,7 +39,7 @@ void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char 
                                                 **   runs' bearings, sixteenths, by their first headings: view.c's
                                                 **   runs, as a look begins, for sight.c's ways) */
 #define RUNS            ((unsigned char*) (HUB_WINDOW + RUN_AT))
-void __fastcall__ kept (unsigned char what);    /* The memory of what the view saw kept (each chunk's: part 4's,
+void __fastcall__ kept (unsigned char what);    /* The memory of what the view saw kept (each chunk's: part kept's,
                                                 **   after the view's): what 2; 1, its passage's runs first, sight.c's
                                                 **   (a look one way's memory after its reply: dq0p.c's kept_owed) */
 

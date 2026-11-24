@@ -8,13 +8,13 @@
 **   hthings.c  the things' verbs: take, drop, handle (hold, stow, put, wear, light ...), hide, eat and drink (part
 **              2's things_do); a thing filled, tied, looked into, one that closes worked, a hide begun (their timed
 **              works: overlay 1's things_work, overlay 16's till stage 3)
-**   hplaces.c  the features' and the doors': a door's work, climb, examine, search, a look one way (part 2's)
-**   hmove.c    moving: go (a way, a thing, a place in the room), face, jump (part 2's)
-**   hdens.c    the denizens': a blow, the missiles, disengage, the sway, a gift and the market (part 2's)
+**   hplaces.c  the features' and the doors': a door's work, climb, examine, search, a look one way (part commands's)
+**   hmove.c    moving: go (a way, a thing, a place in the room), face, jump (part commands's)
+**   hdens.c    the denizens': a blow, the missiles, disengage, the sway, a gift and the market (part commands's)
 **   hself.c    the body's and the meta commands: the limbs, a feel about, a look, wait, stop, tend, dig, what's
-**              carried, the sheet and the map, the time, pause and save, help, quit (part 2's)
+**              carried, the sheet and the map, the time, pause and save, help, quit (part commands's)
 **
-** All five in part 2 so far, the commands' own (s_command's: no copy of a part between the line and its handler): a
+** All five in part commands so far, the commands' own (s_command's: no copy of a part between the line and its handler): a
 ** group moved is its pragmas alone.
 */
 
@@ -37,7 +37,7 @@ void put_in (void);                             /* (hthings.c's: a thing put in 
 void __fastcall__ portal (unsigned char pa);    /* (hplaces.c's: a portal worked) */
 void __fastcall__ climb (unsigned char h);      /* (hplaces.c's: up or down, H_CLIMB's and a jump's) */
 unsigned char __fastcall__ grip_go (unsigned char g);  /* (hdens.c's: a grapple's move sent, HOUSE.md's grappling) */
-void __fastcall__ minds (unsigned char h);      /* (minds.c's, part 27: say, knock, wake, taunt, orate, pretend; h H_*) */
+void __fastcall__ minds (unsigned char h);      /* (minds.c's, part minds: say, knock, wake, taunt, orate, pretend; h H_*) */
 
 /* main.c's */
 void __fastcall__ work (unsigned char what, unsigned char obj);
