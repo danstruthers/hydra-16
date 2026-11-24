@@ -13,7 +13,7 @@ The numbers in brackets are lines of DECISIONS.md, where the user's own words ar
 - **P3. Generalize.** A rule stated for one case holds for every case of the same class (476). Apply it to the class.
 - **P4. Verbs do what they say.** Every verb attempts a meaningful action in the world (1911). "Wear" takes only what can be worn.
 - **P5. A puzzle, not a contest.** "It is not about winning or losing. It is about solving a puzzle" (1677).
-- **P6. Swappable.** The ruleset owns tests, skills, harm and their numbers (1994). The world plug-in owns history, peoples, lands, deities, names, scripts and calendars (2254). Neither leaks into the other's code.
+- **P6. Swappable.** The ruleset owns tests, skills, harm and their numbers (1994). The world plug-in owns history, peoples, lands, deities, names, scripts and calendars (2254). Neither leaks into the other's code. The line: the world names, the ruleset numbers. A creature's kind, name, faction and tongue are its world's, its sheet the ruleset's; a coin's name is the world's, its worth the ruleset's. Any ruleset runs in any world; a life keeps both to its last dungeon; the world is asked at the start (2553).
 - **P7. Budgets bound how, not what.** D17, the RAM floors and the headroom rule are the engineer's to meet (2268, 2370). Only if meeting one would change what the player sees is it a question.
 
 ## 1. Bodies
@@ -69,6 +69,7 @@ The numbers in brackets are lines of DECISIONS.md, where the user's own words ar
   - Sight has facing and needs light from any source, as the looker's own eyes allow; darkvision is one such pair of eyes.
   - It works both ways through any opening (2244, 2318, 2445).
   - The player is told what the character's senses report, by the same rule that tells a creature what it notices.
+  - What a looker makes out falls with distance and light: first movement, then a shape, then a kind, then who it is. Only what is made out is named, by the look and by the minds (2557). To be built after the one-path rewrite.
 - **S2. One hearing rule for every sound and every hearer.** Every act makes the act table's noise (2331, 2523). Minds turn to what they hear, as their nature says (2538).
 - **S3. Knowledge.** An actor knows:
   - what it has perceived: one who sees a trap found learns of it (2541);
@@ -97,6 +98,8 @@ The numbers in brackets are lines of DECISIONS.md, where the user's own words ar
 
 - One wording per action, for any actor: "You take..." and "The bandit takes..." come from one row (2075).
 - Nothing is told twice.
+- Everything nameable in a look has a letter: things, creatures, features (doors, windows, stairs), and a patch of floor with things on it (2548).
+- A look is told only when what the character can see changes. A light lost and regained within one act is told in a sentence each way (2551).
 - First words come at once, in the story.
 - Only seen names are used. People are "they"; beasts and the unseen are "it".
 - Plain words go on the screen; numbers go on the sheet.

@@ -35,58 +35,7 @@ merged:
 
 ## The rule-level questions
 
-- **Q1. What gets a letter** (old P1, P2; presentation).
-  - **Proposed rule:** everything the player can name in a look gets a capital letter, in the look and in "Which
-    one?", as things and denizens do now. That includes features (a door, a window, a stair, a portcullis), and a part
-    of the floor with things lying on it.
-  - **It settles:**
-    - P1: doors and other features lettered, in place of "Which door? (1) ... (2) ...";
-    - P2: a zone of the floor lettered.
-    
-    The user's rule for doors, a numbered list unless one is directly ahead (DECISIONS.md:362-363), would then read
-    "a lettered list".
-  - **Against it:** letters for things and denizens alone, as built. Features stay named by their words and
-    numbered, and floor places by the locatives ("on the floor", "in the corner"). Lettering features changes every
-    room's words.
-  - Sources: built/2026-11-07-decisions-archive.md:83, "The doors' 'Which door?' the same question";
-    COMMANDS-CRITIQUE.md:454-457, 579-581.
-- **Q2. The look and a change of light** (old L4; presentation).
-  - **Proposed rule:** a look is told when what the character can see changes, and never otherwise (the user's rule of
-    2026-11-14, "No look when the light's the same", taken as the general rule). When a light goes out and is lit
-    again within one act (a reach's own steps, dq0packsteps' dip), the dark is told in a sentence as it falls. The
-    light's return is told in a sentence too, with no look if what's seen is then the same.
-  - **It settles:** L4. It confirms L1, L2 and L5, which ASSUMED.md answers by the same rule.
-  - **Against it:** a whole look whenever a light is lit after none was carried, whether or not what's seen has
-    changed. Or, as built: the dip not told at all.
-  - Sources: DECISIONS.md, "No look when the light's the same" (2026-11-14), and its archived account
-    (built/2026-11-14-decisions-archive.md); ENGINE-CRITIQUE.md's row 6, its last "Left:" note.
-- **Q3. The plug-ins' boundary** (old W1, W5, W9, W11, W12; the plug-ins, presentation).
-  - **Proposed rule:** the world owns every name, people, tongue and belief; the ruleset owns every number (P6, drawn
-    to a line). So:
-    - A creature's kind, name, faction and tongue are its world's; its sheet and stats are the ruleset's bestiary.
-    - A coin's name is the world's; its worth is the ruleset's economy.
-    - Any ruleset runs in any world; neither names the other.
-    - A life keeps its world and its ruleset from its first dungeon to its last.
-    - The world is asked at the start, as the pace is, with "first" the default.
-  - **It settles:**
-    - W1: the bestiary split by that line;
-    - W5: the coins;
-    - W9: the world fixed for a life;
-    - W11: rulesets and worlds not paired;
-    - W12: the world asked at the start.
-    
-    ASSUMED.md's W2-W4, W6-W8 and W10 follow from P6 as it stands. A different line here may reopen them.
-  - **Against it:** rulesets and worlds paired (Harn's world with HarnMaster), so a world may carry its own numbers.
-    And the world chosen by a command-line switch, as now, not asked.
-  - Source: built/2026-11-21-world1.md's open questions; WORLDS.md.
-- **Q4. Sight's detail by distance** (old U1; the user's own item; the scope of content).
-  - **Proposed rule:** what a looker makes out falls with distance and light, by its own sight, unless it is blind:
-    first movement, then a shape, then a kind (humanoid or not), then who it is. The look and the minds name only what
-    is made out (S1), for every looker. Until it's built, a look one way reaches 31 squares at most.
-  - **It settles:** U1. It also settles how a far or dimly lit creature is named everywhere ("something", "a
-    figure", "a dwarf").
-  - **The question:** is that the rule, and is it built now or later?
-  - Sources: HOUSE.md:4283-4286; DECISIONS.md:769.
+- Q1-Q4 were answered on 2026-11-24 (DECISIONS.md, "The rule-level round"); their rules are in WORLD-MODEL.md (P6, S1, section 7).
 - **Q5. Tuning by play** (old U2, U3; difficulty and balance).
   - **Proposed rule:** a number the book doesn't give is a realistic house figure, marked tunable, which the engineer
     sets now (AGENTS.md's Scope). The user tunes them later, by play:

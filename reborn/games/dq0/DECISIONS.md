@@ -2540,3 +2540,20 @@ M3-M5), with the images' commit.
   finding it.
 - **The character learns of a trap it sees a creature find or step round** (step2 7).
 - **A winged body crosses an open pit** (step2 8), not only a covered one.
+
+## The rule-level round: the user's answers (2026-11-24)
+
+After OPEN.md was triaged against WORLD-MODEL.md (docs2), the user answered its rule-level questions:
+
+- **Everything nameable in a look gets a letter** (Q1, old P1 and P2): doors, windows, stairs, portcullises and the
+  other features, and a patch of floor with things on it, as things and denizens have now. "Which door?" becomes a
+  lettered list.
+- **A look is told only when what the character can see changes** (Q2, old L4). A light that goes out and comes back
+  within one act (a dip into a pack) is told in a sentence each way, with no look.
+- **The world names, the ruleset numbers** (Q3, old W1, W5, W9, W11, W12). A creature's kind, name, faction and
+  tongue are its world's, its sheet and stats the ruleset's; a coin's name is the world's, its worth the ruleset's.
+  Any ruleset runs in any world. A life keeps its world and its ruleset from its first dungeon to its last. The world
+  is asked at the start, as the pace is, with "first" the default.
+- **Sight's detail falls with distance and light** (Q4, old U1): first movement, then a shape, then a kind, then who
+  it is. The look and the minds name only what is made out, for every looker. Built after the one-path rewrite gives
+  every looker one sense code; till then a look one way reaches 31 squares at most.
