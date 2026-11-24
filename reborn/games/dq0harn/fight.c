@@ -666,7 +666,8 @@ unsigned char __fastcall__ o_beast_flags (unsigned char kind)
 /* A creature's side of two actors' tests (RS_CONTEST's, dq0harn.c's: the actor's test of purpose a, at the steps): by
 ** its sheet, Initiative its bestiary's, Stealth its Agility times 5 (the house's: the bestiary has no Stealth of its
 ** own; the book's Stealth is Agility, Hearing and Will, Skills 9), a dig its Strength times 5 (a tunneller's, the
-** house's: the bestiary has no Mining), anything else its Dexterity times 5 (a grope's), its injuries' penalty off it
+** house's: the bestiary has no Mining), anything else its Dexterity times 5 (a grope's; a filch's, P_FILCH, the book's
+** Legerdemain its Dexterity's, the bestiary having none), its injuries' penalty off it
 ** (one senseless, or in shock, tests nothing: a critical failure); the grade in the reply */
 static void tested (void)
 {

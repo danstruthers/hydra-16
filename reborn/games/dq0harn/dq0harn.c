@@ -227,6 +227,8 @@ static const unsigned char purpose[P_THEME] = {
     HARN_ORA,                                                           /* A speech: Oratory */
     HARN_RAGR,                                                          /* A prayer: the deity's own Ritual
                                                                         **   (test's: Agrik's the first) */
+    HARN_LEG,                                                           /* A thing filched: Legerdemain (the
+                                                                        **   user's, 2026-11-23) */
 };
 #pragma rodata-name (pop)
 

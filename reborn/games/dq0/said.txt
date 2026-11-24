@@ -623,9 +623,10 @@ SWAY.far[how=SW_ROB]        "{Obj} is out of your reach."
 SWAY.far[how=SW_FILCH]      "{Obj} is out of your reach."
 SWAY.cant[how=SW_ROB]       "{Obj} isn't helpless: {folk?it|they} would stop you."
 SWAY.cant[how=SW_FILCH]     "{Obj} is awake: {folk?it|they} would feel your hand."
-SWAY.wont[how=SW_FILCH]     "{Obj} wakes as your hand finds {folk?its|their} purse!"
+SWAY.wont[how=SW_FILCH]     "{Obj} wakes as your hand finds {folk?its|their} purse! {folk?It seems|They seem} {@seems} now."
 SWAY.any[how=SW_ROB]        "You go through {obj}'s things."
 SWAY.any[how=SW_FILCH]      "You slip a hand into {obj}'s purse."
+SWAY.wont[how=SW_ROB]       "{Obj} wakes as you go through {folk?its|their} things! {folk?It seems|They seem} {@seems} now."
 
 # ---- A blow (UK_FIGHT, an E_FIGHT's record worded: out, O_*, the UI's own gone, bled, bound for FO_*, and stray, a
 # miss's stray at one beside the mark; who the attacker, {actor?the character's|a denizen's}; w4 the attacker's name,

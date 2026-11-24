@@ -617,7 +617,7 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
 
     p->where = where;
     p->x = x;
-    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
+    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | flags;
     if (p->y >= IC_MARK) {
         p->y = 0;                               /* (Out of a compartment past the first: its first, or none) */
     }
@@ -1453,7 +1453,7 @@ void __fastcall__ s_lit_back (unsigned char go)
         rec.where = IW_ACTOR;
         rec.x = rec.y = 0;
         rec.sn = h;
-        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | I_HELD;
         store (&rec, n);
         light_now ();                           /* (Its light: what it holds lit) */
         if (sc) {
@@ -1497,7 +1497,7 @@ void s_rs_did2 (void)
         rec.where = IW_ACTOR;
         rec.x = 0;
         rec.sn = h;
-        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | I_HELD;
     } else if (d == SE_BACKIN) {
         hub_map (0);
         c = 0;
@@ -1828,7 +1828,7 @@ static void rs_did (void)
         fetch (&rec, n);
         rec.where = IW_ACTOR;
         rec.x = 0;
-        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD | I_LIT;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | I_HELD | I_LIT;
         rec.sn = rs_hand;
     } else if (rstep.edge == SE_STOW) {
         about ();
@@ -1854,7 +1854,7 @@ static void rs_did (void)
         rec.where = IW_ACTOR;
         rec.x = 0;
         rec.sn = h;
-        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | I_HELD;
     } else {                                    /* (A pack taken off, put on; a thing let fall, set down) */
         rec.flags &= ~(I_WORN | I_HELD);
         if (rstep.edge == SE_ON) {
@@ -6420,7 +6420,7 @@ static void __fastcall__ o_place (unsigned n, unsigned char where, unsigned x, u
     FETCH (n);
     o.where = where;
     o.x = x;
-    o.flags = (o.flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
+    o.flags = (o.flags & ~(I_HELD | I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | flags;
     if (where == IW_ITEM && ccomp) {
         o.y = IC_MARK | crow.prep << 4 | ccomp; /* (Its compartment, its prep: stow's, o_fits' crow) */
     } else if (o.y >= IC_MARK) {
@@ -6960,7 +6960,7 @@ static unsigned char __fastcall__ scan (unsigned char seek, unsigned char r, uns
     y = b ? iq.y : HUB->pc_y;
     while ((i = items (i, IN_SQUARE, 0)) != 0) {
         fetch (&rec, i);
-        if (rec.sn != sn || (rec.flags & I_MAGIC) || (dx = rec.x - x + SEARCH_R) > 2 * SEARCH_R ||
+        if (rec.sn != sn || (rec.flags & (I_HIDDEN | I_MAGIC)) == (I_HIDDEN | I_MAGIC) || (dx = rec.x - x + SEARCH_R) > 2 * SEARCH_R ||
             (dy = rec.y - y + SEARCH_R) > 2 * SEARCH_R || (d = d2_[dx] + d2_[dy]) >= r ||
             (!touch && !b && (!(t = at (sn, rec.x, rec.y)) || !(*t & T_VIS))) ||
             (seek ? d >= sd2 || !named (kind_of (rec.kind)->name, sname) :
@@ -7498,7 +7498,7 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
     p = item_at (n);
     p->where = IW_ACTOR;
     p->x = 0;
-    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_MAGIC | I_TENDED)) | I_KNOWN | I_HELD;
     p->sn = h;
     hold_said (hcur ? SA_SHIFT : SA_HOLD, h);
     took = row_t (AC_HOLD);
@@ -7762,7 +7762,7 @@ void s_kit (void)
         if ((k = kind_named (more)) != 0 && (i = item_new (k, IW_ACTOR, 0, 1)) != 0xFFFF && !carry (i, 1)) {
             item_at (i)->where = IW_ACTOR;      /* (No room: held all the same) */
             item_at (i)->x = 0;
-            item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
+            item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN | I_MAGIC)) | I_KNOWN | I_HELD;
             kk = kind_at (i);
             k = TWO (kk) == 2 ? IH_BOTH : off ^ IH_BOTH;
             item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
