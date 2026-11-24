@@ -91,7 +91,7 @@ static void died (void)
     bd.state = 0;
     bleeds &= ~(1 << bk);
     if (GRIP_OF (grip) == bk + 1) {
-        grip = 0;                               /* (Held: let go, dead) */
+        grip = 0;                               /* (Held: let go, dead: the hub's pc_grip den_strip's) */
     }
     den_strip (lay_body (bd.remains, bd.sn, bd.x, bd.y));     /* (Its things on its body: part 51's) */
     den_saw = 1;
@@ -521,6 +521,8 @@ void __fastcall__ s_grip_left (unsigned char out)
         ((glf.ff & (FF_D_DOWN | FF_D_DEAD)) && (!glf.def || glf.def == GRIP_OF (grip)))) {
         grip = 0;
     }
+    hub_map (0);
+    HUB->pc_grip = grip;                        /* (The one held, the minds' to know: a robbery's, 2026-11-23) */
 }
 
 /* Body bd's intent m (part 14's), if it's the one the character holds: gone, or apart, let go; else anything but a
@@ -533,6 +535,10 @@ void __fastcall__ s_grip_held (struct msg* m)
     if (m->kind == I_LEAVE || m->kind == I_ENTER || !bd.state || bd.sn != bps || (unsigned) (bd.x - bpx + 1) > 2 ||
         (unsigned) (bd.y - bpy + 1) > 2) {
         grip = 0;
+        hub_map (0);
+        HUB->pc_grip = 0;
+    } else if (m->kind == I_ROB && I_ROB_ERRAND (*m) == FE_ROBBED) {
+                                                /* (Robbed as it's held: the character's robbery, 2026-11-23) */
     } else if (m->kind != I_WAIT && m->kind != I_ROUSE && (m->kind != I_ATTACK || (grip & GH_PIN))) {
         m->kind = I_ATTACK;
         I_ATTACK_FOE (*m) = 0;
@@ -553,10 +559,11 @@ void __fastcall__ s_grip_off (unsigned char t)
     struct fight* f;
 
     grip = 0;
+    hub_map (0);
+    HUB->pc_grip = 0;                           /* (The minds' to know, 2026-11-23) */
     if (!t) {
         return;
     }
-    hub_map (0);
     a = &HUB->actor[(k - 1) & 7];
     memcpy (nm, a->name, sizeof nm);
     bev.kind = E_FIGHT;
@@ -726,47 +733,32 @@ unsigned char __fastcall__ s_den_pry (unsigned n, unsigned char how)
     return 1;
 }
 
+#define WSLOT           (HUB->slot[SLOT_WORLD])
 /* The character robbed by body bd (its intent, I_ROB: part 14's; a robber's, kinds.txt's ways r, the character
 ** helpless beside it): what it holds (but a light lit: the robber leaves it its light) and its pennies (wherever it
-** keeps them that it can get into, by their compartments' rules: den_pry's, 2026-11-17), taken off to x, y (the robber's lair's home square, on its stratum; or, that square not to be had,
-** where the robber stands) and put down there, a stash to be found; the referee told at once what's to hand now and
+** keeps them that it can get into, by their compartments' rules: den_pry's, 2026-11-17), carried off on the robber's
+** body (the user's C10, 2026-11-23: by the carry every actor's, wthings.c's, coins its purse, its pack, a hand; else
+** hung at its belt; one with no things of its own, a beast's, sets it down at its feet), marked its takings (items.h's I_LOOT: put by at its lair as it gets there, its mind's FE_STASH;
+** one killed on the way gives them back); the referee told at once what's to hand now and
 ** the load left (RS_EQUIP 2, as the UI's to_hand tells it a thing handled: the keys of the tools it still carries, each
 ** after its mark and with its quality, things.c's tools; their weight, weight_in's: the user's, 2026-10-22, "Weight
-** should be recounted immediately after a robbery"), the UI the robbery (E_TASK TE_ROBBED, b the robber plus 1), if
-** anything was taken.  Or (x[3] RB_PURSE, 2026-11-06) the character at rest robbed unawares, its coins alone; or
-** caught at it (RB_CAUGHT), nothing taken, its long task stopped hard; told either way, w1's high byte the how */
-#define WSLOT           (HUB->slot[SLOT_WORLD])
+** should be recounted immediately after a robbery"), the robber's own things too, the UI the robbery (E_TASK TE_ROBBED,
+** b the robber plus 1), if anything was taken.  Or (x[3] RB_PURSE, 2026-11-06) the character at rest robbed unawares,
+** its coins alone; or caught at it (RB_CAUGHT), nothing taken, its long task stopped hard; told either way, w1's high
+** byte the how */
+unsigned char __fastcall__ den_carry (unsigned n, unsigned char hand_first);    /* (Part 114's: wthings.c) */
+void __fastcall__ den_hold (unsigned n, const struct actor* a, unsigned char f);
+void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+extern unsigned char den_eq_all;
 void __fastcall__ s_den_rob (const struct msg* q)
 {
     struct msg m;                               /* (On the C stack: the main RAM's room, 2026-10-29) */
-    struct actq aq;
-    unsigned i, n, x, y, box;
-    unsigned char kind, f, how, fac, pur, hd = 0;
-    unsigned char* s;
+    unsigned i, n;
+    unsigned char kind, f, pur;
 
     if (I_ROB_ERRAND (*q)) {
         den_fetch (q);                          /* (An ally's errand, a gift: part 72's, slice 4.8's) */
         return;
-    }
-    x = I_ROB_X (*q);
-    y = I_ROB_Y (*q);
-    how = I_ROB_KEEP (*q);
-    fac = I_ROB_FACTION (*q);
-    s = at (bd.sn, x, y);
-    if (!s || !(TILE (*s) == T_FLOOR || TILE (*s) == T_CORR) ||
-        !it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS)) {
-        x = bd.x;
-        y = bd.y;
-        how = how == RB_HOARD ? RB_HOARD : 0;  /* (Its home no floor, a way's square: its hoard still the one
-                                                **   near, 2026-10-29) */
-    }
-    for (box = 0, i = 0; how == RB_HOARD && (i = items (i, IN_SQUARE, 0)) != 0; ) {
-        if (ip->owner == (OW_HOARD | fac) && ip->sn == bd.sn && (unsigned) (ip->x - x + 16) <= 32 &&
-            (unsigned) (ip->y - y + 16) <= 32) {
-            box = i;                            /* (Its faction's hoard, by its leader's home: the takings in it,
-                                                **   2026-10-27) */
-            break;
-        }
     }
     pur = I_ROB_PURSE (*q);                     /* (The character at rest robbed unawares: its coins alone, a purse cut;
                                                 **   caught at it, nothing, its rest stopped: the mind's, 2026-11-06) */
@@ -779,26 +771,19 @@ void __fastcall__ s_den_rob (const struct msg* q)
         }
         reach_from (i);                         /* (Its reach, the robber's: HOUSE.md's, every actor's) */
         p = item_at (i);
-        p->where = IW_SQUARE;
-        p->sn = bd.sn;
-        p->x = x;
-        p->y = y;
         p->flags &= ~(I_HELD | I_WORN);
-        if (box) {
-            p->where = IW_ITEM;
-            p->x = box;
-        } else if (how == RB_HIDE) {
-            if (!hd) {                          /* (Its stash concealed, the first thing taken: the character's own hiding
-                                                **   of a thing, the act table's conceal row, its test by its sheet, its
-                                                **   minute: the one-path plan's stage 2, 2026-11-21) */
-                act_get (aq, AC_CONCEAL);
-                hd = s_act_test (bk + 1, aq.r.test, aq.r.steps);
-                hd = 0x80 | HIDE_OF ((signed char) hd);
-                bd.ready += aq.r.time;
-                p = item_at (i);
+        if (bd.did) {
+            if (!den_carry (i, 0)) {
+                den_hold (i, &bd, 0);           /* (No room in its purse, its pack or its hands: hung at its belt) */
             }
-            p->flags = (p->flags & ~I_KNOWN) | I_HIDDEN;   /* (Its stash at its home: found by searching) */
-            p->hide = hd & 0x7F;
+            item_at (i)->flags |= I_LOOT;       /* (On its body, its takings: home with it) */
+        } else {
+            p = item_at (i);                    /* (No room on it: set down at its feet, the character's own robbery's) */
+            p->where = IW_SQUARE;
+            p->sn = bd.sn;
+            p->x = bd.x;
+            p->y = bd.y;
+            p->owner = p->hide = 0;
         }
         ++n;
     }
@@ -815,6 +800,8 @@ void __fastcall__ s_den_rob (const struct msg* q)
             equip_now ();                       /* (What's to hand now, and its load: the referee's, at once, part
                                                 **   49's) */
             light_now ();                       /* (Its light, a torch taken; what it carries, the UI's first words') */
+            den_eq_all = 1;
+            den_equip ();                       /* (The robber's own things, what it holds now, told the referee) */
         }
         hub_map (0);
         if (pur & RB_CAUGHT) {

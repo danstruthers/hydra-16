@@ -117,6 +117,24 @@ function paceTable(dir) {
   const at = want.findIndex((v, k) => have[k] !== v);
   if (at >= 0 || have.length !== 32) throw new Error('games/dq0/pace.c: pl[] not pace_words\' (letter ' + at + ': 0x' +
     want[at].toString(16).toUpperCase().padStart(4, '0') + ')');
+  // (And its po[], where each first letter's words begin, its words of a letter together, in the letters' order: o_pacing
+  // looks for a word among its letter's alone, from there till another letter's: room8, 2026-11-24)
+  const o = /static const unsigned po\[32\] = \{[\s\S]*?\*\/([^}]*)\}/.exec(s);
+  if (!o) throw new Error('games/dq0/pace.c: no po[32]');
+  const wantPo = new Array(32).fill(0), seen = new Set();
+  let last = -1;
+  for (let i = 0; i < str.length; i += str.charCodeAt(i) + 1) {
+    const c = str.charCodeAt(i + 1) & 31;
+    if (c !== last) {
+      if (seen.has(c) || c < last) throw new Error('games/dq0/pace.c: pace_words\' words of a letter not together, in the letters\' order (' + str.substr(i + 1, str.charCodeAt(i)) + ')');
+      seen.add(c);
+      wantPo[c] = i;
+      last = c;
+    }
+  }
+  const havePo = o[1].split(',').map(x => x.trim()).filter(Boolean).map(Number);
+  const bad = wantPo.findIndex((v, k) => havePo[k] !== v);
+  if (bad >= 0 || havePo.length !== 32) throw new Error('games/dq0/pace.c: po[] not pace_words\' (letter ' + bad + ': ' + wantPo[bad] + ')');
 }
 
 function build({ dir, objdir, say = () => {} }) {

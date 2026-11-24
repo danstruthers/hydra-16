@@ -157,6 +157,36 @@ static unsigned char __fastcall__ room_to (unsigned x, unsigned y, unsigned char
     return 1;
 }
 
+/* A shut door beside body bd (the four ways) braced (its FE_DRAG of thing 0: its mind's, shut against the character, the
+** user's, 2026-11-23): a heavy thing on a square beside it (not the door's) dragged onto its own square, it a square back
+** (room behind it), so the door's braced (s_braced's: a heavy thing on a square leading through it).  The thing (iq.item,
+** iq.to's DG_PULL set), or 0 (no shut door beside it, braced already, nothing heavy there to drag) */
+static unsigned brace (void)
+{
+    static unsigned char d, h;
+    static unsigned char* q;
+    static struct portal* o;
+
+    D_SN = bd.sn;
+    for (d = DIR_N; d <= DIR_W; ++d) {
+        if ((q = at (bd.sn, bd.x + dir_x[d], bd.y + dir_y[d])) != 0 && TILE (*q) == T_DOOR &&
+            (o = portal_at (cx_, cy_)) != 0 && o->kind == PK_DOOR && !(o->state & PS_OPEN)) {
+            break;
+        }
+    }
+    if (d > DIR_W || s_braced (bd.sn, bd.x + dir_x[d], bd.y + dir_y[d])) {
+        return 0;
+    }
+    for (h = 0; h < 8; ++h) {                   /* (Its heading to the thing: any but the door's) */
+        if ((head_x[h] != dir_x[d] || head_y[h] != dir_y[d]) &&
+            (D_N = heavy_on (bd.sn, bd.x + head_x[h], bd.y + head_y[h], 0)) != 0 && room_to (bd.x, bd.y, (h + 4) & 7)) {
+            iq.to |= DG_PULL;
+            return D_N;
+        }
+    }
+    return 0;
+}
+
 /* A heavy thing shoved a square away (DG_PUSH) or dragged a square toward (DG_PULL) the character (iq.name, the UI's), or
 ** body bd (iq.to's TO_DEN: its thing iq.item lying beside it, its errand FE_DRAG's: wthings.c's), every actor's by the
 ** act table's drag row (the one-path plan's stage 2, things and robbery, 2026-11-23): its strain's time, its noise (the
@@ -181,6 +211,9 @@ unsigned char s_drag (void)
     D_WHO = iq.to & TO_DEN ? bk + 1 : 0;
     if (!D_WHO && !(iq.item = pick (iq.name, HW_SEEN))) {
         return IR_NONE;
+    }
+    if (!iq.item && !brace ()) {
+        return IR_NONE;                         /* (A brace, nothing to brace with: nothing done) */
     }
     D_WT = weight_of (D_N);                     /* (Its weight, what's in it too: the other parts called first, this
                                                 **   part's locals its image's again after them) */

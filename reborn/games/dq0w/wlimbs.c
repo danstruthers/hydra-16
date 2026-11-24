@@ -306,6 +306,11 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
 
 void __fastcall__ s_den_other (const struct msg* m)
 {
+    if (I_KIT_DRAW (*m) == KT_TRAPS) {
+        own_traps (m);                          /* (A lair of folk placed: its chunk's traps its faction's, part 122's,
+                                                **   2026-11-23) */
+        return;
+    }
     if (I_KIT_DRAW (*m) & KT_DIG) {
         look_more (0, LM_ROPES);                /* (Part 79 read in, the first time: things.c's) */
         den_dig (m);                            /* (Not things: a tunneller's dig, part 79's, slice 4.11's) */
@@ -386,7 +391,7 @@ void __fastcall__ s_den_strip (unsigned body)
         }
         f = ip->flags;
         ip->owner = ip->hide = 0;
-        ip->flags = f & ~(I_HELD | I_WORN);
+        ip->flags = f & ~(I_HELD | I_WORN | I_LOOT);
         if ((f & I_HELD) || !body) {
             ip->where = IW_SQUARE;
             ip->sn = bd.sn;
@@ -398,6 +403,7 @@ void __fastcall__ s_den_strip (unsigned body)
         }
     }
     hub_map (0);
+    HUB->pc_grip = grip;                        /* (Held, let go dead: the minds' to know, 2026-11-23) */
 }
 
 /* Its weapon let fall still lying in its reach (its square or beside it): 1, to take it up (its turn); gone (taken,

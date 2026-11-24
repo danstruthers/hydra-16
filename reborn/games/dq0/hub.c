@@ -43,6 +43,11 @@ int s_find_banks (void)
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
 #endif
+#ifdef HUB_ATTACH_P23                           /* (The minds': part 23's, with hub_attach, as it starts: the main
+                                                **   RAM's room, room8, 2026-11-24) */
+#pragma code-name (push, "SW23CODE")
+#pragma rodata-name (push, "SW23RODATA")
+#endif
 static int find_banks (void)
 #endif
 {
@@ -61,7 +66,8 @@ static int find_banks (void)
     hub_map (0);
     return 0;
 }
-#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4)
+#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4) || \
+    defined (HUB_ATTACH_P23)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #endif
@@ -148,13 +154,16 @@ int __fastcall__ hub_create (unsigned char banks)
 #endif
 
 #ifdef HUB_ATTACHED                             /* (The UI's room: what it never does left out, here and below) */
-#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4)
+#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4) || defined (HUB_ATTACH_P23)
 #ifdef HUB_ATTACH_SW3
 #pragma code-name (push, "SW88CODE")            /* (The world's: its start-up's, the main RAM's room) */
 #pragma rodata-name (push, "SW88RODATA")
 #elif defined (HUB_ATTACH_P4)
 #pragma code-name (push, "SW4CODE")             /* (The referee's: part 4's, as it starts) */
 #pragma rodata-name (push, "SW4RODATA")
+#elif defined (HUB_ATTACH_P23)
+#pragma code-name (push, "SW23CODE")            /* (The minds': part 23's, as they start) */
+#pragma rodata-name (push, "SW23RODATA")
 #else
 #pragma code-name (push, "SW3CODE")             /* (The senses': part 3's, as it starts) */
 #pragma rodata-name (push, "SW3RODATA")
@@ -173,7 +182,7 @@ int __fastcall__ hub_attach (unsigned char s, unsigned char me)
     smask = HUB->small ? 1 : MAXSTRATA - 1;     /* (dq0 -C: two of the strata's slots) */
     return 0;
 }
-#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4)
+#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3) || defined (HUB_ATTACH_P4) || defined (HUB_ATTACH_P23)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #endif

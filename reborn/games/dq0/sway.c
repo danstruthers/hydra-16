@@ -474,6 +474,16 @@ static unsigned char __fastcall__ ix_pick (const char* w, unsigned char sel, uns
                                                 **   the second ring, 2026-11-10) */
         }
     }
+    if (n == 1) {                               /* (The first: the least rank under 13, the first of it, in one pass, not
+                                                **   thirteen: room8, 2026-11-24, D17's) */
+        for (j = 0xFF, r = 13, e = 0; e < nix; ++e) {
+            if (rk[e] < r) {
+                r = rk[e];
+                j = e;
+            }
+        }
+        return j;
+    }
     for (r = 0; r < 13; ++r) {
         for (e = 0; e < nix; ++e) {
             if (rk[e] == r && !--n) {

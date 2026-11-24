@@ -3772,6 +3772,17 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   passage, only on a dig's face, so it would change nothing), the materials as things (timber, a door's leaf, stone
   carried), the spoil as a thing (rubble beside the way: no such thing in the catalogue yet), harm from rock falling
   on a denizen, a mine past its home's chunk.
+- **Building, every actor's** *(the user's, 2026-11-23: "The character builds anywhere, with materials"; the house's
+  reading of it, for review)*: the character and a builder hang a door and wall up a way by one code (dq0w/wbuild.c).
+  "hang the door": the door it faces, broken down, its leaf mended and hung again (shut, its lock and bar whole, its
+  harm gone): the world has no door's leaf to carry yet, so a door is hung only where a broken one's leaf is.  "wall up"
+  (or "brick up"): the passage square it faces, no one on it and nothing lying there, a wall again; its stones the
+  spoil of that square's own digging (a way dug), else a square of rubble beside it (its stones taken, that square a
+  clear passage).  Each wants a hammer carried (a record's, away from the character, its kind's outfit, as its
+  digging's tools are), and the referee's test: Timbercraft for a door, Masonry for a wall (by the actor's own sheet;
+  a record's untested).  Gone badly, its time is spent and nothing's done ("The work goes badly: you leave it as it
+  was."; a builder's heard, not told as done).  Its time and noise the act table's hang row (ten minutes) and wallup
+  row (an hour, six of its spells): the character's a wait, its work done as it begins; a builder's on its ready.
 
 ## Denizens and doors *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
 
@@ -3785,8 +3796,9 @@ These are the house's.
   window's shutters, bends its bars and works its pane out, and slams a door; an ally does any of them asked (lock,
   bar, unbar, force, pick: 2026-11-21, the one-path plan's stage 2).
 - **No trap sprung** *(the house's; left for now, the user's, 2026-11-03)*: a denizen never sets off a door's trap as it opens it, as it never sets
-  off one underfoot.  A faction knowing its own traps (and being caught by another's) is a planned item; till then
-  none is.
+  off one underfoot.  (Built since, step1 and step2, 2026-11-23: every actor sets off a trap underfoot and a door's;
+  each faction knows its own traps underfoot, those in a lair of its folk's chunk, as the lair's placed, and another's
+  once one of it finds it (noticed, searched for); a winged body passes over a floor's traps, pits and spilt oil.)
 - **A lock picked** *(2026-11-02, the house's)*: a robber's kind (kinds.txt's ways r: a bandit, a kobold, a brown orc,
   their leaders) with no key to a
   locked door picks its lock, by the character's code (a minute a try, its test the lock's steps worse), two tries,

@@ -26,11 +26,13 @@ OVMAX       = OVLS                  ; dq0.cfg's overlays, the build's count (the
                                     ;   27th the status line, 2026-11-11; the 28th the phrase table's rows,
                                     ;   said.txt's, 2026-11-11: said_b; the 29th
                                     ;   their second bank, stage 3; the 30th their third,
-                                    ;   2026-11-15)
+                                    ;   2026-11-15; the 31st their fourth, 2026-11-24)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
                                     ;   in the copies; 2026-11-03)
+SWSTUBOV    = 15                    ; (The stubs' tables in overlay 15's bank, dq0.cfg's SWSTP ...: a stub 4 bytes, not
+                                    ;   6, the main RAM's room, room8, 2026-11-24: room7's open question 1)
 
             .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -60,21 +62,24 @@ _getbank:
 ; said.c's: its own bank, overlay 27's room for the renderer), the window put back as it was.  (Some 40 cycles a byte
 ; with its call: a sentence's few hundred bytes read, a row found by the rows' lengths).  p past $A000, overlay 29's,
 ; the rows' second bank (stage 3, 2026-11-11: dq0.cfg's OV29 linked at $A000), at p less $2000 in it; past $C000,
-; overlay 30's, their third (2026-11-15: OV30 linked at $C000), at p less $4000
+; overlay 30's, their third (2026-11-15: OV30 linked at $C000), at p less $4000; past $E000, overlay 31's, their fourth
+; (room8, 2026-11-24: OV31 linked at $E000), at p less $6000.  (The first two banks' bytes as quick as before)
 _said_b:
             sta         ptr1
             txa
             ldy         _ovbank + 27
             cmp         #$A0
-            bcc         :+
+            bcc         @in
             ldy         _ovbank + 28
             cmp         #$C0
             bcc         @a0
             ldy         _ovbank + 29
-            sbc         #$20               ; (Carry set: past $C000, overlay 30's)
+            cmp         #$E0
+            bcs         @e0
+            sbc         #$1F               ; (Carry clear: past $C000, overlay 30's, less $20)
 @a0:        sec
             sbc         #$20               ; (Past $A000, overlay 29's)
-:           sta         ptr1 + 1
+@in:        sta         ptr1 + 1
             ldx         BANKREG
             sty         BANKREG
             ldy         #0
@@ -82,6 +87,9 @@ _said_b:
             stx         BANKREG
             ldx         #0
             rts
+@e0:        ldy         _ovbank + 30
+            sbc         #$60               ; (Carry set: past $E000, overlay 31's)
+            bra         @in
 
 ; ---- The overlays' calls
 

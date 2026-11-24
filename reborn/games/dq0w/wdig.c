@@ -55,33 +55,18 @@ static void __fastcall__ cut_corner (unsigned x, unsigned y)
     }
 }
 
-/* A builder's work (I_KIT's KT_BUILD, slice 4.11's rest: HOUSE.md's builders, for review): at m's w1, w2, a door broken
-** down put up again, a spell's work (the house's: its frame stands, a new leaf hung in it, shut, its lock and bar
-** whole; the change records the portal's own, PORTAL_STATE, PORTAL_HARM), or a way dug walled up (the square a wall,
-** an hour's work: six of the wallup row's spells); an actor's told (the act table's hang and wallup rows, the one-path
-** plan's digging, 2026-11-23: DE_HANGS, "The dwarf miner hangs a new door.", heard hammering; DE_WALLS, "The dwarf
-** miner walls up the way.", heard stones being laid), a record's not (the character's never near) */
-static void __fastcall__ build (const struct msg* m)
+/* A builder's work (I_KIT's KT_BUILD, slice 4.11's rest: HOUSE.md's builders): at m's w1, w2, a door broken down
+** put up again, or a way dug walled up: the character's own building, every actor's (wbuild.c's, part 124's: the
+** user's, 2026-11-23, "The character builds anywhere, with materials"; its hammer, its leaf or its stones, its test,
+** the act table's hang and wallup rows' times and noise; a record's, away, its tools the house's, untested, untold) */
+extern struct ireq iq;                          /* (things.c's: the request's copy) */
+unsigned char build (void);                     /* (Part 124's: wbuild.c) */
+static void __fastcall__ built (const struct msg* m, unsigned char rd)
 {
-    struct portal* q;
-    unsigned x = I_KIT_X (*m), y = I_KIT_Y (*m);
-    unsigned char pt, *p;
-
-    if ((p = at (bd.sn, x, y)) != 0 && TILE (*p) == T_CORR) {
-        change (bd.sn, x, y, T_WALL, C->elev[cy_][cx_], 0xFF);
-        if (m->who) {
-            den_saw = 1;
-            bd.ready += 6 * (unsigned long) act_noise (bk + 1, AC_WALLUP, x, y);
-        }
-    } else if (p && (q = portal_at (cx_, cy_)) != 0 && (q->state & PS_WRECKED)) {
-        pt = q->parts;                          /* (Read while its chunk's in the window) */
-        change (bd.sn, x, y, 0, pt, PORTAL_STATE);
-        change (bd.sn, x, y, 0, 0, PORTAL_HARM);
-        if (m->who) {
-            den_saw = 1;                        /* (The world to look about again: the door shut) */
-            bd.ready += act_noise (bk + 1, AC_HANG, x, y);
-        }
-    }
+    iq.to = TO_DEN | (rd ? BD_REC : 0) | BD_ANY;
+    iq.x = I_KIT_X (*m);
+    iq.y = I_KIT_Y (*m);
+    build ();
 }
 
 /* Body bd's tools to dig with, listed for the referee (their keys in the tools' own form, eight bytes each, an empty
@@ -198,7 +183,7 @@ void __fastcall__ s_den_dig (const struct msg* m)
         r1 = I_KIT_WITH (*m);                   /* (What it digs with: its claws; its things the world's to look at) */
     }
     if ((I_KIT_DRAW (*m) & KT_BUILD) == KT_BUILD) {
-        build (m);                              /* (A door put up again, a builder's) */
+        built (m, rd);                          /* (A door put up again, a way walled up: a builder's) */
         goto put;
     }
     dx = bd.x + head_x[h];

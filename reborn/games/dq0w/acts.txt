@@ -85,10 +85,11 @@ wshut       | 2 step | -        | 0  | 3 | DOOR  | WSHUTS    | -    | -     | - 
 # digfound: a hidden door dug into, its facing off (dig_spell's find, the character's E_DIG D_FOUND; an actor's told,
 # DE_DIGFOUND, at the door): the spell's noise.  hang: a door broken down put up again, a spell's work (a builder's,
 # DE_HANGS, heard hammering); wallup: a way dug walled up, an hour's work, six of the row's spells (DE_WALLS, heard
-# stones being laid).  The character's building none yet (the user's to say: OPEN.md)
+# stones being laid).  Every actor's, the character's too (the user's, 2026-11-23: wbuild.c's): a hammer, the
+# referee's Timbercraft (hang) or Masonry (wallup), a broken door's leaf or stones
 digfound    | 0      | -        | 0  | 6 | WORK  | DIGFOUND  | -    | -     | -        | 2
-hang        | 6000   | -        | 0  | 4 | WORK  | HANGS     | WORK | -     | -        | 2
-wallup      | 6000   | -        | 0  | 4 | WORK  | WALLS     | WORK | -     | -        | 2
+hang        | 6000   | TIMBER   | 0  | 4 | WORK  | HANGS     | WORK | -     | HAMMER   | 2
+wallup      | 6000   | MASONRY  | 0  | 4 | WORK  | WALLS     | WORK | -     | HAMMER   | 2
 
 # ---- Things, every actor's (the one-path plan's stage 2, things and robbery, 2026-11-23: ONE-PATH.md's 2.1 and 2.7):
 # the character's own numbers (things.c's catalogue code: its handlings' times), read by both sides (wthings.c's, an
@@ -97,7 +98,7 @@ wallup      | 6000   | -        | 0  | 4 | WORK  | WALLS     | WORK | -     | - 
 # don, doff: worn, taken off; strip: a worn thing taken from a body (on top of the takeout's); give: handed to another;
 # drag: a heavy thing shoved or dragged a square (its test's steps by its weight, the caller's: wdrag.c's); rob: one
 # helpless robbed (its time the round's and its reach's, the caller's); filch: a purse cut unnoticed (its contest the
-# minds', the robber's Stealth against the other's hearing: dq0d's HM_FILCH and SW_FILCH)
+# minds', the robber's Legerdemain against the other's hearing: dq0d's HM_FILCH and SW_FILCH, the user's, 2026-11-23)
 hold        | 10     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 put         | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 takeout     | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
@@ -107,7 +108,7 @@ strip       | 100    | -        | 0  | 0 | -     | -         | -    | -     | - 
 give        | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 drag        | 50     | FORCE    | 2  | 3 | WORK  | DRAGS     | -    | -     | -        | 2
 rob         | 0      | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
-filch       | 0      | STEALTH  | 0  | 0 | -     | -         | -    | -     | -        | 1
+filch       | 0      | FILCH    | 0  | 0 | -     | -         | -    | -     | -        | 1
 
 # ---- Links and lights (the one-path plan's stage 2, climbing and links, lights, 2026-11-23: wlink.c's, every actor's).
 # flight: a stairway's, a ladder's or a long slope's crossing, its time the flight's (acts.h's FLIGHT_T, by the

@@ -219,6 +219,9 @@ whisper     alone=VB_SAY thing=VB_SAY aux=1                          #   speech'
 empty       thing=VB_EMPTY_OBJECT unsaid=last aux=IO_EMPTY           # (Its things put out, a liquid poured away: P4, 2026-11-18)
 rob         thing=VB_THREATEN unsaid=none aux=SW_ROB                 # (One helpless robbed, its coins filched: the
 filch       thing=VB_THREATEN from=VB_THREATEN unsaid=none aux=SW_FILCH skill=P_STEALTH   #   character's, the one-path plan's stage 2, 2026-11-23)
+hangdoor    alone=VB_BUILD thing=VB_BUILD unsaid=none aux=BD_HANG skill=P_TIMBER   # (A broken door's leaf mended and hung
+wallup      alone=VB_BUILD thing=VB_BUILD unsaid=none aux=BD_WALL skill=P_MASONRY  #   again: "hang the door"; a passage walled
+                                                                        #   up: "wall up the way": the user's, 2026-11-23)
 
 [words]
 change facing = face
@@ -667,6 +670,8 @@ dump out = empty
 pour = empty
 rob = rob
 filch = filch
+wall up = wallup
+brick up = wallup
 steal from = filch
 
 [turns]
@@ -704,3 +709,4 @@ knock daylights = punch
 knock crap = punch
 put headlock = hold
 put head = hold
+hang door = hangdoor

@@ -261,13 +261,17 @@ module.exports = {
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3", 'drop the staff',
         'defend dodge', 'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'attack', 'attack', 'look at the body',
-        'take the leather vest from the body', 'quit', 'dq0 -d /ram/g', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
+        'take the leather vest from the body', 'quit', 'dq0 -d /ram/g', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -R 3", 'quit',
         'echo $status']) },
       start(m) {   // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
         // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
         // bandit's spear in hand, its knife kept) the dice had the other knock the character senseless first)
+        // (-R 3 on its games, room8, 2026-11-24, as dq0lair's since build2: with the three branches merged (build2's kit,
+        // things2's errands, step2's courage after a wound) the dice had the other bandit close as its fellow fell, knock the
+        // character senseless and leave it in shock before the vest; at -R 1, 3 and 4 it holds off and the vest's taken
+        // (dq0kit and dq0strip alike), at 0 and 5 the character's in shock: the dice's, the same rules)
         dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
       },
       expect: ['% echo $status'],
@@ -366,9 +370,9 @@ module.exports = {
       init: 't_rc', cycles: 1700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
-        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
+        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -R 3", 'quit',
         'echo $status']) },
       start(m) {   // (The scene set, 2026-11-03, as dq0kit's: as the first attack's typed, the bandits wary: the one down finished, the rest no longer
         // fighting on, the dice had it dead before it looked; and at the look a thing on the body beneath its clothes, I_HIDDEN and not known, a purse's
@@ -682,13 +686,17 @@ module.exports = {
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
         'take the leather vest from the body', 'take the belt from the body', 'quit', 'echo $status']) },
       start(m) {
         // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
         // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
         // bandit's spear in hand, its knife kept) the dice had the other knock the character senseless first)
+        // (-R 3 on its games, room8, 2026-11-24, as dq0lair's since build2: with the three branches merged (build2's kit,
+        // things2's errands, step2's courage after a wound) the dice had the other bandit close as its fellow fell, knock the
+        // character senseless and leave it in shock before the vest; at -R 1, 3 and 4 it holds off and the vest's taken
+        // (dq0kit and dq0strip alike), at 0 and 5 the character's in shock: the dice's, the same rules)
         dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
       },
       expect: ['% echo $status'],
@@ -2478,7 +2486,7 @@ module.exports = {
         // (reach1's, 2026-11-20: a step's words told as it's done, so typed as the pack comes off is typed in the round after the
         //  step before's words, the torch laid down (LATER cycles on: a line typed just between two steps, a flight's held to
         //  the reach's end, the report's); the crowbar's, as the fight takes its round after "You reach for your backpack.")
-        const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), LATER = 3000000;   // (3M cycles: in the pack's round; 1M and
+        const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), LATER = 3100000;   // (3.1M cycles since step2, 2026-11-23: at 3M the typed flee's echo met the status line's redraw, "f" and "lee" apart, the layout's timing; in the pack's round; 1M and
                                                 // 2M land as the step changes, the flight held past the inventory, the report's)
         let due = 0, text = '';
         cpu.step = v => { step(v); if (due && cpu.cyc >= due) { due = 0; a.rxQueue.unshift(...text); a.promptFrom = -1; } };

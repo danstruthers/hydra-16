@@ -81,10 +81,20 @@ its area's rows narrowed, below.)
 - **The minds**: a hidden door is dug at as the wall it seems (dq0d.c's dig_way: dug_as).
 - **Parity test**: dq0digact (the character's dig and a dwarf miner's: the query as it begins, the spells' ten
   minutes, the noise, the test and the rate by the grade, the tool worn).
-- **Left in this area**: the character's building (hang a door, wall up a way: no decision says what it needs or how:
-  OPEN.md); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
+- **Left in this area**: ~~the character's building (hang a door, wall up a way)~~ done (build2, below); a denizen digging down (no mind wants a shaft yet: OPEN.md); the roof's harm on a denizen (the world's harm
   for an actor, G3: the step's branch); a denizen tiring by its spells (the one body clock, A6, Y9); an arm useless
   stopping a denizen's chisel; the time of a denizen's spell spent while it's interrupted (Y8).
+
+**Done: stage 2's step, its second round** (branch step2, 2026-11-23; built/2026-11-23-step2.md; step1's before it):
+- **Each faction knows its own traps** (the user's): a trap's knowers (world.h's struct trap's know, a bit a faction,
+  TRAP_STATE's elev); a lair of folk placed marks its chunk's floor traps its faction's (I_KIT KT_TRAPS, wstep.c's
+  own_traps); a denizen's notice or search find its faction's alone, the character's its own (TS_HIDDEN); the minds'
+  walks go round what their faction knows (wet_ok, ktrap.s).
+- **A winged body over a floor's traps, pits and spilt oil** (hz.s, the minds' WA_WINGS); a door's trap still its.
+- **A wound from a trap or a fall tests courage** as a blow's (RS_HARM's heart and shy, both referees).
+- **A cry of pain heard as any noise** (E_DEN DE_CRY, DE_CRYCUT: the UI's hearing rule).
+- **The climb out of a pit ends with a step's time** for the character too (dq0w.c's climb_round_on).
+- **Parity tests:** dq0trapknow, dq0trapheart, dq0pitstep.
 
 **Done: stage 2's things and robbery** (branch things1, 2026-11-23; built/2026-11-23-things1.md):
 - **The act table's rows** hold, put, takeout, don, doff, strip, give, drag, rob, filch (games/dq0w/acts.txt), read by
@@ -107,6 +117,31 @@ its area's rows narrowed, below.)
 - **Parity tests:** dq0thingact (put, takeout, don, drag), dq0dentakein (a take from an open sack), dq0pcrob.
 - **Left in this area:** see built/2026-11-23-things1.md's open questions (C10's takings carried home, the grope for
   a denizen, worn places for a denizen, the minds' use of the new errands, the character's take-up time the UI's).
+- **Then (branch things2, 2026-11-23; built/2026-11-23-things2.md), the user's decisions of 2026-11-23:** the character
+  robs one held (its grapple's: the hub's pc_grip) or asleep, as well as one senseless; a filch is the character's
+  Legerdemain (a new purpose, P_FILCH: both referees; a creature's its Dexterity, the denizens' filch of the character
+  the same row's) against the victim's hearing; one that catches it has its attitude moved against the character by its
+  nature (dq0d's caught); a robber carries its takings home on its body (items.h's I_LOOT, the carry's), put by at its
+  lair as it gets there (FE_STASH: its hoard, hidden, or lying there), so one killed on the way gives them back (C10);
+  the minds use the errands (t 0, the world's choice): armour better than it wears taken up and worn (TW_ARMOUR,
+  FE_DON), its loot held put away (FE_STOW), a spare weapon or light handed a fellow that needs one (FE_PASS's PN_*,
+  FE_HAND), and a heavy thing beside it dragged to brace a door it shuts against the character (FE_DRAG, wdrag.c's
+  brace).  Tests dq0robheld, dq0denerrands.  Left: binding (no state to be bound yet), and its open questions.
+
+**Done: building** (branch build2, 2026-11-23; built/2026-11-23-build2.md; the user's "The character builds anywhere,
+with materials"):
+- **One build** (dq0w/wbuild.c, part 123): the character's "hang the door" and "wall up" (the things' IO_BUILD) and a
+  builder's I_KIT KT_BUILD (wdig.c) are one code: a broken door's leaf hung again in any doorway, a passage walled up
+  anywhere; a hammer (every actor's tool_of; a record's its outfit's); the leaf the broken door's own, the stones the
+  way's own spoil or rubble beside it; the referee's Timbercraft or Masonry (P_TIMBER, P_MASONRY) by the actor's own
+  sheet; the act table's hang and wallup rows' times and noise.  The act audit's G-17.
+- **Outfits**: bandits, soldiers and cultists carry a torch and a tinderbox, dwarf miners a tinderbox (climb1's
+  lighting then theirs).
+- **Parity test:** dq0buildact (the character's hang and wall, refusals, and a dwarf miner's, by the same tests, rows
+  and effects).
+- **Left in this area:** a door's leaf and stones as things carried; a new door hung in an empty doorway (a portal made
+  where there was none); a doorway walled up; the work's time interrupted part way (the character's a wait, its work
+  done as it begins).
 
 **Done so far:**
 - **Stage 1, the world's part** (act1, 2026-11-19): the act table (games/dq0w/acts.txt) and one sender each for noise and

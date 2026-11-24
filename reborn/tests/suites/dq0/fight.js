@@ -8,7 +8,7 @@ const { typed } = require('../../lib/common.js');
 const {
   liveChunks, stratumRec, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never,
   dq0Carried, dq0Named, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Body, dq0Sheet, dq0PcShock, dq0Grow,
-  dq0Aware, dq0OnWords, WORN, dq0Ad, dq0Timer, dq0Asks, dq0Paces, dq0HeldPaces, dq0FightPause
+  dq0Aware, dq0OnWords, WORN, dq0Ad, dq0Timer, dq0Asks, dq0Paces, dq0HeldPaces, dq0FightPause, dq0Root
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 const MID_MARK = '\u0104', NO_ROUND = 60e6, MID_GAP = 3e6;   // (dq0fightmid's: a line typed as the character's own blow is being worked, 3M cycles after the line before at least; none in 60M cycles, typed anyway)
@@ -124,7 +124,7 @@ module.exports = {
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml shd 90 >> /ram/c.hm',
         'echo ml swd 20 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk' -R 1", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(30).fill('wait'), 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
@@ -205,7 +205,7 @@ module.exports = {
       name: 'dq0broke', outfit: true, asks: true, initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapons broken by the book (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage, 3d6 over its Weapon Quality, on a Block), every actor's: dq0shield's bandit set on the character, sword in hand, its stance a block: a block, weapon against weapon, breaks one of them: told, its pieces a 'broken weapon' on the floor, none of it in hand after; the character's next blow by its fists, or the bandit's",
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status']) },
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 1", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
       },
@@ -1425,15 +1425,22 @@ module.exports = {
         const torch = (shock ? dq0Carried(T.of('drop the torch').at) : now).find(i => i.name === 'torch' && (i.flags & I.HELD));   // (In shock: as it came round)
         if (dq0Named(now, 'dagger').length || dq0Named(now, 'pennies').length) f.push('the dagger or the pennies still carried');
         if (!torch || !(torch.flags & I.LIT)) f.push('its torch not in hand, lit');
-        const lay = q.at.items.filter(i => i.where === 'IW_SQUARE' && (i.n === dag.n || i.n === pen.n));
-        if (lay.length !== 2 || lay[0].x !== lay[1].x || lay[0].y !== lay[1].y || (lay[0].x === q.at.pc.x && lay[0].y === q.at.pc.y))
-          f.push('the dagger and the pennies not put down together off its square: ' + JSON.stringify(lay.map(i => [i.name, i.x - q.at.pc.x, i.y - q.at.pc.y])));
+        // (The takings carried off on the robber's body, its takings (I_LOOT), home to its lair, put down there as it gets
+        //   there: the user's C10, 2026-11-23; till then, so one killed on the way gives them back)
+        const rtk = T.find(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }).length), rober = robs[0] && rtk && rtk.after && rtk.after.actors.find(a => a.k === robs[0].by);
+        const on = (s, i) => { const r = dq0Root(s, i); return r.where === 'IW_DEN' && rober && r.did === rober.did && (i.flags & 0x10); };
+        const took = rtk && rtk.after ? rtk.after.items.filter(i => i.n === dag.n || i.n === pen.n) : [];
+        if (took.length !== 2 || !took.every(i => on(rtk.after, i))) f.push('the takings not on the robber as it robbed (its own, I_LOOT): ' + JSON.stringify(took.map(i => [i.name, i.where, i.flags, dq0Root(rtk.after, i).did])) + ' ' + JSON.stringify(rober));
+        const lay = q.at.items.filter(i => i.where === 'IW_SQUARE' && (i.n === dag.n || i.n === pen.n)), still = q.at.items.filter(i => (i.n === dag.n || i.n === pen.n) && on(q.at, i));
+        if (still.length !== 2 && (lay.length !== 2 || lay[0].x !== lay[1].x || lay[0].y !== lay[1].y || (lay[0].x === q.at.pc.x && lay[0].y === q.at.pc.y)))
+          f.push('the dagger and the pennies neither on the robber nor put down together at its lair: ' + JSON.stringify(lay.map(i => [i.name, i.x - q.at.pc.x, i.y - q.at.pc.y])));
+        this.notes = ['the takings at the end: ' + (still.length === 2 ? 'on the robber' : 'at its lair')];
         if (all.slice(down + 1).some(e => e.def === 0)) f.push('struck at after it fell');
         if (/You are dead\./.test(s)) f.push('the character killed');
         const RSE = m.dq0.layout().K.RS_EQUIP, eq = (t, slot) => t.replies.filter(r => r.kind === RSE && r.a === 2 && r.req === slot);
         const rt = T.find(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }).length), tk = T.of('take the torch');
         if (rt && rt.after && !dq0Carried(rt.after).some(i => i.name === 'torch' && (i.flags & I.HELD) && (i.flags & I.LIT))) f.push('its torch not in hand, lit, as it was robbed');
-        const was = eq(h, 'slot1').pop(), told = rt ? eq(rt, 'slot0') : [], again = eq(tk, 'slot1').pop();
+        const was = eq(h, 'slot1').pop(), told = rt ? eq(rt, 'slot0').filter(r => !r.actor) : [], again = eq(tk, 'slot1').pop();   // (The character's: the robber's own told too, 2026-11-23)
         if (told.length !== 1) f.push('the robbed load not told the referee as it was robbed (the world\'s RS_EQUIP 2): ' + told.length);
         else if (!was || (!shock && !again) || told[0].w1 >= was.w1 || (!shock && told[0].w1 !== again.w1))
           f.push('the load told as it was robbed not what was left: before ' + (was && was.w1) + ', robbed ' + told[0].w1 + ', its torch put down and taken up again ' + (again && again.w1));

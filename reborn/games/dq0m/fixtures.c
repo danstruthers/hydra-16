@@ -267,6 +267,7 @@ static void __fastcall__ trap (unsigned char x, unsigned char y, unsigned char k
     t->trigger = trigger;
     t->state = 0;
     t->hide = 0;
+    t->know = 0;                                /* (No one's: its faction's as its lair's placed, the world's) */
     t->power = 1 + dr (9);
     if (kind == TK_PIT) {                       /* (An open pit: in plain sight, its depth its power, in feet) */
         L->tile[y][x] = T_PIT;

@@ -113,7 +113,9 @@ extern struct work wk;
 void doors (void);                              /* (Part 5's) A door worked, or a window's shutters */
 void blows (void);                              /* (Part 6's) A portal broken by blows: begun, or its next blow */
 void portals (void);                            /* (Part 7's) A portcullis or a window worked */
-void traps (void);                              /* (Part 8's) A trap stepped onto, disarmed; a search */
+void traps (void);                              /* (Part 8's) A trap stepped onto, disarmed; a door gone over */
+void tsearch (void);                            /* (Part 123's: wtsrch.c) A search (PA_SEARCH: the character's, an
+                                                **   actor's) */
 void revealed (void);                           /* (Part 41's: dq0w.c) An opening told, with what it shows beyond */
 
 /* dq0w.c's: the world's events told the UI, its one sender (the hub's header in the window after): kind, who, w1 and

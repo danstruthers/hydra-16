@@ -332,6 +332,10 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
                                                 **   character's rules: dq0w/wdig.c; w1 w2 the square it digs.  Who
                                                 **   0, a record's, away from the character: its spell at once,
                                                 **   untested, x[2] its stratum, x[0] its tools, slice 4.11's rest) */
+#define KT_TRAPS        0x40                    /* (I_KIT's a, who 0: a lair of folk placed, the traps set underfoot in
+                                                **   its chunk its faction's (b), known to it from now on (world.h's
+                                                **   struct trap's know: the world's own_traps, wstep.c's; the user's,
+                                                **   2026-11-23); w1 w2 its home square, x[2] its stratum) */
 #define KT_BUILD        0xC0                    /* (I_KIT's a, a builder's (slice 4.11's rest): a door broken down put
                                                 **   up again, or a way dug in walled up: w1 w2 its square, b the
                                                 **   heading to it; who as KT_DIG's, a record's x[2] its stratum: the
@@ -447,8 +451,8 @@ enum {
                                                 **   standing (its personal things': kinds.txt's) */
     I_ROB,                                      /* (The denizens', a robber's: kinds.txt's ways r) The character,
                                                 **   helpless beside it, robbed: what it holds (but a light lit) and
-                                                **   its pennies taken off to w1 w2 (its lair's home square, on its
-                                                **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED;
+                                                **   its pennies carried off on its body (I_LOOT: FE_STASH's w1 w2 at
+                                                **   its lair, 2026-11-23), a round's work; E_TASK TE_ROBBED; FE_STASH's:
                                                 **   x[2] RB_HOARD, w1 w2 its faction's leader's home (its hoard
                                                 **   there, b its kind's faction: the takings in it), RB_HIDE, hidden
                                                 **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB; x[3]
@@ -678,8 +682,12 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_DIGFOUND,                              /* (A hidden door dug into, its facing off: found, every actor's dig,
                                                 **   the act table's digfound row: at the door's square, the one-path
                                                 **   plan's digging, 2026-11-23) */
-    DE_DRAGS };                                   /* (A heavy thing shoved or dragged, its strain: the act table's drag,
+    DE_DRAGS,                                     /* (A heavy thing shoved or dragged, its strain: the act table's drag,
                                                 **   the character's, wdrag.c's, every actor's, 2026-11-23) */
+    DE_CRY, DE_CRYCUT };                          /* (A cry of pain, hurt by the world (a fall, a trap: wstep.c's
+                                                **   den_harm), and one cut short, dead of it: told only where it's
+                                                **   heard, as any noise, the user's, 2026-11-23; the minds deaf to it,
+                                                **   as to a blow) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
@@ -1247,7 +1255,13 @@ struct actor {
 #define TW_SEARCH       0x08                    /* (And its own search first, a robber's where it last sensed the
                                                 **   character: a minute's, its reach, what's hidden there found by its
                                                 **   sheet, wtake.c's) */
+#define TW_ARMOUR       0x10                    /* (Armour better than it wears, folk's: a kind it doesn't wear, worth
+                                                **   more than the best it does, the world's to judge; its mind's FE_DON
+                                                **   0 to wear it after, 2026-11-23) */
 #define TW_SEEN         0xFE00
+#define TW_GOT          0xFC00                  /* (The hub's dig_t: it's taken up a thing it wanted that isn't a
+                                                **   weapon (armour, loot, food), the world's: its mind's to see to it
+                                                **   (FE_DON 0, a robber's FE_STOW 0) at its next look, 2026-11-23) */
 #define TW_ATE          0xFD00                  /* (The hub's dig_t: it's eaten what it held, the world's: its mind's to
                                                 **   know, and clear by an I_TAKE of no wants) */
 enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an ally's fetching, the thing (t) taken up
@@ -1270,12 +1284,25 @@ enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an all
                                                 **   or dragged toward it, it a square back (w2 1): wdrag.c's; */
        FE_HAND,                                 /*   thing t it holds handed to actor w1 less 1 beside it, by the
                                                 **   receiver's take rule (its hands, what it lifts): the give row's,
-                                                **   FE_PASS's food too.  No mind posts these yet: I_ROB:fetch's fields) */
-       FE_ROBBED };                             /* (The actor robbed by the character beside it (the minds' SW_ROB,
+                                                **   FE_PASS's food too.  I_ROB:fetch's fields.  The minds' (2026-11-23),
+                                                **   t 0 the world's to choose: FE_STOW its loot held (coins, jewels, its
+                                                **   takings), FE_DON its best armour carried that's better than it
+                                                **   wears (TW_ARMOUR's), FE_HAND a spare of its own a fellow needs (w2
+                                                **   PN_*, FE_PASS's), FE_DRAG a heavy thing beside it pulled to brace a
+                                                **   shut door beside it) */
+       FE_ROBBED,                               /* (The actor robbed by the character beside it (the minds' SW_ROB,
                                                 **   SW_FILCH: the one-path plan's stage 2, 2026-11-23): what it holds
                                                 **   but a light lit, and its coins, x[3] RB_PURSE its coins alone, taken
                                                 **   into the character's hands, pack or purse by its carry, each told
                                                 **   (E_TASK TE_FETCHED FT_STOLEN; none, FT_BARE): wthings.c's) */
+       FE_STASH };                              /* (A robber home with its takings (the user's C10, 2026-11-23: carried
+                                                **   on its body till its lair, items.h's I_LOOT): each put down at w1
+                                                **   w2, I_ROB's x[2] the keep (RB_HOARD, RB_HIDE) and b the faction, as
+                                                **   a robbery's were: wthings.c's) */
+#define PN_ARMS         1                       /* (FE_PASS's t: what a fellow beside it needs handed it, a weapon (it has
+                                                **   none), */
+#define PN_LIGHT        2                       /*   a light (none of its own); 0 food: the world's to choose a spare of
+                                                **   its own, the minds' to see the need: 2026-11-23) */
 enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR,
        FT_STOLEN, FT_BARE };   /* (E_TASK TE_FETCHED's b's high
                                                 **   bits: taken up, handed over, gone from where it lay, too heavy
@@ -1319,9 +1346,11 @@ enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRI
                                                 **   performing skill by the order: PF_*) */
        SW_ROB, SW_FILCH };                      /* (One robbed by the character, the denizens' own robbery the other way
                                                 **   about (the one-path plan's stage 2, things and robbery, 2026-11-23):
-                                                **   one senseless beside it, what it holds and its coins; one asleep (or
-                                                **   senseless) beside it, its coins alone, the character's Stealth
-                                                **   against its hearing, the better caught (SR_WONT: it wakes) */
+                                                **   one helpless beside it (senseless, asleep, or held: the user's,
+                                                **   2026-11-23), what it holds and its coins; filched, its coins alone;
+                                                **   one asleep the character's Legerdemain (P_FILCH) against its
+                                                **   hearing, the better caught (SR_WONT: it wakes, its attitude moved
+                                                **   against the character by its nature, its mind's) */
 enum { PF_ANY, PF_SING, PF_PLAY, PF_DANCE };    /* (SW_ENTERTAIN's order: the best of them, or the one said) */
 enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK,
        OR_LOCK, OR_BAR, OR_UNBAR, OR_FORCE, OR_PICK };   /* An ally's request (SW_ORDER's): follow the character, wait
@@ -1786,6 +1815,9 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   its square, its sens light), | AL_KIT a light of its own it could
                                                 **   light, | AL_NOFIRE none of them lit for want of a flame (its mind
                                                 **   asks no more till its things change) */
+    unsigned char   pc_grip;                    /* The actor the character holds, plus 1 (0 none), | GH_PIN pinned (the
+                                                **   world's grip, as its grapple leaves it: the minds' to know one held
+                                                **   is helpless to a robbery, the user's, 2026-11-23) */
 };
 #define AL_REACH        0x1F
 #define AL_NOFIRE       0x40
@@ -2230,6 +2262,7 @@ struct wsave {
 **   own hub.sens senses                                        (Each actor's senses: one path, 2026-11-19)
 **   own hub.dsense_whom denizens +world                        (A sense's target: the asker's)
 **   own hub.ui_enter ui                                        (Each line's Enter: the give-way's, 2026-11-19)
+**   own hub.pc_grip world                                      (The one the character holds: 2026-11-23)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

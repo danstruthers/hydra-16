@@ -302,6 +302,7 @@ unsigned __fastcall__ den_lvl (unsigned c, unsigned char from);
 unsigned char __fastcall__ den_carry (unsigned n, unsigned char hand_first);
 unsigned char __fastcall__ den_store (unsigned n, unsigned c, unsigned char on);
 void __fastcall__ den_robbed (unsigned char purse);   /* (Part 116's: the character's robbery) */
+void __fastcall__ den_stash (const struct msg* q);  /* (Part 116's: a robber's takings put by at its lair) */
 #undef own
 #define own(i)          den_own ((i), bd.did)
 
@@ -387,14 +388,109 @@ static unsigned char __fastcall__ hand (unsigned n, unsigned char a)
     return IR_OK;
 }
 
-/* Body bd's errand (its intent m, I_ROB with a FE_STOW ... FE_HAND: t its thing, w1 w2 the other and how): the
+/* Whether body bd wears a thing of kind k: 1 */
+static unsigned char __fastcall__ wears (unsigned char k)
+{
+    unsigned i = 0;
+
+    while ((i = items (i, IN_DEN, 0)) != 0) {
+        if (ip->kind == k && ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 && (ip->flags & I_WORN)) {
+            hub_map (0);
+            return 1;
+        }
+    }
+    hub_map (0);
+    return 0;
+}
+
+/* The thing of its own an errand's done with, the world's to choose (t 0: its mind's, the user's, 2026-11-23): FE_STOW
+** its loot held (coins, jewels, its takings: no weapon, no light); FE_DON the armour it carries, not worn, worth more than
+** the best it wears and of a kind it doesn't wear (the most worth: TW_ARMOUR's "better", the world's); FE_HAND (FE_PASS's,
+** need PN_*) a spare its fellow needs, a weapon (PN_ARMS) or a light not lit (PN_LIGHT), one of two at least of its
+** own, one not in hand first.  Its number, or 0 */
+static unsigned __fastcall__ choose (unsigned char e, unsigned char need)
+{
+    unsigned i = 0, w = 0, v, best = 0, bv = 0;
+    unsigned char k, f, c, l, kf, n = 0, ok;
+
+    if (!bd.did) {
+        return 0;
+    }
+    while (e == FE_DON && (i = items (i, IN_DEN, 0)) != 0) {    /* (The best it wears, its worth) */
+        if (ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 && (ip->flags & I_WORN)) {
+            k = ip->kind;
+            hub_map (KIND_BANK);
+            if (CATALOGUE[k].craft == AP_ARMOUR && CATALOGUE[k].value > w) {
+                w = CATALOGUE[k].value;
+            }
+        }
+    }
+    for (i = 0; (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+        k = ip->kind;
+        f = ip->flags;
+        hub_map (KIND_BANK);
+        c = CATALOGUE[k].craft;
+        v = CATALOGUE[k].value;
+        l = CATALOGUE[k].light;
+        kf = CATALOGUE[k].flags;
+        ok = CATALOGUE[k].form & KF_COUNT;
+        ok = e == FE_STOW ? (f & I_HELD) && c != AP_WEAPON && !l && ((f & I_LOOT) || k == KI_PENNIES || k == KI_FARTHINGS ||
+            k == KI_CROWNS || c == AP_JEWEL) : e == FE_DON ? !(f & I_WORN) && c == AP_ARMOUR && (kf & K_WEAR) && v > w &&
+            v > bv : e != FE_HAND ? 0 : need == PN_ARMS ? c == AP_WEAPON && (kf & K_HAND) && !ok : need == PN_LIGHT && l;
+        if (!ok || !own (i) || (e == FE_DON && wears (k))) {
+            continue;
+        }
+        if (e != FE_HAND) {
+            best = i;                           /* (Loot: the first; armour: the most worth) */
+            bv = v;
+            if (e == FE_STOW) {
+                break;
+            }
+            continue;
+        }
+        ++n;                                    /* (A spare: one of two, not lit, one not in hand first) */
+        if (!(item_at (i)->flags & I_LIT) && (!best || !(f & I_HELD))) {
+            best = i;
+        }
+    }
+    hub_map (0);
+    return e != FE_HAND || n >= 2 ? best : 0;
+}
+
+/* Body bd's errand (its intent m, I_ROB with a FE_STOW ... FE_HAND: t its thing, w1 w2 the other and how; t 0, the
+** world's to choose, choose's: nothing to do, nothing done, no time; FE_STASH, its takings put by at its lair): the
 ** result (IR_*), told as it's seen if done; refused, a second's pause (a denizen's refused act's) */
 unsigned char __fastcall__ s_den_things (const struct msg* m)
 {
     struct ireq k;
+    struct item was;
     unsigned n = I_ROB_THING (*m), o = 0;
     unsigned char e = I_ROB_ERRAND (*m), r, b, h;
 
+    if (e == FE_STASH) {
+        den_stash (m);                          /* (Part 116's) */
+        return IR_OK;
+    }
+    if (!n && (e == FE_STOW || e == FE_DON || e == FE_HAND)) {
+        if (!(n = choose (e, I_ROB_Y (*m)))) {
+            return IR_NONE;
+        }
+        memcpy (&was, item_at (n), sizeof was);
+        if (e == FE_HAND && !(was.flags & I_HELD)) {
+            bd.ready += row_u (AC_TAKEOUT) + den_lvl (n, 1);   /* (Got out first, to hand: the takeout row, its reach) */
+            den_hold (n, &bd, I_HELD);
+            if ((r = hand (n, I_ROB_X (*m))) != IR_OK) {
+                memcpy (item_at (n), &was, sizeof was);   /* (Not taken: put back where it was) */
+                hub_map (0);
+                return r;
+            }
+            hub_map (0);
+            den_eq_all = 1;
+            den_equip ();
+            den_seen (WB_HANDS_TO | (unsigned) was.kind << 8, I_ROB_X (*m));
+            return IR_OK;
+        }
+    }
     h = (item_at (n)->flags & I_HELD) != 0;
     b = item_at (n)->kind;
     hub_map (0);
@@ -591,7 +687,7 @@ void __fastcall__ s_den_robbed (unsigned char purse)
             continue;                           /* (Not wanted; not its; where the hand can't get at it) */
         }
         p = item_at (i);
-        p->flags &= ~(I_HELD | I_WORN);
+        p->flags &= ~(I_HELD | I_WORN | I_LOOT);
         p->owner = p->hide = 0;                 /* (No longer its: the character's now) */
         if (!carry (i, 1)) {
             hub_map (0);
@@ -619,4 +715,76 @@ void __fastcall__ s_den_robbed (unsigned char purse)
     light_now ();
     den_eq_all = 1;
     den_equip ();                               /* (And the robbed one's) */
+}
+
+/* Body bd home with its takings (FE_STASH, its mind's: the user's C10, 2026-11-23, a robbery's carried on its body till
+** its lair): each thing of its own marked its takings (items.h's I_LOOT, however deep) put down at x, y (I_ROB's w1 w2:
+** its lair's home square on its stratum; or, that square not to be had, where it stands), in its faction's hoard there
+** (how RB_HOARD, by its leader's home: the hoard's container, OW_HOARD | its faction), hidden there (RB_HIDE, its kind
+** hides its things: the conceal row's test by its sheet, its minute, the first thing's hiding all of theirs: HOUSE.md's
+** the robbers' takings, the character's own hiding of a thing), else lying there (s_den_rob's before, at the robbery);
+** what it holds told the referee after */
+void __fastcall__ s_den_stash (const struct msg* q)
+{
+    struct item* p;
+    struct actq aq;
+    unsigned i, x, y, box;
+    unsigned char how, fac, hd = 0, n = 0, h = 0;
+    unsigned char* s;
+
+    x = I_ROB_X (*q);
+    y = I_ROB_Y (*q);
+    how = I_ROB_KEEP (*q);
+    fac = I_ROB_FACTION (*q);
+    s = at (bd.sn, x, y);
+    if (!s || !(TILE (*s) == T_FLOOR || TILE (*s) == T_CORR) ||
+        !it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS)) {
+        x = bd.x;
+        y = bd.y;
+        how = how == RB_HOARD ? RB_HOARD : 0;  /* (Its home no floor, a way's square: its hoard still the one near) */
+    }
+    for (box = 0, i = 0; how == RB_HOARD && (i = items (i, IN_SQUARE, 0)) != 0; ) {
+        if (ip->owner == (OW_HOARD | fac) && ip->sn == bd.sn && (unsigned) (ip->x - x + 16) <= 32 &&
+            (unsigned) (ip->y - y + 16) <= 32) {
+            box = i;                            /* (Its faction's hoard, by its leader's home: the takings in it) */
+            break;
+        }
+    }
+    for (i = 0; (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+        if (!(ip->flags & I_LOOT) || !own (i)) {
+            continue;
+        }
+        p = item_at (i);
+        h |= p->flags & I_HELD;
+        p->where = IW_SQUARE;
+        p->sn = bd.sn;
+        p->x = x;
+        p->y = y;
+        p->owner = p->hide = 0;
+        p->flags &= ~(I_HELD | I_WORN | I_LOOT);
+        if (box) {
+            p->where = IW_ITEM;
+            p->x = box;
+            p->y = 0;
+        } else if (how == RB_HIDE) {
+            if (!hd) {                          /* (Its stash concealed, the first thing put by: the conceal row) */
+                act_get (aq, AC_CONCEAL);
+                hd = act_test (bk + 1, aq.r.test, aq.r.steps);
+                hd = 0x80 | HIDE_OF ((signed char) hd);
+                bd.ready += aq.r.time;
+                p = item_at (i);
+            }
+            p->flags = (p->flags & ~I_KNOWN) | I_HIDDEN;   /* (Its stash at its home: found by searching) */
+            p->hide = hd & 0x7F;
+        }
+        ++n;
+    }
+    hub_map (0);
+    if (n) {
+        ++HUB->den_seq;
+        if (h) {
+            den_eq_all = 1;
+            den_equip ();                       /* (What it holds now, told the referee) */
+        }
+    }
 }

@@ -93,14 +93,16 @@ static void __fastcall__ news (unsigned w)
     hub_map (0);
 }
 
-/* The first thing body bd holds that's food; or (food 0) that's neither a weapon nor a light: its number, or 0 */
+/* The first thing body bd holds that's food; or (food 0) that's neither a weapon nor a light, nor its takings (a
+** robber's, I_LOOT: carried home, 2026-11-23): its number, or 0 */
 static unsigned __fastcall__ held (unsigned char food)
 {
     unsigned i = 0;
     unsigned char k, y;
 
     while (bd.did && (i = items (i, IN_DEN, 0)) != 0) {
-        if (ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 && (ip->flags & I_HELD)) {
+        if (ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 && (ip->flags & I_HELD) &&
+            (food || !(ip->flags & I_LOOT))) {
             k = ip->kind;
             hub_map (KIND_BANK);
             y = !strcmp (CATALOGUE[k].tool, "food");
@@ -132,7 +134,7 @@ static void __fastcall__ let_go (unsigned n)
     p->x = bd.x;
     p->y = bd.y;
     p->owner = p->hide = 0;
-    p->flags = (p->flags & ~(I_HELD | I_WORN)) | I_KNOWN;
+    p->flags = (p->flags & ~(I_HELD | I_WORN | I_LOOT)) | I_KNOWN;
     sky_ask (n);
     hub_map (0);
     news (WB_DROP | (unsigned) k << 8);
@@ -153,10 +155,13 @@ static void __fastcall__ rest (const struct msg* m)
         }
     } else if (I_ROB_ERRAND (*m) == FE_PASS) {  /* (Food handed to a fellow beside it: none held, nothing, no time; the
                                                 **   one hand of a thing, every actor's, wthings.c's FE_HAND: the
-                                                **   receiver's take rule, the give row, 2026-11-23) */
-        if ((n = held (1)) != 0) {
+                                                **   receiver's take rule, the give row, 2026-11-23); or (t PN_*) a
+                                                **   spare weapon or light it needs, wthings.c's to choose */
+        n = I_ROB_THING (*m) ? 0 : held (1);
+        if (n || I_ROB_THING (*m)) {
             memcpy (&q2, m, sizeof q2);
             I_ROB_ERRAND (q2) = FE_HAND;
+            I_ROB_Y (q2) = I_ROB_THING (*m);
             I_ROB_THING (q2) = n;
             I_ROB_X (q2) = I_ROB_FELLOW (*m);
             den_things (&q2);
@@ -217,6 +222,30 @@ unsigned char __fastcall__ s_take_rule (unsigned n)
 
 /* ---- Only what it's found (the user's, 2026-11-17) */
 static unsigned char want, dark, cleared;       /* (The take's: its wants, its darkvision, got's) */
+static unsigned armw;                           /* (The worth of the best armour it wears: TW_ARMOUR's, 2026-11-23) */
+
+/* Whether body bd wears a thing of kind k, or (k 0) the worth of the best armour it wears (armw) */
+static unsigned char __fastcall__ worn_k (unsigned char k)
+{
+    unsigned i = 0;
+    unsigned char j;
+
+    armw = k ? armw : 0;
+    while ((i = items (i, IN_DEN, 0)) != 0) {
+        if (ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 && (ip->flags & I_WORN)) {
+            if ((j = ip->kind) == k) {
+                hub_map (0);
+                return 1;
+            }
+            hub_map (KIND_BANK);
+            if (!k && CATALOGUE[j].craft == AP_ARMOUR && CATALOGUE[j].value > armw) {
+                armw = CATALOGUE[j].value;
+            }
+        }
+    }
+    hub_map (0);
+    return 0;
+}
 
 /* The thing ip (items ()'s) at body bd's own home, its lair's own or its takings: 1 (left there) */
 static unsigned char home_near (void)
@@ -264,17 +293,22 @@ static unsigned char __fastcall__ open_out (unsigned i)
 }
 
 /* Kind k as body bd wants it (want's): a weapon in hand, its having none (the catalogue's weapons held in a hand, not
-** a lot counted); food; coins and jewels: its craft (AP_*) plus 1, or 0 */
+** a lot counted); food; coins and jewels; armour better than it wears (TW_ARMOUR, the user's, 2026-11-23: a kind it
+** doesn't wear, worth more than the best it does, armw): its craft (AP_*) plus 1, or 0 */
 static unsigned char __fastcall__ wanted (unsigned char k)
 {
-    unsigned char c, f;
+    unsigned char c, f, r;
 
     hub_map (KIND_BANK);
     c = CATALOGUE[k].craft;
     f = CATALOGUE[k].flags;
-    return ((want & TW_ARMS) && c == AP_WEAPON && (f & K_HAND) && !(CATALOGUE[k].form & KF_COUNT)) ||
+    r = ((want & TW_ARMS) && c == AP_WEAPON && (f & K_HAND) && !(CATALOGUE[k].form & KF_COUNT)) ||
         ((want & TW_FOOD) && !strcmp (CATALOGUE[k].tool, "food")) ||
-        ((want & TW_LOOT) && (k == KI_PENNIES || k == KI_CROWNS || k == KI_FARTHINGS || c == AP_JEWEL)) ? c + 1 : 0;
+        ((want & TW_LOOT) && (k == KI_PENNIES || k == KI_CROWNS || k == KI_FARTHINGS || c == AP_JEWEL));
+    if (!r && (want & TW_ARMOUR) && c == AP_ARMOUR && (f & K_WEAR) && CATALOGUE[k].value > armw) {
+        r = !worn_k (k);
+    }
+    return r ? c + 1 : 0;
 }
 
 /* Thing i (its kind k, its craft c plus 1: wanted's) taken up by body bd by the take rule, held (its own: a weapon told
@@ -307,6 +341,9 @@ static unsigned char __fastcall__ got (unsigned i, unsigned char k, unsigned cha
     }
     hub_map (0);
     ++HUB->den_seq;
+    if (!w && bd.doing != DO_DIG) {
+        HUB->dig_t[bk] = TW_GOT;                /* (Its mind's to see to it: worn, put away, 2026-11-23) */
+    }
     return 1;
 }
 
@@ -330,6 +367,9 @@ void __fastcall__ s_den_take (const struct msg* m)
     }
     want = I_TAKE_WANT (*m);
     dark = I_TAKE_DARK (*m);
+    if (want & TW_ARMOUR) {
+        worn_k (0);                             /* (The best it wears, armour's: what's better) */
+    }
     if (want & TW_SEARCH) {                     /* (Its own search first, a robber's where it lost the character: the
                                                 **   character's own, every actor's, wsearch.c's (the one-path plan's
                                                 **   stage 2, 2026-11-21): what it finds uncovered, taken as anything

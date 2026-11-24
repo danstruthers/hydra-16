@@ -356,6 +356,8 @@ static void __fastcall__ harm (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) RS_HARM_EFFECTS (*r);
     unsigned char n, t = r->actor ? BTOUGH : TOUGH;
+    signed char ht = (RS_HARM_SHY (*r) & 1 ? -4 : 0) + (signed char) RS_HARM_HEART (*r);   /* (A creature's courage's
+                                                **   steps, read before its effects take their place) */
     unsigned char* dw = r->actor ? &sheet[aden[(r->actor - 1) & 7]] : &wounds;   /* (The character's, or a creature's:
                                                 **   its harm by the same rule, the one path's step, 2026-11-23) */
 
@@ -365,6 +367,7 @@ static void __fastcall__ harm (struct req* r)
     *tp = 0;
     RS_HARM_BAND (*r) = 0;
     RS_HARM_OUT (*r) = 0;
+    RS_HARM_LEFT (*r) = 0;
     if (r->other || *dw >= t || (r->actor && RS_HARM_CAUSE (*r) == HC_STRUCK)) {
         r->result = 1;
         return;
@@ -383,6 +386,10 @@ static void __fastcall__ harm (struct req* r)
     e->x[0] = 0;                                /* (Where: none said, the null's) */
     e->x[1] = AS_BLUNT;
     wound_words (n);
+    if (r->actor && *dw < t && !G_OK (flat (ht))) {
+        RS_HARM_LEFT (*r) = FF_FLEES;           /* (Its courage tested as it's wounded, as a blow's: the user's,
+                                                **   2026-11-23) */
+    }
 }
 
 /* ---- Shields (2026-10-29): the shields' keys (the catalogue's tools: a round shield, a buckler, a knight shield, a

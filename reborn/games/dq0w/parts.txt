@@ -3,7 +3,8 @@
 # (dq0w.cfg's OVn: its wish; a bank too full, the build puts it in another of its file's), what it's for.  Which
 # functions are in each is the C's (#pragma code-name "SWnCODE"); the stubs and the config's lines for them are the
 # build's (../dq0/parts.js: obj/games/dq0w/parts.inc and dq0w.cfg).  "stub NAME N": a part's stub that the C doesn't
-# show (its assembly's).
+# show (its assembly's).  "spare N": each bank's room kept free, if the parts allow (64 without).
+spare 128   # (Each bank 128 free, not the headroom rule's 64: the next round's room spread over them; room8, 2026-11-24)
 1   22  Digging, and the rock it's into (overlay 22's, slice 4.10's); one spell of digging, every actor's (2026-11-23)
 2   3   Climbing
 3   1   The dungeon begun, the strata below grown
@@ -58,7 +59,7 @@
 52  16  The character's bearings underground (dq0w.c's: slice 4.2's)
 53  26  A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
 54  16  Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
-55  35  Travel to a place it knows (dq0w.c's: slice 4.2's)
+55  36  Travel to a place it knows (dq0w.c's: slice 4.2's)
 56  17  The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
 57  18  The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
 58  19  The outfits made (outmake.c)
@@ -82,32 +83,32 @@
 76  23  The time of day believed (wtime.c: 2026-10-31)
 77  10  The sky seen, the time believed's start (wtime.c)
 78  27  Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till 2026-10-31, its room the walk's)
-79  36  A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
+79  37  A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
 80  24  One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
 81  28  One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
 82  25  A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
 83  25  Its tests at a stop (wroom.c)
-84  35  The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+84  36  The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
 85  16  The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
 86  26  Their other half
 87  17  And the hand the pack goes in, a tool's use, the words
 88  16  The hub attached (hub.c's: the start-up's, 2026-11-02)
 89  27  A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
 90  13  Hands made free, a tool in hand and back (things.c: 2026-11-03)
-91  35  A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
+91  36  A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
 92  5   A request of the things served (things.c: part 10's till 2026-11-03)
 93  26  An arrival (dq0w.c: the main RAM's till 2026-11-03; overlay 19's, then 15's, till 2026-11-06)
 94  14  Hiding oneself (dq0w.c: 2026-11-04); an actor's search, the character's own (wsearch.c: 2026-11-21)
-95  34  A drop found, a rope put in place, a grapple thrown up (wrope3.c)
-96  34  Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
-97  34  Climbing, a round at a time, a rope's help (dq0w.c: part 2's till 2026-11-04)
-98  35  A rope untied, looked at (wrope2.c)
+95  35  A drop found, a rope put in place, a grapple thrown up (wrope3.c)
+96  35  Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
+97  35  Climbing, a round at a time, a rope's help (dq0w.c: part 2's till 2026-11-04)
+98  36  A rope untied, looked at (wrope2.c)
 99  27  The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04); lamp oil's pools on the floor, the flasks' oil (wpool.c: H15, H16, 2026-11-21)
 100 9   A light renewed (things.c: part 27's till 2026-11-04)
 101 18  A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04; overlay 18's, 2026-11-06)
 102 24  A thing told apart, what it carries for the UI (things.c, 2026-11-06)
-103 36  A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
-104 36  A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
+103 37  A well's shaft (wwell.c: 2026-11-06, dq0w.rop's)
+104 37  A thing let fall down a well, a shaft (wwell2.c: 2026-11-06)
 105 15  What it carries listed: gathered first (things.c, 2026-11-06: part 11's room; overlay 15's, 3's room)
 106 8   Grappling: the hold kept, a held one's try to break free (wfight.c: 2026-11-09, part 15's room; its let go part 37's)
 107 3   Where a thing's worn: its place, the room there, its words; which, asked by place (wworn.c: 2026-11-10)
@@ -126,5 +127,7 @@
 120 9   The step and its hazards, every actor's: a trap set off, a pit climbed out of (wstep.c: the one path's step, 2026-11-23)
 121 4   The world's harm to a body, every actor's (wstep.c: 2026-11-23)
 122 10  A trap an actor set off, told (wstep.c: 2026-11-23)
+123 33  A search, the character's, an actor's (wtsrch.c: wtrap.c's till 2026-11-23, part 8's room)
+124 33  Building, every actor's: a door hung, a way walled up (wbuild.c: the user's, 2026-11-23, build2)
 stub start 3
 stub begin 3

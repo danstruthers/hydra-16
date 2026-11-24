@@ -541,6 +541,8 @@ DEN.closes          +"{arg?\n{@closes}.|something closing in}"
 DEN.aims            +"{arg?\n{@aims}.|a bowstring drawn}"
 DEN.digfound        +"{arg?\n{Actor} strike{s} a door behind the facing.|a scraping in rock}"
 DEN.drags           +"{arg?\n{Actor} strain{s} at something heavy.|something heavy scraping}"
+DEN.cry             +"{arg?|a cry of pain}"
+DEN.crycut          +"{arg?|a cry of pain cut short}"
 
 # ==== The UI's own kinds (dq0.h's UK_*, msgs.def's: no world's event, the UI's words of its own; narration as data,
 # stage 4, 2026-11-12).  The UI fills one and has it worded, as an outcome event is
@@ -623,9 +625,10 @@ SWAY.far[how=SW_ROB]        "{Obj} is out of your reach."
 SWAY.far[how=SW_FILCH]      "{Obj} is out of your reach."
 SWAY.cant[how=SW_ROB]       "{Obj} isn't helpless: {folk?it|they} would stop you."
 SWAY.cant[how=SW_FILCH]     "{Obj} is awake: {folk?it|they} would feel your hand."
-SWAY.wont[how=SW_FILCH]     "{Obj} wakes as your hand finds {folk?its|their} purse!"
+SWAY.wont[how=SW_FILCH]     "{Obj} wakes as your hand finds {folk?its|their} purse! {folk?It seems|They seem} {@seems} now."
 SWAY.any[how=SW_ROB]        "You go through {obj}'s things."
 SWAY.any[how=SW_FILCH]      "You slip a hand into {obj}'s purse."
+SWAY.wont[how=SW_ROB]       "{Obj} wakes as you go through {folk?its|their} things! {folk?It seems|They seem} {@seems} now."
 
 # ---- A blow (UK_FIGHT, an E_FIGHT's record worded: out, O_*, the UI's own gone, bled, bound for FO_*, and stray, a
 # miss's stray at one beside the mark; who the attacker, {actor?the character's|a denizen's}; w4 the attacker's name,
@@ -689,7 +692,7 @@ FIGHT.stumble           "{@blow}{f1?|{actor?, but stumble|, but stumbles}}{f2?|{
                         "|; you stumble}}.{@after}"
 FIGHT.advantage         "{@blow}{actor?; {dfolk?it slips|they slip} inside your guard|; you see an opening}.{@after}"
 FIGHT.any               "{@blow}.{@after}"
-FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|You hear a cry of pain{adead?.| that stops short.}}"
+FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|}"
 
 # ---- A refusal (UK_NO: no, U_*, A_*: refuse.c's say_no, the one wording of its meaning; text the thing's name as it's
 # put in, "a door", "The giant rat"; a name not to be said, its nameless form, the next).  (refuse.c's said before,
@@ -1091,3 +1094,12 @@ SA.not_on           +"{text?You find nothing on the {obj}.|You find no {text} on
 SA.no_fall          +"There's no well or shaft here for the {text} to fall down."
 SA.pit_fall         +"You let the {text} fall into the pit."
 SA.in_pit           +"The {text} {pl?is|are} down in the pit, out of reach: climb down to {pl?it|them} first."
+# (Building, every actor's: wbuild.c's IO_BUILD, the user's, 2026-11-23: a broken door's leaf hung again, a passage
+# walled up; text "" the spoil of its digging, else the rubble's stones)
+SA.hung             +"\nYou mend the broken leaf and hang the door again."
+SA.walled           +"\nYou wall up the way with {text?its spoil|stones from the rubble}."
+SA.build_bad        +"\nThe work goes badly: you leave it as it was."
+SA.no_hang_here     +"\nThere's no broken door ahead to hang."
+SA.no_wall_here     +"\nThere's no clear passage ahead to wall up."
+SA.build_hammer     +"\nYou have no hammer."
+SA.no_stones        +"\nYou have no stones to wall it up with."

@@ -99,6 +99,13 @@ enum {
     P_ORATE,                                    /* Oratory: a speech to all in earshot (orate) */
     P_RITUAL,                                   /* The character's own deity's Ritual: a prayer (HarnMaster's the
                                                 **   deity's own skill; none worshipped, the referee's to refuse) */
+    P_FILCH,                                    /* Legerdemain: a thing filched from one beside, unfelt (a purse cut,
+                                                **   one robbed asleep: the user's, 2026-11-23), against its hearing
+                                                **   (P_NOTICE_SOUND); a creature's by its sheet (HarnMaster's house: its
+                                                **   Dexterity, the bestiary having no Legerdemain) */
+    P_TIMBER,                                   /* A door hung (HarnMaster's Timbercraft), */
+    P_MASONRY,                                  /*   a way walled up (Masonry): building, every actor's (the user's,
+                                                **   2026-11-23; the world's wbuild.c) */
     P_THEME,                                   /* A theme's own, P_THEME + n (named in its data) */
 };
 #define P_READ          P_LORE                  /* A writing read (the plan for the game between dungeons, its step 9):

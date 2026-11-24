@@ -101,6 +101,8 @@ free: sandals@worn *70 | knee boots@worn *30
 free: blanket@bed
 free 30: candle@bed
 free: pouch@belt
+free: pouch@belt, torch@in, tinderbox@in            ; (A light and a fire-maker, the user's, 2026-11-23: in a
+                                                ;   pouch of their own, the catalogue's torch not hung)
 [role priest] free make 4 4
 free: robe@worn
 free: clothes@worn
@@ -243,6 +245,8 @@ free 25: dice@pouch
 free 25: talisman@worn
 free: lockpicks@pouch                           ; (A robber's tools: a lock picked only with them, every actor's, the act
                                                 ;   audit's B4, 2026-11-21; last, each line its own die)
+free: pouch@belt, torch@in, tinderbox@in            ; (A light and a fire-maker, the user's, 2026-11-23: in a
+                                                ;   pouch of their own, the torch not hung: its role's section full)
 ; (Its lord a Brigand/Outlaw and a Warrior: the higher chance and dice, the book's rule for one of two categories)
 [purse banlord]
 free 90: pennies@pouch 7d6
@@ -354,6 +358,7 @@ free: leather cap@worn
 free: leather vest@worn
 free: clothes@worn
 free: knee boots@worn
+free: tinderbox@pouch                            ; (A fire-maker for its lantern, the user's, 2026-11-23)
 [role khuzeld] free make 7 2
 free: warhammer@hand *50 | battleaxe@hand *50
 free: mail byrnie@worn fine
@@ -383,6 +388,8 @@ free 85: leather tunic@worn *40 | leather vest@worn *30 | ring byrnie@worn *30
 free 80: kurbul helm@worn *50 | iron helm@worn *50
 free 25: crossbow@worn, bolt case@belt, bolts@in 12-20
 free: pouch@belt
+free: pouch@belt, torch@in, tinderbox@in            ; (A light and a fire-maker, the user's, 2026-11-23: in a
+                                                ;   pouch of their own, the catalogue's torch not hung)
 [role captain] free make 4 4
 free: belt@worn
 free: scabbard@belt, sword@in

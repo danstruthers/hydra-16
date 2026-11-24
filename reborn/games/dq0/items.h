@@ -335,6 +335,9 @@ struct item {
 #define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
 #define I_HIDDEN        0x08                    /* Hidden (found by searching) */
 #define I_MAGIC         0x10                    /*   by magic (found only by magical means) */
+#define I_LOOT          I_MAGIC                 /* (On a thing not hidden, a denizen's own: a robber's takings, carried
+                                                **   on its body till its lair (the user's C10, 2026-11-23: FE_STASH),
+                                                **   cleared as it's put down, or taken from it, or it dies) */
 #define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
 #define I_NAMED         0x40                    /* Named by the character (the UI's names: hub.h's struct tname, by
                                                 **   its id; marked in what's carried, worded: "#id a sword") */
@@ -547,6 +550,18 @@ enum { DG_PUSH, DG_PULL, DG_TASTE };
                                                 **   wempty.c's, every actor's: to TO_DEN, body bd's own thing item on
                                                 **   square x, y (I_ROB's FE_PLACE) */
 #define TO_DEN          0x80                    /* (IO_EMPTY's and IO_PLACE's to: a denizen's, body bd's: wbody.c's) */
+#define IO_BUILD        (IO_BAR + 22)           /* A door hung, a way walled up, every actor's (the user's, 2026-11-23:
+                                                **   "The character builds anywhere, with materials"): to BD_HANG, a
+                                                **   broken door's leaf mended and hung in its frame again; BD_WALL, a
+                                                **   passage walled up with stones (the spoil of its digging, or the
+                                                **   rubble beside it); BD_ANY, whichever the square is (a builder's).
+                                                **   The square ahead of the character (TO_DEN: body bd's, square x, y;
+                                                **   | BD_REC a record's, away, untested).  A hammer carried; the referee's
+                                                **   Timbercraft or Masonry (P_TIMBER, P_MASONRY); the act table's hang
+                                                **   and wallup rows' times.  Its words in things_text, its time in x
+                                                **   (tenths); IR_NO refused (the words why).  dq0w/wbuild.c's */
+enum { BD_ANY, BD_HANG, BD_WALL };              /* (IO_BUILD's to: what's built; the verbs' aux) */
+#define BD_REC          0x40                    /* (IO_BUILD's to: a record's, away from the character) */
 enum { PW_DOWN, PW_CORNER, PW_MIDDLE, PW_FAR, PW_NEAR, PW_LEFT, PW_RIGHT, PW_LEDGE, PW_PASSAGE };   /* (IO_PLACE's qty:
                                                 **   the place's words, "in the corner", "on the far side": wempty.c's) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO, LM_ROPES };   /* (IO_LOOK's: a look at it; a closer look; its
@@ -631,8 +646,11 @@ enum {
                                                 **   2026-11-17) */
     SA_PIT_FALL,                                /* (Let fall into an open pit within reach: wwell2.c's, in trtext as the
                                                 **   well's, 2026-11-17) */
-    SA_IN_PIT                                   /* (Down in a pit, out of reach from its edge: things.c's s_serve, the
+    SA_IN_PIT,                                  /* (Down in a pit, out of reach from its edge: things.c's s_serve, the
                                                 **   user's, 2026-11-18, H10) */
+    SA_HUNG, SA_WALLED, SA_BUILD_BAD, SA_NO_HANG_HERE, SA_NO_WALL_HERE, SA_BUILD_HAMMER, SA_NO_STONES
+                                                /* (Building, every actor's: wbuild.c's, IO_BUILD, 2026-11-23; past 127,
+                                                **   SAY_AT2's) */
 };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

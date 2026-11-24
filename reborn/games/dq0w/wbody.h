@@ -206,6 +206,8 @@ unsigned char __fastcall__ den_trap (unsigned char op, unsigned char d);  /* (Pa
 #define DT_PIT          2                       /* (den_trap's: in a pit, a round's climb out) */
 void den_harm (void);                           /* (Part 121) Body bd's harm (RS_HARM, its actor: the world's slot's
                                                 **   request made, workpart.h's harm's) */
+void __fastcall__ own_traps (const struct msg* m);  /* (Part 122) A lair of folk placed (I_KIT's KT_TRAPS): its chunk's
+                                                **   traps its faction's own */
 void __fastcall__ trap_beat (unsigned char kind, unsigned w1);  /* (Part 120) A trap's outcome for body bd, told (an
                                                 **   actor's work's E_TRAP: dq0w.c's work_told) */
 extern unsigned char bclimb[NACTORS];           /* (wbody.c's: each body's climb out of its pit so far, feet) */
