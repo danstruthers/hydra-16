@@ -127,5 +127,6 @@
 121 4   The world's harm to a body, every actor's (wstep.c: 2026-11-23)
 122 10  A trap an actor set off, told (wstep.c: 2026-11-23)
 123 33  A search, the character's, an actor's (wtsrch.c: wtrap.c's till 2026-11-23, part 8's room)
+124 33  Building, every actor's: a door hung, a way walled up (wbuild.c: the user's, 2026-11-23, build2)
 stub start 3
 stub begin 3

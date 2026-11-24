@@ -608,6 +608,10 @@ threaten the guard	VB_THREATEN	target=guard	near=guard	threaten
 rob the bandit	VB_THREATEN	target=bandit	near=bandit	one helpless robbed (the one-path plan's stage 2, 2026-11-23)
 filch from the bandit	VB_THREATEN	target=bandit	near=bandit	a purse cut unnoticed
 steal from the bandit	VB_THREATEN	target=bandit	near=bandit	filch's
+hang the door	VB_BUILD	-	near=door	a broken door hung again (the user's, 2026-11-23; commands.verbs' [turns])
+wall up the passage	VB_BUILD	object=passage	-	a passage walled up (2026-11-23)
+wall up	VB_BUILD	-	-	the way ahead
+brick up the way	VB_BUILD	object=way	-	brick up: wall up
 scare the goblin	VB_THREATEN	target=goblin	near=goblin	scare an alias of threaten
 calm the dog	VB_CALM	target=dog	near=dog	calm
 soothe the dog	VB_CALM	target=dog	near=dog	soothe an alias of calm

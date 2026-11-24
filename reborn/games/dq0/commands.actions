@@ -148,6 +148,7 @@ VB_TIE_OBJECT           object support          (* "tie the rope to the ring", "
 VB_UNTIE_OBJECT         object                  (* "untie the rope", "untie the sack" *)
 VB_RIP_OBJECT           object instrument       (* a cloth torn up for bandages, "cut up the cloak with the dagger"; washed, "wash the bandages" (2026-11-10): the verb's aux, the word's *)
 VB_EMPTY_OBJECT         object container        (* its things put out, here or on the other; a liquid poured away (the user's P4, 2026-11-18) *)
+VB_BUILD                object                  (* a door hung, a way walled up, ahead (the user's, 2026-11-23: "The character builds anywhere, with materials"): the verb's aux, BD_* *)
 
 [results]
 ERROR:NOT_UNDERSTOOD

@@ -2479,6 +2479,7 @@ static unsigned __fastcall__ held_lit (void)
 
 static unsigned char o_handle (void);
 unsigned char drag (void);                      /* (Part 109's: wdrag.c, IO_DRAG) */
+unsigned char build (void);                     /* (Part 124's: wbuild.c, IO_BUILD) */
 unsigned char __fastcall__ handout (const struct msg* m);  /* (Part 111's: wempty.c, IO_EMPTY, IO_PLACE) */
 unsigned char s_serve (void)
 {
@@ -2561,6 +2562,9 @@ unsigned char s_serve (void)
         break;
     case IO_DRAG:                               /* (A heavy thing shoved, dragged; a thing tasted: part 109's, wdrag.c) */
         changed = (iq.result = drag ()) == IR_OK && iq.to != DG_TASTE;
+        break;
+    case IO_BUILD:                              /* (A door hung, a way walled up, every actor's: part 124's, wbuild.c) */
+        changed = (iq.result = build ()) == IR_OK;
         break;
     case IO_EMPTY:                              /* (A thing's things put out, a thing put down on a square: part 111's, */
     case IO_PLACE:                              /*   wempty.c, every actor's: P4, P5, 2026-11-18) */

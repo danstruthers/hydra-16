@@ -366,9 +366,9 @@ module.exports = {
       init: 't_rc', cycles: 1700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
-        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
+        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -R 3", 'quit',
         'echo $status']) },
       start(m) {   // (The scene set, 2026-11-03, as dq0kit's: as the first attack's typed, the bandits wary: the one down finished, the rest no longer
         // fighting on, the dice had it dead before it looked; and at the look a thing on the body beneath its clothes, I_HIDDEN and not known, a purse's
