@@ -386,7 +386,7 @@ void __fastcall__ s_den_strip (unsigned body)
         }
         f = ip->flags;
         ip->owner = ip->hide = 0;
-        ip->flags = f & ~(I_HELD | I_WORN);
+        ip->flags = f & ~(I_HELD | I_WORN | I_LOOT);
         if ((f & I_HELD) || !body) {
             ip->where = IW_SQUARE;
             ip->sn = bd.sn;
@@ -398,6 +398,7 @@ void __fastcall__ s_den_strip (unsigned body)
         }
     }
     hub_map (0);
+    HUB->pc_grip = grip;                        /* (Held, let go dead: the minds' to know, 2026-11-23) */
 }
 
 /* Its weapon let fall still lying in its reach (its square or beside it): 1, to take it up (its turn); gone (taken,

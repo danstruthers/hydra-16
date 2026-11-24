@@ -97,7 +97,7 @@ wallup      | 6000   | -        | 0  | 4 | WORK  | WALLS     | WORK | -     | - 
 # don, doff: worn, taken off; strip: a worn thing taken from a body (on top of the takeout's); give: handed to another;
 # drag: a heavy thing shoved or dragged a square (its test's steps by its weight, the caller's: wdrag.c's); rob: one
 # helpless robbed (its time the round's and its reach's, the caller's); filch: a purse cut unnoticed (its contest the
-# minds', the robber's Stealth against the other's hearing: dq0d's HM_FILCH and SW_FILCH)
+# minds', the robber's Legerdemain against the other's hearing: dq0d's HM_FILCH and SW_FILCH, the user's, 2026-11-23)
 hold        | 10     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 put         | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 takeout     | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
@@ -107,7 +107,7 @@ strip       | 100    | -        | 0  | 0 | -     | -         | -    | -     | - 
 give        | 20     | -        | 0  | 0 | -     | -         | -    | -     | -        | 1
 drag        | 50     | FORCE    | 2  | 3 | WORK  | DRAGS     | -    | -     | -        | 2
 rob         | 0      | -        | 0  | 0 | -     | -         | -    | -     | -        | 2
-filch       | 0      | STEALTH  | 0  | 0 | -     | -         | -    | -     | -        | 1
+filch       | 0      | FILCH    | 0  | 0 | -     | -         | -    | -     | -        | 1
 
 # ---- Links and lights (the one-path plan's stage 2, climbing and links, lights, 2026-11-23: wlink.c's, every actor's).
 # flight: a stairway's, a ladder's or a long slope's crossing, its time the flight's (acts.h's FLIGHT_T, by the

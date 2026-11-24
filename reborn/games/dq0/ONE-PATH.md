@@ -107,6 +107,16 @@ its area's rows narrowed, below.)
 - **Parity tests:** dq0thingact (put, takeout, don, drag), dq0dentakein (a take from an open sack), dq0pcrob.
 - **Left in this area:** see built/2026-11-23-things1.md's open questions (C10's takings carried home, the grope for
   a denizen, worn places for a denizen, the minds' use of the new errands, the character's take-up time the UI's).
+- **Then (branch things2, 2026-11-23; built/2026-11-23-things2.md), the user's decisions of 2026-11-23:** the character
+  robs one held (its grapple's: the hub's pc_grip) or asleep, as well as one senseless; a filch is the character's
+  Legerdemain (a new purpose, P_FILCH: both referees; a creature's its Dexterity, the denizens' filch of the character
+  the same row's) against the victim's hearing; one that catches it has its attitude moved against the character by its
+  nature (dq0d's caught); a robber carries its takings home on its body (items.h's I_LOOT, the carry's), put by at its
+  lair as it gets there (FE_STASH: its hoard, hidden, or lying there), so one killed on the way gives them back (C10);
+  the minds use the errands (t 0, the world's choice): armour better than it wears taken up and worn (TW_ARMOUR,
+  FE_DON), its loot held put away (FE_STOW), a spare weapon or light handed a fellow that needs one (FE_PASS's PN_*,
+  FE_HAND), and a heavy thing beside it dragged to brace a door it shuts against the character (FE_DRAG, wdrag.c's
+  brace).  Tests dq0robheld, dq0denerrands.  Left: binding (no state to be bound yet), and its open questions.
 
 **Done so far:**
 - **Stage 1, the world's part** (act1, 2026-11-19): the act table (games/dq0w/acts.txt) and one sender each for noise and

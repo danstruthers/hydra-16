@@ -335,6 +335,9 @@ struct item {
 #define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
 #define I_HIDDEN        0x08                    /* Hidden (found by searching) */
 #define I_MAGIC         0x10                    /*   by magic (found only by magical means) */
+#define I_LOOT          I_MAGIC                 /* (On a thing not hidden, a denizen's own: a robber's takings, carried
+                                                **   on its body till its lair (the user's C10, 2026-11-23: FE_STASH),
+                                                **   cleared as it's put down, or taken from it, or it dies) */
 #define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
 #define I_NAMED         0x40                    /* Named by the character (the UI's names: hub.h's struct tname, by
                                                 **   its id; marked in what's carried, worded: "#id a sword") */
