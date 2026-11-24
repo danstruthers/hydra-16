@@ -224,6 +224,24 @@ From built/2026-11-21-world1.md's open questions: what else a world decides (wor
 - **G18. 4-byte stubs in the UI too** (194 bytes where it's 99 over its floor)? dq0Poke re-poking until its write
   takes (the dq0fightmid/dq0felled race)? (room7 1, 3)
 
+## Stage 2's second round, its leftovers (2026-11-24: built/2026-11-23-{things2,step2,build2}.md, 2026-11-24-room8.md)
+
+- **R1. Robbing:** one held robbed has no test and its attitude unmoved; a sleeper robbed tested as a filch though all
+  its things go; a robber goes straight home after (no flight), blocked it flees and comes again. (things2 2, 3, 6, 13)
+- **R2. The numbers:** caught-filching's steps by nature; a creature's Legerdemain its Dexterity x5 (Agility?); "better"
+  armour by worth; the errands' cadence; a fellow's need of a light; the brace only against the character.
+  (things2 4, 5, 8-11)
+- **R3. Takings carried** never refused for room or weight? (things2 7)
+- **R4. A trap's faction** read from a lair of folk's chunk; a factionless creature's find shared by all beasts; a
+  denizen stepping onto a trap it knows still sets it off. (step2 2, 5, 6)
+- **R5. A cry's loudness** 5, a fight's din (it was 3). (step2 3)
+- **R6. Building:** walling up a doorway; rubble taken clears its square; the work's time spent after it's done (a long
+  task instead?); a failure spends all the time (a marginal one slower?); Masonry by Strength; GA_WORK fatigue not
+  spent; the seven SA rows' wording. (build2 2-7, 13)
+- **R7. Room and time:** a spare of its own for the minds' and the UI's banks; the most-read said rows in the first two
+  banks; 4-byte stubs in dq0harn and dq0p; s_pace_cmd in a smaller part ("step forward" 86.7%, "put the whetstone"
+  87.4%); the minds' part 14 split (door_way, take_way, ~31K a door). (room8 1-5)
+
 ## Architecture
 
 - **A1. Game code in the paged ROM, for good?** The user's answer of 2026-11-17: tried for one module, measured, then
