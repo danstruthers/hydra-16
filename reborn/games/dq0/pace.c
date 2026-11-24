@@ -362,14 +362,24 @@ unsigned char __fastcall__ s_travel_go (const char* l)
 ** to match must be here too.  "Listen" alone, 0: the listen's, never s_pace_cmd's (its watchfulness only with a move's
 ** word or "listening"; the pace's part and the commands' swapped for it each time, some 70,000 cycles of its first
 ** words, 2026-11-16) */
-static const char pace_words[] =                /* (Each word after its length: no strlen of each, each time) */
-    "\005creep\010creeping\005sneak\010sneaking\006tiptoe\005crawl\003hop\007quietly\012stealthily\006slowly"
-    "\004slow\004walk\007walking\006normal\010normally\007quickly\003jog\007jogging\004trot\007briskly\003run"
-    "\007running\005hurry\006sprint\011sprinting\004dash\006status\004stop\004trap\005traps\011carefully"
-    "\007careful\006warily\006listen\011listening\007mapping\003map\006colour\005color\007colours\006colors"
-    "\004step\010sidestep\007shuffle\004back\005space\006spaces\006square\007squares\005steps\004pace\005paces"
-    "\004foot\004feet\002ft\004yard\005yards\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire"
-    "\011autoshoot\004auto";
+static const char pace_words[] =                /* (Each word after its length: no strlen of each, each time, those of
+                                                **   a first letter together, in its order, po[]'s: room8, 2026-11-24) */
+    "\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire\011autoshoot\004auto"
+    "\007briskly\004back\005creep\010creeping\005crawl\011carefully\007careful\006colour\005color"
+    "\007colours\006colors\004dash\004foot\004feet\002ft\003hop\005hurry\003jog\007jogging\006listen"
+    "\011listening\007mapping\003map\006normal\010normally\004pace\005paces\007quietly\007quickly\003run"
+    "\007running\005sneak\010sneaking\012stealthily\006slowly\004slow\006sprint\011sprinting\006status"
+    "\004stop\004step\010sidestep\007shuffle\005space\006spaces\006square\007squares\005steps\006tiptoe"
+    "\004trot\004trap\005traps\004walk\007walking\006warily\004yard\005yards";
+
+static const unsigned po[32] = {               /* Where each first letter's (its low five bits') words begin in
+                                                **   pace_words (the build's to hold to them: make.js's paceTable), so a
+                                                **   word of the line is looked for among its letter's alone, not all 64
+                                                **   (some 15,000 cycles of a command's first letter with three such
+                                                **   words, "take the sack from the backpack": room8, 2026-11-24) */
+    0, 0, 70, 83, 150, 0, 155, 0, 168, 0, 178, 0, 190, 207, 219, 0, 235, 246, 262, 274, 397, 0, 0, 420, 0, 440, 0, 0,
+    0, 0, 0, 0
+};
 
 static const unsigned pl[32] = {               /* Each first letter's (its low five bits') words' lengths, a bit each:
                                                 **   pace_words', the build's to hold to them (make.js's paceTable;
@@ -385,15 +395,18 @@ static const unsigned pl[32] = {               /* Each first letter's (its low f
 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
+    static const char* s;                       /* (The line, its letter c: statics, not the C stack's argument read again
+                                                **   at each letter: room8, 2026-11-24) */
     static const char* p;
-    static unsigned char n, k, w, words, ls;
+    static unsigned char n, k, w, words, ls, c;
 
+    s = l;
     w = ls = 0;
     for (words = 0; ; ++words) {
-        while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
-            ++l;
+        while ((c = *s) == ' ' || c == ',' || c == '.' || c == '!') {
+            ++s;
         }
-        if (!*l) {
+        if (!c) {
             if (ls) {
                 return words > 1 ? 2 : 0;       /* ("Listen" alone: the command's) */
             }
@@ -402,26 +415,27 @@ unsigned char __fastcall__ o_pacing (const char* l)
                                                 **   parts' swaps and a word with the world, all a walk's first words were
                                                 **   waiting on); else 2) */
         }
-        for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
+        for (n = 0; (k = s[n]) != 0 && k != ' ' && k != ',' && k != '.' && k != '!'; ++n) {
         }
-        if (*l >= '0' && *l <= '9') {
-            for (p = l + n; *p == ' ' || *p == ',' || *p == '.' || *p == '!'; ++p) {
+        if (c >= '0' && c <= '9') {
+            for (p = s + n; *p == ' ' || *p == ',' || *p == '.' || *p == '!'; ++p) {
             }
             if (!*p) {
                 return 2;                       /* (A figure at the end: squares, s_pace_cmd's) */
             }
-            l += n;
+            s += n;
             continue;
         }
-        if (!words && n == 4 && !strnicmp (l, "walk", 4)) {
+        if (!words && n == 4 && !strnicmp (s, "walk", 4)) {
             w = 1;
-            l += n;
+            s += n;
             continue;
         }
-        if (n < 16 && (pl[*l & 31] & (1u << n))) {     /* (A word of its letter and its length among them) */
-            for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
-                if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
-                    if (n != 6 || (*l | 0x20) != 'l' || (l[1] | 0x20) != 'i') {
+        if (n < 16 && (pl[c & 31] & (1u << n))) {     /* (A word of its letter and its length among them) */
+            for (p = pace_words + po[c & 31], c |= 0x20; (k = *p) != 0 && p[1] == c; p += k + 1) {   /* (Each word's
+                                                **   length, then its first letter: its letter's words, then none) */
+                if (k == n && !strnicmp (s, p + 1, n)) {
+                    if (n != 6 || c != 'l' || (s[1] | 0x20) != 'i') {
                         return 2;
                     }
                     ls = 1;                     /* ("Listen": one of them only with more said) */
@@ -429,7 +443,7 @@ unsigned char __fastcall__ o_pacing (const char* l)
                 }
             }
         }
-        l += n;
+        s += n;
     }
 }
 
