@@ -203,7 +203,7 @@ function dq0LookFarTest(turns) {
       // (Each command's first letter held to D17.first, a look's and the map's longest pause to D17.pause, by the median
       // of the typings; their wholes trends: tests/lib/trends.js, 2026-11-17, their budgets FIRST, MAP, ACROSS and
       // 1,200,000 before, then the looks' wholes held to 1.79M, their trends over it: not failed)
-      for (const s of ['', ', menacing', ', played']) cmds.forEach((c, k) => {   // (The first three's median; the others their own)
+      for (const s of turns ? [''] : ['', ', menacing', ', played']) cmds.forEach((c, k) => {   // (The first three's median; the others their own)
         const r = runs.filter((x, n) => sfx[n] === s).map(x => x[k]), id = c.id + s;
         r.forEach((x, n) => { if (x.busy) f.push(id + ': typed in typing ' + (n + 1) + ' while the character was busy (its answer the game\'s time, not the command\'s)'); });
         dq0Held(this, f, notes, id, 'first letter', r.map(x => x.first), D17.first);

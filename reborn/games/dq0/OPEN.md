@@ -76,11 +76,11 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   - the senses get a scene part, by the rule that every task owning state a test sets has one (dq0heading pokes the
     senses' RAM; dq0p is 242 bytes over its floor);
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
-  - dq0saveout's and dq0ahead's raw pokes.
-- **F1. A line's first letter in a fight** (built/2026-11-25-fix3.md, section 8; fix2's open item 1). The lag sweep
-  (264 typings) leaves dq0fightcmd 2 past D17 (worst 881K): a fight's first fight-back, its part copies (~80K), the
-  referee's blow (~150K), the UI's words (~100K), the minds (60-80K). Levers: the blow's sentence begun first, held_kinds
-  in the engage part. And a "d" line as a denizen's kit is drawn: 600-650K.
+  - dq0ahead's raw pokes (dq0saveout's gone: lock2's).
+- **F1. A "d" line's first letter as a denizen's kit is drawn** (fix2's open item 1; the fight-back round's part done
+  by lock2, built/2026-11-25-lock2.md). The world draws a denizen's kit (part outfit, den_limbs, den_bodies: 170K of
+  part copies) as the game's first "d" comes: 600-680K over the lag sweeps (dq0pcfelled's 657,158 in the last full
+  run, 91%).
 - **F2. The look across's pause** (fix3, section 8): about 1.05M of it is the senses' far look, 223K its four parts'
   copies; it grows with the ground the maker built during the listen. 94% in one run, under 90% in the next.
 - **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
