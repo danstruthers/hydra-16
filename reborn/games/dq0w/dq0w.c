@@ -5948,27 +5948,52 @@ static unsigned char __fastcall__ swatted (unsigned char k)
 /* What it fights back with unbidden (the user's, 2026-10-22: what's in its hands): the thing it holds the referee
 ** would strike with (RS_WIELD: its main hand's first, slice 4.1b's), as a thing named is (SK_OF), but a soft one;
 ** else the best it holds (SK_BEST: its fists, its hands empty); its hand the hub's pc_shand */
-static unsigned char in_hand (void)
+unsigned char in_hand (void);                   /* (Part work_done's: s_in_hand, below: the kind it would strike with, 0 its
+                                                **   fists, or the best it holds) */
+#pragma code-name (push, "SW_work_done_CODE")
+#pragma rodata-name (push, "SW_work_done_RODATA")
+static unsigned char wkh[3];                    /* (The kinds held as the referee was last asked, and its answer plus 1:
+                                                **   the same hands, the same answer, not asked again (its RS_WIELD a
+                                                **   fight-back's 100,000 cycles, the first letter of a line held behind
+                                                **   one); part work_done's, with held_kinds, engage's room: fix3) */
+unsigned char s_in_hand (void)
 {
     struct req* r;
-    unsigned char n, s;
+    unsigned char s;
 
     held_kinds ();
-    r = &HUB->slot[SLOT_WORLD];
-    r->kind = RS_WIELD;
-    r->actor = 0;
-    RS_WIELD_THING (*r) = 0;
-    RS_WIELD_HELD (*r)[0] = held_k[0];
-    RS_WIELD_HELD (*r)[1] = held_k[1];
-    r = hub_ask (SLOT_WORLD);
-    s = RS_WIELD_WHICH (*r);
-    r->state = REQ_FREE;
+    if (wkh[2] && wkh[0] == held_k[0] && wkh[1] == held_k[1]) {
+        s = wkh[2] - 1;
+    } else {
+        r = &HUB->slot[SLOT_WORLD];
+        r->kind = RS_WIELD;
+        r->actor = 0;
+        RS_WIELD_THING (*r) = 0;
+        RS_WIELD_HELD (*r)[0] = wkh[0] = held_k[0];
+        RS_WIELD_HELD (*r)[1] = wkh[1] = held_k[1];
+        r = hub_ask (SLOT_WORLD);
+        s = RS_WIELD_WHICH (*r);
+        r->state = REQ_FREE;
+        wkh[2] = s + 1;
+    }
     HUB->pc_shand = 0;
+    if (!s) {
+        return 0;
+    }
+    HUB->pc_shand = held_h[s - 1];
+    return held_k[s - 1];                       /* (Its kind: engage's strike_of, a soft one none) */
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* What it fights back with, as the thing it'd strike with's kind says: a soft one's its fists (engage's: fight_swing's) */
+static unsigned char strike_of (void)
+{
+    unsigned char s = in_hand (), n;
+
     if (!s) {
         return SK_BEST;
     }
-    HUB->pc_shand = held_h[s - 1];
-    s = held_k[s - 1];
     hub_map (KIND_BANK);
     n = fight_swing (CATALOGUE + s);
     hub_map (0);
@@ -6249,7 +6274,7 @@ over:
                                                 **   a bow the book's stick; else on with its missiles) */
             pshoot = 0;
             if (!(pshoot = !fight_foe ())) {
-                HUB->pc_strike = in_hand ();
+                HUB->pc_strike = strike_of ();
             }
         }
         h = fight_reach (k = HUB->pc_task.foe);
@@ -6325,7 +6350,7 @@ over:
                                                 **   holds; after a command that took a fight over, turned to) */
     HUB->pc_aim = Z_MID;
     if (!pshoot) {
-        HUB->pc_strike = in_hand ();
+        HUB->pc_strike = strike_of ();
     }
     fight_blow (k);
     return 2;
