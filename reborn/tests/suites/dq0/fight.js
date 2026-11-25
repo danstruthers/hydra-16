@@ -1084,7 +1084,9 @@ module.exports = {
         if (inHand(t3.after).length || lying(t3.after).length !== 1) f.push('the dagger thrown again not on the floor');
         const a2 = o.slice(o.lastIndexOf('> hold the dagger'));
         if (/You lift the dagger\./.test(a2.slice(0, 80))) f.push('held after it was thrown again, its first words a dagger lifted (the UI\'s copy of what\'s carried): ' + a2.slice(0, 120));
-        if (!/You have no dagger to hand\.|You go over to the dagger\./.test(a2.slice(0, 200))) f.push('held after it was thrown again, neither told it isn\'t carried nor gone over to: ' + a2.slice(0, 200));
+        // (Or reached for where it lies within reach, B5's and Ac2's: at the normal pace the second throw's dice fall as the tasks' timing
+        //  has them, a hit or a wild shot leaving it a step off, at the rat's feet, as the layout moves: lock2's, 2026-11-25; never lifted)
+        if (!/You have no dagger to hand\.|You go over to the dagger\.|You reach for the dagger\./.test(a2.slice(0, 200))) f.push('held after it was thrown again, neither told it isn\'t carried, gone over to nor reached for: ' + a2.slice(0, 200));
         return f;
       },
       sdcard: true

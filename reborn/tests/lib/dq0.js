@@ -702,6 +702,9 @@ function sceneOf(m) {
 function sceneDone(m, e) {
   const cur = e.cur;
   if (cur.cr !== undefined) (m.dq0SceneAt || (m.dq0SceneAt = new Map())).set(cur.cr, m.cpu.cyc);   // (Its line's Enter's: dq0Timer's from then)
+  const h0 = m.dq0 && m.dq0.bank(0), S0 = sceneLayout();   // (At the turns pace the line waits on past it for the world's quiet
+  if (cur.cr !== undefined && h0 && (h0[S0.H.off('hub', 'pace')] & 3) === 3) m.dq0SceneTake = cur.cr;   //   after it, lock2's:
+  //   dq0Timer's from the line taken then, the UI's ui_cmd, the world's reaction to the test's setting up its own too)
   if (process.env.DQ0SCENE) console.log('scene ' + cur.seq + ' in place at ' + m.cpu.cyc + ' (' + (m.cpu.cyc - cur.at) + ' after): ' + cur.why);
   e.cur = null;
   if (cur.after) cur.after();
@@ -724,6 +727,10 @@ function sceneSend(m, e, item) {
       const s = m.dq0Scenes;
       if (process.env.DQ0SCENE && s && s.cur && off === S.sceneW && k === k0()) console.log('scene ' + v + ': the world\'s part at ' + m.cpu.cyc + ' (' + (m.cpu.cyc - s.cur.at) + ' after)');
       if (s && s.cur && off === S.sceneD && v === s.cur.seq && k === k0()) sceneDone(m, s);
+      if (m.dq0SceneTake !== undefined && off === S.H.off('hub', 'ui_cmd') && v === 1 && k === k0()) {   // (The line taken, past
+        m.dq0SceneAt.set(m.dq0SceneTake, m.cpu.cyc);   //   the scene's quiet: sceneDone's)
+        m.dq0SceneTake = undefined;
+      }
     };
     r.dq0SceneHook = true;
   }
@@ -1153,7 +1160,9 @@ function dq0Timer(m) {
       if (pause === null && own >= w) pause = 0;
     }
     const t = Math.max(e.t, (m.dq0SceneAt && m.dq0SceneAt.get(e.t)) || 0);   // (From the scene in place, a test's set as it was typed:
-                                                //   the UI's line waits for it, the test's own setting up, not the game's work)
+                                                //   the UI's line waits for it, the test's own setting up, not the game's work;
+                                                //   at the turns pace from the line taken at the world's quiet after it, its
+                                                //   reaction to the setting up the setting up's, sceneDone's: lock2's)
     return { line: c.line, first: w < 0 ? null : at[idx[w]] - t, whole: w < 0 || last < w ? null : at[idx[last]] - t, pause, pauseAt, busy: e.busy };
   }
 }

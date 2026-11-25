@@ -10,6 +10,8 @@
 // reason that begins "@real" (lock1's, 2026-11-24: the lockstep turns pace) is noise only in its games at a real pace:
 // its games at the turns pace (a game from its title, "D I N G U S ...", to the next; its pace its dq0 line's, "-p t",
 // those lines in the raw output in order, one a game) are held exactly, and a difference there is past the noise.
+// A sentence listed with a reason that begins "@real" (lock2's, 2026-11-25) is noise in a test's real-pace games
+// alone, the same way: its count in the test's turns-pace games held exactly.
 //
 // Usage: node sim/tools/sentdiff.js BEFORE AFTER [NAME ...] [--noise FILE] [--quiet]
 //   BEFORE, AFTER  two TRANSCRIPTS folders (a test missing from AFTER said; one only in AFTER, new)
@@ -106,6 +108,11 @@ function main(argv) {
     if (!fs.existsSync(a)) { console.log('NEW ' + name + ' (not in ' + A + ')'); continue; }
     const ra = read(a), rb = read(b), d = diff(ra, rb, noise);
     if (!d.length) continue;
+    let tc = null;                              // (A sentence's noise at the real paces alone: its turns-pace count held)
+    for (const e of d) if (e.noise && /^@real/.test(e.noise)) {
+      if (!tc) { const ta = turnsOnly(ra), tb = turnsOnly(rb); tc = ta && tb ? [count(ta), count(tb)] : [null, null]; }
+      if (!tc[0] || (tc[0].get(e.s) || 0) !== (tc[1].get(e.s) || 0)) e.noise = null;
+    }
     let why = noise.tests.get(name);
     if (why && /^@real\b/.test(why)) {         // (Noise in its real-pace games alone: its turns-pace games held exactly)
       const ta = turnsOnly(ra), tb = turnsOnly(rb);
