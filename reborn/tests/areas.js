@@ -232,7 +232,7 @@ function selfCheck() {
   one(/^      name: 'dq0shield'/, g => g === 'dq0shield', 'dq0shield\'s entry');
   one(/^function hylangCard/, g => /\bhysuite1\b/.test(g) && /\bhyhydra\b/.test(g) && !/\bdq0\b/.test(g), 'hylangCard (a shared helper)');
   one(/^const DQ0_ANSWERS/, g => g === 'dq0answer', 'DQ0_ANSWERS (a helper of a test made by code)');
-  one(/^function dq0Poke/, g => /\bdq0cmd\b/.test(g) && /\bdq0shield\b/.test(g) && !/\bboot\b|\bbasic\b|\bdq0parse\b/.test(g), 'dq0Poke (a dq0 helper)');
+  one(/^function dq0Scene\(/, g => /\bdq0cmd\b/.test(g) && /\bdq0shield\b/.test(g) && !/\bboot\b|\bbasic\b|\bdq0parse\b/.test(g), 'dq0Scene (a dq0 helper)');
   one(/^\/\/ \w+\.js - /, (g, r) => !r.all && !g, 'header comment', /suites\/dq0\//);
   one(/^\/\/ \w+\.js - /, (g, r) => !r.all && !g, 'header comment', /lib\//);
   one(/^const fs = require/, (g, r) => !!r.all, 'require line', /suites\//);

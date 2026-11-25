@@ -719,8 +719,13 @@ function dq0SceneNow(m, fn, after, why = 'a scene', enter = false) {
     fn(c, L, K, at, named, sc);
   });
   if (!ops.length) { if (after) after(); return; }
-  const item = { ops, after, why, cr: enter ? m.acia.rxAt : undefined };   // (A line's: its Enter's)
-  if (e.cur) e.queue.push(item); else sceneSend(m, e, item);
+  // (The minds' own facts first, a scene of their own: an actor's name, its attitude, its record in place before the
+  // world's bodies move and its den_seq bids the senses look again, as a poke had them all at once; then the rest, the
+  // world's, the maker's, the referee's and the intents posted)
+  const C = sceneLayout().C, mind = o => o[0] === C.SO_DHUB || o[0] === C.SO_REC || o[0] === C.SO_DRAM;
+  const cr = enter ? m.acia.rxAt : undefined, a = ops.filter(mind), b = ops.filter(o => !mind(o));
+  const items = [a.length && b.length ? { ops: a, why: why + ' (the minds\' first)', cr } : null, { ops: b.length ? b : a, after, why, cr }].filter(Boolean);
+  for (const item of items) if (e.cur) e.queue.push(item); else sceneSend(m, e, item);
 }
 
 // A test's scene set as lines are typed (each p: g its game, 1 on; line, n: its nth time typed in it), the pokes' specs:

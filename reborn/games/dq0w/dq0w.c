@@ -7424,8 +7424,9 @@ static void clock_run (void)
     unsigned t = hy_ticks (), d = t - last;
 
     last = t;
-    if (HUB->paused || HUB->hold || !HUB->tpr) {
-        return;
+    if (HUB->paused || HUB->hold || !HUB->tpr || ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d)) {
+        return;                                 /* (And a test's scene a line waits for: no time for it, as it's put in
+                                                **   place) */
     }
     while (d) {                                 /* (64 ticks at a time: in 16 bits, cc65's longs slow, and this
                                                 **   each time round) */
