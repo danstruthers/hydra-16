@@ -1280,8 +1280,10 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   it comes round, numb's) */
                 out_told |= k != V_STIR ? 2 : 0;
             } else if (k == V_STIR) {
-                if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy || t_next ())) {   /* (At the turns pace a line
-                                                **   entered as the character's busy, taken as the world's quiet: its own too, lock1's) */
+                if (HUB->tpr ? t_next () || inn || HUB->ui_cmd : !busy) {   /* (At the turns pace held as the character's
+                                                **   free, told at its E_READY or a line's own answer's end; told as it
+                                                **   comes as it's busy, the world waiting on the UI's seeing it (ui_eq):
+                                                **   whatever the keys' timing, lock2's) */
                     stir_held = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
                                                 **   typed: told as it's entered and answered, or let go, its echo
@@ -3387,8 +3389,9 @@ int main (int argc, char* argv[])
                                                 **   not the world's time as it works the answer out, nor in the way of
                                                 **   its first news's part, 2026-11-17) */
         }
-        if (stir_held && !inn && !HUB->ui_cmd && !took && pace != PACE_TURNS) {   /* (At the turns pace told at the
-                                                **   character's E_READY alone, events': lock2's) */
+        if (stir_held && !inn && !HUB->ui_cmd && !took && (pace != PACE_TURNS || l)) {   /* (At the turns pace told at
+                                                **   the character's E_READY, events', or here as a line the UI answers
+                                                **   alone is done (l, ui_cmd none), the world's no part in it: lock2's) */
             stir_held = 0;
             t_flush ();                         /* (Its answer out, not waiting on these words) */
             stir ();                            /* (A stir held while the line was typed and answered: told now, its

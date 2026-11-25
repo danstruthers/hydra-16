@@ -7693,8 +7693,11 @@ unsigned char was_busy;                         /* (main's: its E_READY to come;
 static unsigned free_t;                         /* (main's: the character free again, E_READY told, then) */
 static unsigned char look_due (void)
 {
-    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind &&
-        (unsigned) (hy_ticks () - free_t) >= REST_IDLE)) && !move.on;
+    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind && !(HUB->ui_keys | HUB->ui_cmd) &&
+        (unsigned) (hy_ticks () - free_t) >= REST_IDLE)) && !move.on;   /* (A rest as nothing's in hand, the senses' own
+                                                **   rule (dq0p.c's look_rest: WW_MADE again as a line's in hand): at the
+                                                **   turns pace not a job owed as a line waits on the quiet, round and round
+                                                **   (dq0ahead's hang, lock2's) */
 }
 
 /* A body fallen: looked at again, the things too; or a look one way's rest, the chunk its eyes reached made since, the
@@ -7710,7 +7713,9 @@ static void look_job (void)
 
 static unsigned char dseq_due (void)
 {
-    return HUB->den_seq != dseq;
+    return HUB->den_seq != dseq && (HUB->tpr || HUB->ui_eq == (unsigned char) HUB->eq_head);   /* (At the turns
+                                                **   pace not till the UI's seen to the events: the senses' record a stir
+                                                **   it hasn't told yet reads not looked at again under it, lock2's) */
 }
 
 /* A blow left by part engage (fdef: fight_on's, fight_go's) struck now, from the main RAM: part fight_blows copied in, and not
