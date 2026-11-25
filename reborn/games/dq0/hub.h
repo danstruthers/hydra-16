@@ -1773,6 +1773,14 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_grip;                    /* The actor the character holds, plus 1 (0 none), | GH_PIN pinned (the
                                                 **   world's grip, as its grapple leaves it: the minds' to know one held
                                                 **   is helpless to a robbery, the user's, 2026-11-23) */
+    /* The lockstep turns pace (GAME-CRITIQUE.md's 6.4, the user's of 2026-11-17, lock1's): at the turns pace the UI
+    ** takes a line (but one held for the character, as it's free) only as the world, the minds and the senses are
+    ** idle, every intent it set going carried out and the denizens' turn done for that moment of the game, so the
+    ** game a line finds is the same whatever the tasks' timing (dq0w.c's lockstep, jobs.s) */
+    volatile unsigned char ui_want;             /* The UI's: bumped after each thing it sets going (a line taken, an
+                                                **   intent in the ring) */
+    volatile unsigned char w_idle;              /* The world's: ui_want as it read it, all of it done since (its
+                                                **   lockstep's quiet): the UI's next line taken when they're equal */
 };
 #define AL_REACH        0x1F
 #define AL_NOFIRE       0x40
@@ -2283,6 +2291,8 @@ struct wsave {
 **   own wrec.inuse[ASK_DENIZENS] denizens
 **   own wrec.inuse[ASK_SENSES] senses
 **   own wrec.inuse[ASK_UI] ui
+**   own hub.ui_want ui                                         (The lockstep turns pace: what the UI's set going,
+**   own hub.w_idle world                                       (all of it done, the world's: lock1's, 2026-11-24)
 **   own.
 */
 
