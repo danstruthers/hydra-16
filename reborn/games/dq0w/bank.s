@@ -18,8 +18,8 @@
             .import     popax, pushax, _cat_map
 
             .include    "zeropage.inc"
-OVL_BANKS   = OVBANKS + 4           ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num; the overlays and
-OVL_DOT     = 0                     ;   the world's own four banks)
+OVL_BANKS   = OVBANKS + 6           ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num; the overlays and
+OVL_DOT     = 0                     ;   the world's own six banks)
 .define     OVL_FILE "/dq0w.ovl"
 RP_X        = 1                     ; (The record store's calls, ../dq0/rp.h's rp_x)
             .include    "../dq0/dq0lib.inc"
@@ -41,9 +41,9 @@ ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
             .bss
-_ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        OVBANKS + 6 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
-                                    ;   the traces' store, two: wtrace.c's)
+                                    ;   the traces' store, two: wtrace.c's; the outfits' file, two: outfit.c's)
 fn:         .res        2           ; (m0 ...: the function called,
 keepa:      .res        1           ;   .A and .X kept,
 keepx:      .res        1

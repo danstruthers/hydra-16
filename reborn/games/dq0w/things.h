@@ -99,8 +99,12 @@ extern unsigned irs;                            /* (things.c's: a thing's own nu
 #define OVBANKS         OVLS                    /* (dq0w.cfg's OV1 ..., the build's count: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
-                                                **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */
-extern unsigned char ovbank[OVBANKS + 4];
+                                                **   ovbank[OVBANKS + 2] and [OVBANKS + 3]; the outfits' file, outfit.c's,
+                                                **   OF_BANK (0) and (1)) */
+extern unsigned char ovbank[OVBANKS + 6];
+#define OF_BANK(k)      ovbank[OVBANKS + 4 + (k)]    /* (The outfits' file whole, read in as it's first opened: a denizen's kit's
+                                                **   sections from it, not the card, each a seek and a read some 140,000
+                                                **   cycles, a command's first letter behind them, fix2, 2026-11-24) */
 
 /* ---- The swapped parts' (bank.s's stubs) */
 unsigned char serve (void);                     /* (Part serve) The hub's ireq answered (but its state): 1 if what lies

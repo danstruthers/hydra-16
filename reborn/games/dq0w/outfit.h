@@ -115,6 +115,7 @@ unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Par
 void __fastcall__ outmake (unsigned char who);  /* (Part outmake) The list's things made: the character's (who 0), or a
                                                 **   denizen's (1: ost's did, its things filed at hx, hy, IW_DEN) */
 unsigned char old_mint (void);                  /* (Part den_limbs) The lair's stratum's oldest era's mint (ost's hsn), 0 none */
+void outfits_in (void);                         /* (Part outfit) The outfits' file read into its banks, as the game begins */
 void __fastcall__ den_kit (const struct msg* m); /* (Part outfit) A denizen's things drawn by its kind and made (I_KIT's:
                                                 **   ost's did, hx, hy, hsn, fac set, the chunk in the store) */
 
