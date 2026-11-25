@@ -90,6 +90,11 @@ const ASM = {
     HUB_WINDOW: 'HUB_WINDOW', HUBO_PACE: 'hub.pace', HUBO_TPR: 'hub.tpr', HUBO_CMD: 'hub.ui_cmd', HUBO_KEYS: 'hub.ui_keys',
     HUBO_CQ: 'hub.cq', RQ_SEQ: 'rqh.seq', GW_CMD: 'GW_CMD', GW_KEYS: 'GW_KEYS', GW_PACE: 'GW_PACE', GW_NOKEYS: 'GW_NOKEYS',
     GW_LOOK: 'GW_LOOK', GW_ALL: 'GW_ALL', GW_REST: 'GW_REST', HUBO_WWST: 'hub.way_want.st', HUBO_ENTER: 'hub.ui_enter',
+  },
+  jobs: {                                                       // games/dq0w/jobs.s: the lockstep's quiet (lock1's)
+    HUB_WINDOW: 'HUB_WINDOW', HUBO_PACE: 'hub.pace', HUBO_ASKING: 'hub.pc_task.asking', HUBO_EQ: 'hub.eq_head',
+    HUBO_DQ: 'hub.dq_head', HUBO_SEQ: 'hub.den_seq', HUBO_DITAIL: 'hub.di_tail', HUBO_MBEAT: 'hub.beat[T_DENIZENS]',
+    HUBO_WIDLE: 'hub.w_idle', T_UI: 'T_UI', T_DENIZENS: 'T_DENIZENS',
   },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
   dice: {                                                       // games/dq0/dice.inc: the referees' keyed dice
     HUB_WINDOW: 'HUB_WINDOW', HUBO_NOW: 'hub.now', HUBO_DICE: 'hub.dice', HUBO_SEED: 'hub.seed', HUBO_SLOT: 'hub.slot',

@@ -365,6 +365,7 @@ extern unsigned char saidc;                     /* (term.c's say's count: main.c
 extern unsigned char stir_held;                 /* (main.c's: a denizen's stir held, told after the line's answer) */
 unsigned char still_out (void);                 /* (Overlay 13's) The character senseless still, as the world has it:
                                                 **   its black-out's end the world's next (numb's) */
+unsigned char line_free (void);                 /* (Overlay 13's) A line entered taken now: main's, the lockstep's */
 void fore_sync (void);                          /* (Overlay 13's) The answer's tasks in the foreground or out, as
                                                 **   a line's in hand or not (main.c's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's

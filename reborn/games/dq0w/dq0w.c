@@ -383,7 +383,7 @@ static unsigned char __fastcall__ den_on (unsigned x, unsigned y)
 
 /* ---- The character's moves: worked out as they start (where to, how long), and made when they're done */
 
-static struct {
+struct {                                        /* (Not static: jobs.s's lockstep reads on) */
     unsigned char   on;                         /* A move under way */
     unsigned char   how;                        /* A_* */
     unsigned char   dir;                        /* (A_WALKED's: the passage's way out of the room, or on) */
@@ -7344,12 +7344,24 @@ static unsigned slice (void)
     return r < HUB->now + TURN_SLICE ? TURN_SLICE : (unsigned) (r - HUB->now);
 }
 
+/* The lockstep turns pace (hub.h's ui_want, w_idle: GAME-CRITIQUE.md's 6.4, lock1's): turns_run come to the
+** character free (or asking) with nothing to do (no command being given, no intent of the UI's waiting, every event
+** seen to by the UI, the denizens' turn done for what's told, the clock not to move on), and nothing else under way
+** (its E_READY told, no move going on, no question owed, no job of its own due, the denizens' intents all
+** carried out), found so twice, nothing told, done or intended between (the events', the denizens' and their intents'
+** places, the bodies' changes the same), the minds round their loop again between (rung to it), so what they set going
+** after their turn's end is in by then: the UI's count as turns_run read it first (a thing set going after that the next
+** count's) given back, the UI's next line taken.  jobs.s's (the main RAM's room); the hub's header in the window */
+void lockstep (void);
+extern unsigned char ls_w;                      /* (The UI's ui_want, read before the rest: lockstep's) */
+
 static unsigned char turns_run (void)
 {
     static unsigned ui_t;
     unsigned long d;
     unsigned s;
 
+    ls_w = HUB->ui_want;
     if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail ||
         ((unsigned char) HUB->pcsum.cond & C_DEAD)) {
         return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
@@ -7381,6 +7393,9 @@ static unsigned char turns_run (void)
         return 1;
     }
     if (HUB->pc_ready <= HUB->now) {
+        if (HUB->w_idle != ls_w) {
+            lockstep ();                        /* (Free, or asking: all the UI set going done, its next line) */
+        }
         return 0;                               /* (Free) */
     }
     d = HUB->pc_ready - HUB->now;
@@ -7669,7 +7684,7 @@ static unsigned char den_due (void)
     return DEN_INTENTS ();
 }
 
-static unsigned char was_busy;                  /* (main's: its E_READY to come) */
+unsigned char was_busy;                         /* (main's: its E_READY to come; jobs.s's lockstep's too) */
 #define REST_IDLE       600                     /* (Ticks free before a look one way's rest is asked: three seconds, the
                                                 **   player reading, not typing on; a line come, none: 2026-11-18) */
 static unsigned free_t;                         /* (main's: the character free again, E_READY told, then) */
@@ -7820,6 +7835,9 @@ void (* const jobs_run[]) (void) = {
 #define JOBS_LATE       (8 | 14 << 8)
 void __fastcall__ jobs (unsigned rows);        /* (jobs.s: the rows from the first to the end, each due run if it
                                                 **   doesn't wait) */
+
+/* (jobs.s's lockstep, the turns pace's quiet, reads these: the table's rows, move's on its first) */
+typedef char LS_READS[sizeof jobs_due == 14 ? 1 : -1];
 
 int main (int argc, char* argv[])
 {
