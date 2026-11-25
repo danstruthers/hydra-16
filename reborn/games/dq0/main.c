@@ -1104,6 +1104,7 @@ unsigned char lsn;                              /* (A listen, or a sniff, under 
 unsigned char heard_rel = 0xFF;
 unsigned char face_told;                        /* (The heading a turn told last since a line was typed, plus 1: task.c's
                                                 **   turned_says, "back" to it; 0 none) */
+unsigned char stop_told;                        /* (Its long task's stop told, till it's free or a line's typed: task.c's) */
 char heard_what[20];
 static unsigned heard_sum[4];                   /* (The sounds told since the last line was typed, four, each its words' sum, */
 static unsigned char heard_rep;                 /*   and how far told: two bits a sound, 1 once, 2 again and again; 0
@@ -1182,7 +1183,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = step_k = journeyed = 0;
+                busy = step_k = journeyed = stop_told = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
@@ -3242,7 +3243,7 @@ int main (int argc, char* argv[])
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
             if (l && !held) {
-                heard_rep = face_told = 0;      /* (A command typed, not held for the character before: the sounds
+                heard_rep = face_told = stop_told = 0;   /* (A command typed, not held for the character before: the sounds
                                                 **   told as the last went begun again, s_noise_told's; not a soft
                                                 **   question's answer, its task the same, its sounds "again"; and
                                                 **   the heading a turn told last, task.c's turned_says) */

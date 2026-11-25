@@ -175,6 +175,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             reach_said (TE_IDLE, 0);
         }
     }
+    if (p <= TE_NEAR && stop_told++) {
+        return 0;                               /* (Its stop told already: a blow after it stopped it again, the world's,
+                                                **   untold; "You stop waiting." twice in an answer, fix3, 2026-11-25) */
+    }
     if (out_told && (p <= TE_NEAR || p == TE_ENGAGED)) {
         return 0;                               /* (Its long task stopped as it lies senseless, by the blow that felled
                                                 **   it or one after: its command dropped (above), the stop untold, as

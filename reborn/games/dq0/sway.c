@@ -255,7 +255,7 @@ static void __fastcall__ close_word (unsigned char d, unsigned char f, unsigned 
 
 void __fastcall__ o_walk_says (const char* name)
 {
-    unsigned char k = cmd.obj.kind;
+    unsigned char k = cmd.obj.kind, j, v;
 
     if (cmd.aux == IO_PLACE && !name) {         /* (A thing put in a place, walked there first: the place's words told
                                                 **   already, o_walk_ahead's, P5's, 2026-11-18) */
@@ -279,8 +279,14 @@ void __fastcall__ o_walk_says (const char* name)
                 return;
             }
             worded = 1;
-            close_word ((k & 7) + 1, FS_SEEN, cmd.action == VB_OBSERVE_OBJECT || cmd.action == VB_EXAMINE_OBJECT ?
-                FV_LOOK_AT : FV_LOOK_FOR);
+            k &= 7;
+            hub_mem (0, &v, &HUB->actor[k].den, 1);
+            for (j = sight_copy.ndens; j && sight_copy.den[j - 1].den != v; --j) {
+            }
+            close_word (k + 1, FS_SEEN, j || cmd.action == VB_OBSERVE_OBJECT || cmd.action == VB_EXAMINE_OBJECT ?
+                FV_LOOK_AT : FV_LOOK_FOR);      /* (In sight: looked at, whatever's asked of it; known but out of sight,
+                                                **   looked for.  "You look for the giant rat." of one in sight before a
+                                                **   social verb till fix3, 2026-11-25) */
             return;
         }
         worded = 1;

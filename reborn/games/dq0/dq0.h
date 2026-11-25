@@ -518,6 +518,7 @@ extern unsigned char lsn;                       /* (main.c's: a listen, 1 one wa
 void __fastcall__ bg_words (unsigned char what);    /* Part positions (main.c's): the background heard, the draught felt */
 extern unsigned long heard_at;                  /* (main.c's: when a sound was last told, */
 extern unsigned char heard_rel;                 /*   and the way it came) */
+extern unsigned char stop_told;                 /* (main.c's: its long task's stop told, till it's free or a line's typed) */
 extern unsigned char face_told;                 /* (main.c's: the heading a turn told last since a line was typed, plus 1) */
 unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) A denizen's sound weighed: its way if it's
                                                 **   heard (REL8), to be told; else 0xFF */
