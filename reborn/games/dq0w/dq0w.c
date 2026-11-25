@@ -7290,6 +7290,14 @@ static void turn (void)
     hub_ring (T_DENIZENS);
     for (t0 = hy_ticks (); !late && BEHIND && (unsigned) (hy_ticks () - t0) < TURN_WAIT; ) {
         hub_sleep (1);                          /* (Waited for here, a tick at a time at most) */
+        if (HUB->scene != HUB->scene_w) {
+            scene ();                           /* (A test's scene posted meanwhile, its part done here as at the main
+                                                **   loop's top (no intent's body in hand), so the minds, held for it
+                                                **   till it's in place, can put theirs and take their turn: thirty
+                                                **   seconds waited, the minds late through a whole rest after, till
+                                                **   fix2, 2026-11-24: dq0sleepsenses's bandit come too late to ask) */
+            t0 = hy_ticks ();
+        }
         if (DEN_INTENTS ()) {
             den_intents ();                     /* (Their intents carried out as they come: on its way, the wait
                                                 **   begun again, so a long turn that's going isn't left late, only a
