@@ -7,7 +7,7 @@ const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   xdBytes, saidTheme, DQ0_MAKE, dq0Life, dq0Turns, dq0Rep, dq0Need, dq0Carried, dq0Here, dq0Holder, dq0View, dq0TypedAsk,
-  dq0Typed, dq0Poke
+  dq0Typed, dq0Game, dq0Scene, dq0SceneNow
 } = require('../../lib/dq0.js');
 
 // (A game with a save's folder: the rc variable dq0auto, so the time between two dungeons, dq0acct's, waits for nothing; dq0TypedAsk has it wait)
@@ -38,8 +38,8 @@ module.exports = {
       // the dens (some 4M more to load); it was at 799.4M; 940M, 2026-10-30: 851.0M with the answers' work, the budget
       // some 10% over it)
       init: 't_rc', cycles: 940e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
-        'd', 'quit', 'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
+        'd', 'quit', 'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], dr = T.of('drop the dagger'), d = T.of('d'), q = T.and(T.of('quit')), c = T.of('dq0 -d /ram/kept');
@@ -64,8 +64,8 @@ module.exports = {
     {
       name: 'dq0carry', meaning: true, outfit: true, near: ['save'], what: 'Dingus Quest Zero\'s character carrying on (slice 4.4: D8, the character carries on into a new dungeon; HOUSE.md\'s the character carries on), by the world\'s events and the words told: the crypt (seed 3, dq0 -k: its puzzle\'s pieces and a pick to hand) escaped by its way out, the seal made and used (dq0theme\'s way): the ending\'s words say it carries on, and its sheet is told as the game ends; its sheet kept (pc.hm, a second "body" line: its skills used since their development rolls); then the game begun again with the same folder and no character file: a new dungeon (seed 259, the drowned temple: begun, not carried on), the same character in it (its name, its skills as they were), carrying what it carried out (the world\'s kit.dat, its outfit: a pick it brought, not the hatchet it put down, its outfit not drawn anew; not the old theme\'s seal)',
       init: 't_rc', cycles: 1600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q',
-        'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u', 'cat /ram/q/pc.hm', 'dq0 -p t -s 259 -d /ram/q', 'sheet', 'inventory', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q',
+        'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u', 'cat /ram/q/pc.hm', 'dq0 -p t -s 259 -d /ram/q', 'sheet', 'inventory', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], theme = t => t.after ? t.after.theme : '?';
@@ -96,14 +96,13 @@ module.exports = {
     {
       name: 'dq0life', outfit: true, meaning: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's record of a life (the plan for the game between dungeons, its step 3: life.h, dq0life; DUNGEON.md's a character's life, HOUSE.md's carrying on), by the files and the world's things: the crypt (seed 3) solved and walked out of after a long wait, in two folders: then each folder's next dungeon (no -s), the two the same dungeon, their records the same to the byte (the same seed and commands make the same life): the head's life seed, its dungeon 2, its date on past the days the first took, the first dungeon's seed, outcome and days; its second dungeon's seed under 65,536 (a stand-in's). Each dungeon's own folder, the sheet, the things and the record in the top one. Quit and begun again, the same dungeon going on, the record as it was. 'Made new' stops: a dulled blade stays dull and its life as it was unless the account (dq0acct, dq0auto's: its days on the date) says it's paid for, its version as it was; a torch's fuel as it was; the pennies what the account said, the money-changer's 15% taken. A seed over 65,536 goes on over it; and dq0life's date and age figures",
       init: 't_rc', cycles: 6000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/a', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/a', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
         'dq0 -p t -d /ram/a', 'look', 'inventory', 'appraise the sword', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/b', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
         'dq0 -p t -d /ram/b', 'look', 'inventory', 'appraise the sword', 'quit',
         'cmp /ram/a/life.dat /ram/b/life.dat', 'echo same $status', 'xd /ram/a/life.dat', 'ls /ram/a', 'ls /ram/a/d1', 'ls /ram/a/d2', 'cp /ram/a/life.dat /ram/l.dat',
         'dq0 -p t -d /ram/a', 'look', 'quit', 'cmp /ram/a/life.dat /ram/l.dat', 'echo kept $status',
-        '/sd/0/games/lib/dq0/dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'cp /ram/x/life.dat /ram/y.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'cmp /ram/x/life.dat /ram/y.dat', 'echo again $status', 'echo $status']) },
+        '/sd/0/games/lib/dq0/dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'cp /ram/x/life.dat /ram/y.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'cmp /ram/x/life.dat /ram/y.dat', 'echo again $status', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
         const sword = (i, h, L, g) => {                 // (The sword: its wear and life set, read back as the next dungeon's first looked at)
@@ -126,7 +125,7 @@ module.exports = {
         };
         m.lifeSeen = [];
         dq0LineTime(m);
-        dq0Poke(m, [1, 3].flatMap(g => [{ g, line: 'look', n: 1, fuel: { torch: 3000 } }, { g, line: 'use the seal on the way out', n: 1, call: (h, L) => sword(1, h, L, g) }]).concat(
+        dq0Scene(m, [1, 3].flatMap(g => [{ g, line: 'look', n: 1, fuel: { torch: 3000 } }, { g, line: 'use the seal on the way out', n: 1, call: (h, L) => sword(1, h, L, g) }]).concat(
           [2, 4].map(g => ({ g, line: 'look', n: 1, call: (h, L) => sword(0, h, L, g) }))));
       },
       check(m, out) {
@@ -212,7 +211,7 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) {                                        // (The sword the rich scene has mended: half its life gone, dulled)
         dq0LineTime(m);
-        dq0Poke(m, [{ g: 1, line: 'drop the flask of oil', n: 1, call: (h, L) => {
+        dq0Scene(m, [{ g: 1, line: 'drop the flask of oil', n: 1, call: (h, L) => {
           const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
           for (let k = 0; cat && k < L.nitems; k++) {
             const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
@@ -289,7 +288,7 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) {                                        // (The sword half gone, dulled: a mending that costs the whole price)
         dq0LineTime(m);
-        dq0Poke(m, [{ g: 1, line: 'put the sword in the pack', n: 1, call: (h, L) => {
+        dq0Scene(m, [{ g: 1, line: 'put the sword in the pack', n: 1, call: (h, L) => {
           const per = Math.floor(0x2000 / L.itemSize);
           const cat = m.dq0.bank(L.catBank);
           for (let k = 0; cat && k < L.nitems; k++) {
@@ -339,7 +338,7 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) {                                        // (The knife half gone: the smith's to mend)
         dq0LineTime(m);
-        dq0Poke(m, [{ g: 1, line: 'inventory', n: 1, call: (h, L) => {
+        dq0Scene(m, [{ g: 1, line: 'inventory', n: 1, call: (h, L) => {
           const per = Math.floor(0x2000 / L.itemSize), cat = m.dq0.bank(L.catBank);
           for (let k = 0; cat && k < L.nitems; k++) {
             const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
@@ -638,13 +637,13 @@ module.exports = {
     {
       name: 'dq0nosave', near: ['save', 'body'], what: "Dingus Quest Zero's words at a death telling the truth about the save (the user's, 2026-11-04: \"Change the words\", no save on arriving; HOUSE.md's death, and the autosave; dq0end's, by what's in the folder), a hunter (hmchar's, seed 5) dying of a grievous bleeding wound with nothing saved: in the first dungeon, nothing to go back to and a new game next (the life told as a life, not so far); in a later dungeon, that dungeon begun again by the same seed, the record not moved on; in hard mode, its own words; none of them saying a save's kept",
       init: 't_rc', cycles: 2600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/q.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/q.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -d /ram/e', 'wait 20 minutes', 'echo =NEXT', 'dq0 -p t -s 3 -c /ram/c.hm -m -d /ram/e', 'quit',
         'echo =HARD', 'dq0 -p t -s 3 -c /ram/c.hm -H -d /ram/h', 'wait 20 minutes',
         'echo =OUT', 'dq0 -p t -s 3 -c /ram/q.hm -k sunstone,moonstone -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
         'dq0 -p t -d /ram/q', 'quit', 'rm /ram/q/d2/game.dat', 'echo \'inj 8 0 3 4 0 1\' >> /ram/q/pc.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/q/pc.hm', 'xd /ram/q/life.dat',
         'echo =LATER', 'dq0 -m -p t -d /ram/q', 'wait 20 minutes', 'xd /ram/q/life.dat', 'cat /ram/q/pc.hm',
-        'echo =AGAIN', 'dq0 -N -p t -d /ram/q', 'quit', 'xd /ram/q/life.dat', 'echo =END', 'echo $status']) },
+        'echo =AGAIN', 'dq0 -N -p t -d /ram/q', 'quit', 'xd /ram/q/life.dat', 'echo =END', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
@@ -680,9 +679,8 @@ module.exports = {
     {
       name: 'dq0hardon', near: ['save', 'body'], what: "Dingus Quest Zero's hard mode going on with the life (the fight soak's find, 2026-11-04: it was lost at a carry-on, a death in the next dungeon going back to a save): the crypt solved and left in hard mode (dq0 -H), the next dungeon begun without saying so: the record says so (LF_HARD), and the new dungeon's save (its pace's top bit), so its death is hard mode's",
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -H -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
-        'dq0 -p t -d /ram/q', 'quit', 'echo =LIFE', 'xd /ram/q/life.dat', 'echo =GAME', 'xd /ram/q/d2/game.dat', 'echo =END', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -H -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/q', 'quit', 'echo =LIFE', 'xd /ram/q/life.dat', 'echo =GAME', 'xd /ram/q/d2/game.dat', 'echo =END', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = out.replace(/\r/g, ''), first = n => { const i = o.indexOf('% echo =' + n), r = /\n[0-9a-f]+ +((?:[0-9a-f]{2} ){4})/.exec(o.slice(i, i + 200)); return r ? r[1].trim().split(' ').map(x => parseInt(x, 16)) : []; };
@@ -696,10 +694,9 @@ module.exports = {
     {
       name: 'dq0lifeend', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's life's account (dq0end; the plan's section 1): the crypt solved and walked out of with a wound that's infected, a carry-on: the character dies between the dungeons, told, the life's account after it (solved), the game not begun, status 0; the record says it's over; the next start a new life, the old record kept in lives.dat; and hard mode's death recorded, the account told",
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
         "echo 'inj 6 1 3 5 1 2' >> /ram/q/pc.hm", "echo 'dealt 0' >> /ram/q/pc.hm", 'echo =OFF', 'dq0 -p t -d /ram/q', 'echo st $status', 'xd /ram/q/life.dat', 'echo =NEW',
-        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/q', 'quit', 'ls /ram/q', 'xd /ram/q/life.dat', 'wc /ram/q/lives.dat', 'echo =END', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/q', 'quit', 'ls /ram/q', 'xd /ram/q/life.dat', 'wc /ram/q/lives.dat', 'echo =END', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
@@ -723,9 +720,9 @@ module.exports = {
     {
       name: 'dq0dressbetween', near: ['save', 'body'], what: "Dingus Quest Zero's dressings soiled by the days between dungeons (the user's, 2026-11-11, DECISIONS.md's \"Cloth, bandages and dressings\"): a serious stab to the right forearm, tended, dressed in clean linen (its file's \"dressed :igs\": grade 9, its cloth s), the sheet's \"dressed in linen, clean\"; the crypt solved and walked out of, the game kept (the referee's line written back with its cloth); then (dq0lifeend's way) an infected grievous stab to the left forearm added to the file, a carry-on: the days between (dq0acct's) soil the dressing as the dungeon's do (three grades a day on a serious wound) till the infection kills the character, and the file's line is written back soiled, its cloth kept (a wound the account heals, any it can, is gone by the next dungeon, ninety days at most, so its death is where its sheet is kept)",
       init: 't_rc', cycles: 2600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo inj 134 2 2 2 5 4 >> /ram/c.hm', 'echo dressed :igs >> /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo inj 134 2 2 2 5 4 >> /ram/c.hm', 'echo dressed :igs >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'sheet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
-        'echo =KEPT', 'cat /ram/q/pc.hm', "echo 'inj 6 1 3 5 1 2' >> /ram/q/pc.hm", 'echo =OFF', 'dq0 -p t -d /ram/q', 'echo =END', 'cat /ram/q/pc.hm', 'echo $status']) },
+        'echo =KEPT', 'cat /ram/q/pc.hm', "echo 'inj 6 1 3 5 1 2' >> /ram/q/pc.hm", 'echo =OFF', 'dq0 -p t -d /ram/q', 'echo =END', 'cat /ram/q/pc.hm', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
@@ -810,11 +807,10 @@ module.exports = {
     {
       name: 'dq0fastkept', near: ['save', 'body'], what: "Dingus Quest Zero's vow of fasting kept (the user's, 2026-11-11, DECISIONS.md's \"Prayer, fasting, swimming and following\"): a vow made, 20 minutes waited, the game quit and carried on: eating still refused (\"You're fasting, with 24 hours of your vow to go\"); the crypt solved and walked out of, dq0life run with no time between told (no -l) and the next dungeon's seed 1 (its hour 1, before the first's 3): the record's fast (life.h's, the head's byte 26) its end after the new date's midnight, 15 to 17 steps of 12 minutes; the next dungeon begun, eating refused with 2 to 4 hours of the vow to go; \"stop\" ends it, eating then not refused",
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/v', 'fast', 'wait 20 minutes', 'quit', 'echo =KEPT',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/v', 'fast', 'wait 20 minutes', 'quit', 'echo =KEPT',
         'dq0 -p t -d /ram/v', 'eat food', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
         '/sd/0/games/lib/dq0/dq0life -d /ram/v -s 1', 'echo =LIFE', 'xd /ram/v/life.dat', 'echo =NEXT',
-        'dq0 -p t -d /ram/v', 'eat food', 'stop', 'eat food', 'quit', 'echo =END', 'echo $status']) },
+        'dq0 -p t -d /ram/v', 'eat food', 'stop', 'eat food', 'quit', 'echo =END', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
@@ -833,9 +829,9 @@ module.exports = {
     {
       name: 'dq0hard', near: ['save', 'body'], what: 'Dingus Quest Zero\'s death and its autosave (slice 4.4: D7, death permanent with autosaves before danger as a setting, off hard mode; HOUSE.md\'s the character carries on), by the world\'s events and the words told: a hunter (hmchar\'s, seed 5) given a grievous bleeding wound and its blood near spent (its file\'s lines added), begun by the stairway down (dq0 -T) and down it (kept as it comes into the stratum: the autosave), then a wait: dead of it, the ending\'s words saying its last save is kept, and the game begun again with the folder carried on from that save (resumed, not a new game); the same in hard mode (dq0 -H): no save to go back to, the game begun again a new one (its folder\'s save not taken up)',
       init: 't_rc', cycles: 1700e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: ['cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/d', 'd', 'wait 10 minutes', 'dq0 -p t -d /ram/d', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -H -d /ram/h', 'd', 'wait 10 minutes', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/h', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -H -d /ram/h', 'd', 'wait 10 minutes', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/h', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [];
@@ -856,11 +852,11 @@ module.exports = {
     {
       name: 'dq0savebytes', meaning: true, near: ['save', 'body'], what: 'Dingus Quest Zero\'s save byte for byte (ONE-PATH.md\'s stage 1, the character as actor 0: its record moved in the hub, the save\'s bytes as they were), over five seeds (dq0 -T, the turns pace): the character turned, a step, a jog, crouched, its torch put out and hidden, quit (the world\'s world.dat, the denizens\' dens.dat dumped), carried on and quit again (world.dat dumped again; the folder gone after, so the RAM disk keeps its room): the first world.dat the hub\'s state as it quit (its stratum, square, facing, position, hiding, pace and watchfulness), the game carried on from it, and written back the same (all but the time believed\'s next reckoning, made again as it goes on); the dumps the old build\'s and the new\'s alike (their transcripts compared); and the character\'s body actor 0, the hub\'s bodies[0] (its old names, pc_x ..., on its fields; the denizens\' entries the bodies\' from 1), in the dungeon (its state 1) as each game begins and is carried on',
       init: 't_rc', cycles: 6000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...[1, 2, 3, 6, 21].flatMap(s => [
+      machine: { input: dq0Typed(dq0Game({ lines: [...[1, 2, 3, 6, 21].flatMap(s => [
         'dq0 -p t -s ' + s + ' -c /ram/c.hm -T -d /ram/k' + s, 'turn right', 'step forward', 'jog', 'crouch', 'douse the torch', 'hide', 'quit',
         'xd /ram/k' + s + '/d1/world.dat', 'xd /ram/k' + s + '/d1/dens.dat', 'cp /ram/k' + s + '/d1/world.dat /ram/k' + s + '/w1.dat',
         'dq0 -p t -d /ram/k' + s, 'quit', 'cp /ram/k' + s + '/d1/world.dat /ram/k' + s + '/w2.dat', 'xd /ram/k' + s + '/w2.dat',
-        'cmp /ram/k' + s + '/w1.dat /ram/k' + s + '/w2.dat', 'echo same ' + s + ' $status', 'rm -r /ram/k' + s]), 'echo $status']) },
+        'cmp /ram/k' + s + '/w1.dat /ram/k' + s + '/w2.dat', 'echo same ' + s + ' $status', 'rm -r /ram/k' + s]), 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], H = require('../../../games/dq0/hubgen.js').load(), o = n => H.off('wsave', n), z = n => H.size('wsave', n);
@@ -896,8 +892,7 @@ module.exports = {
     {
       name: 'dq0saveout', near: ['save', 'fight'], what: "Dingus Quest Zero's shock rolls kept with the game (the user's K16, 2026-11-21: a game loaded mid black-out goes on where it was): at seed 3 the character knocked senseless (a scene's: the referee's sheet senseless, its fall now, its time out five minutes on, the world's out), quit as it lies there (the quit's save), carried on: the referee's fall and rolls (ko_at, ko_n) and its time out (pc_out) read back as they were kept (its file's body line), the world's character senseless still (the hub's pc_out); and an actor's kept by its sheet (its fall and rolls set as it quit: saved in the sheets past the denizens' records, KOSAVE) read back the same, its sheet's entry in the fb bank's KOS as RS_NEW_ACTOR finds it",
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/o', 'turn left', 'quit', 'dq0 -p t -d /ram/o', 'save', 'look', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/o', 'turn left', 'quit', 'dq0 -p t -d /ram/o', 'save', 'look', 'quit', 'echo $status'] })) },
       start(m) {
         const lbl = () => fs.readFileSync(path.join(__dirname, '..', '..', '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
         const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl())[1], 16);
@@ -910,7 +905,7 @@ module.exports = {
         m.kept = [];
         const read = () => { const r = ram(), fb = fbMem(); return { at: u32(r, ad('ko_at')), n: r[ad('ko_n')] | r[ad('ko_n') + 1] << 8, out: u32(r, ad('pc_out')),
           state: r[ad('pc') + STATE], hubOut: m.dq0.bank(0)[PCOUT], kos: fb ? Array.from(fb.subarray(KOS(m.kosN), KOS(m.kosN) + 6)) : null }; };
-        dq0Poke(m, [{ g: 1, line: 'quit', n: 1, call: () => {
+        dq0Scene(m, [{ g: 1, line: 'quit', n: 1, call: () => {
           const h = m.dq0.bank(0), { L } = m.dq0.layout(), r = ram(), now = (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24) >>> 0;
           const w = (a, v, n) => { for (let i = 0; i < n; i++) r[a + i] = v >>> (8 * i) & 255; };
           r[ad('pc') + STATE] = 3;                  // (HARN_UNCONSCIOUS)
@@ -939,7 +934,7 @@ module.exports = {
     {
       name: 'dq0savemid', near: ['save'], what: "Dingus Quest Zero's \"save\" typed in the middle of a game (2026-11-19: it halted the UI in every game, overlay 7's o_meta calling part 14's save, which left the hub's bank in the window, the overlay's code returned to run in it; main.c's s_save_game keeps the window now), in a new game and in one carried on, with the caches small (dq0 -C) and not, at seeds 3 and 5: each game played twice, the same commands, one with \"save\" typed among them and one without, both quit (the quit's save): the game kept (\"The game is kept.\") and going on, and the two folders' game.dat and world.dat byte for byte the same (a save typed changes nothing the quit keeps); then both carried on (resumed, not a new game), played on the same way, a \"save\" typed in one, quit and compared again; and the saved one carried on once more",
       init: 't_rc', cycles: 12000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...[[3, ''], [5, '-C '], [5, '']].flatMap(([s, c]) => {
+      machine: { input: dq0Typed(dq0Game({ lines: [...[[3, ''], [5, '-C '], [5, '']].flatMap(([s, c]) => {
         const d = '/ram/m' + s + (c ? 'c' : ''), e = d + 'n';
         const cmp = t => ['cmp ' + d + '/d1/game.dat ' + e + '/d1/game.dat && echo same game ' + d + ' ' + t,
           'cmp ' + d + '/d1/world.dat ' + e + '/d1/world.dat && echo same world ' + d + ' ' + t];
@@ -947,7 +942,7 @@ module.exports = {
           ...(first ? ['turn right', 'step forward'] : ['turn left']), ...(save ? ['save'] : []), 'look', 'quit'];
         return [...play(d, 1, 1), ...play(e, 0, 1), ...cmp('new'), ...play(d, 1, 0), ...play(e, 0, 0), ...cmp('carried'),
           'dq0 -p t ' + c + '-d ' + d, 'quit', 'rm -r ' + d, 'rm -r ' + e];
-      }), 'echo $status']) },
+      }), 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], T = dq0Turns(m), kept = (out.match(/The game is kept\./g) || []).length;

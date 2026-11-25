@@ -19,6 +19,10 @@ void __fastcall__ s_scene_rs (struct req* r)
     struct bbody b;
     unsigned char n = aden[(r->actor - 1) & 7], w = RS_SCENE_WHAT (*r);
 
+    if (w == SCN_RAM || w == SCN_HUB) {         /* (Its own RAM's bytes, or the hub's header's it writes) */
+        memcpy ((char*) (w == SCN_HUB ? HUB_WINDOW : 0) + RS_SCENE_EX (*r), r->x + 4, RS_SCENE_WHICH (*r) & 7);
+        return;
+    }
     if (!r->actor) {
         if (w != SCN_OUT) {
             r->result = 0xFF;

@@ -22,12 +22,12 @@
 void s_scene (void)
 {
     static unsigned at;
-    static unsigned char s, k, n, mk;
+    static unsigned char s, k, n, mk, md;
     static unsigned char b[80];                 /* (An op's payload, copied out of CMD_BANK) */
 
     hub_map (0);
     s = HUB->scene;
-    mk = 0;
+    mk = md = 0;
     for (at = SCENE_AT; at < SCENE_AT + SCENE_SIZE - 2; at += 2 + n) {
         hub_map (CMD_BANK);
         k = HUB_WINDOW[at];
@@ -37,9 +37,12 @@ void s_scene (void)
         }
         memcpy (b, HUB_WINDOW + at + 2, n);
         mk |= k == SO_MHUB;
+        md |= k == SO_DHUB || k == SO_REC || k == SO_INTENT || k == SO_DRAM;
         if (k == SO_HUB) {                      /* (Its bank, its offset, the bytes) */
             hub_map (b[0]);
             memcpy (HUB_WINDOW + (b[1] | b[2] << 8), b + 3, n - 3);
+        } else if (k == SO_WRAM) {               /* (Its own main RAM: the address, the bytes) */
+            memcpy ((char*) (b[0] | b[1] << 8), b + 2, n - 2);
         } else if (k == SO_DUE) {
             if (b[0] == DU_BURN) {
                 burn_ask |= 1;                  /* (The lights' minute at once: the main loop's burn_due_) */
@@ -62,6 +65,9 @@ void s_scene (void)
     hub_map (0);
     if (!mk) {
         HUB->scene_m = s;                       /* (None of the maker's: the minds' next) */
+        if (!md) {
+            HUB->scene_d = s;                   /* (Nor the minds': in place now) */
+        }
     }
     HUB->scene_w = s;                           /* (Its part done: the maker's now, if it has one, then the minds') */
     hub_ring (mk ? T_MAKER : T_DENIZENS);

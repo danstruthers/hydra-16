@@ -50,7 +50,8 @@ const SUITES = [
   'suites/dq0/save.js',
   'suites/dq0/theme.js',
   'suites/dq0/screen.js',
-  'suites/dq0/guards.js'
+  'suites/dq0/guards.js',
+  'suites/dq0/scene.js'
 ];
 const files = {}, tests = [];
 for (const f of SUITES) { const list = require('./' + f).tests; files['reborn/tests/' + f] = list; tests.push(...list); }

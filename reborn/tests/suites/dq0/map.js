@@ -10,7 +10,7 @@ const {
   PK_PORTCULLIS, T_DOOR, T_STEPS, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks,
   O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, dq0Prose, inTurn, dq0Answers, dq0Turns, dq0Ev,
   dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0View, passings, dq0Typed, dq0Portal,
-  dq0Rec, dq0Poke, dq0OnWords
+  dq0Rec, dq0Scene, dq0SceneNow, dq0OnWords, dq0Game
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 
@@ -104,9 +104,6 @@ function dq0CarveStairs(m, p) {
         }
       }
       for (const [i, j] of sq) { b[T(i, j)] = (b[T(i, j)] & 0xF0) | T_CORR; b[E(i, j)] = z; }
-      const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0p', 'dq0p.lbl'), 'latin1');
-      const lg = parseInt(/^al ([0-9A-F]+) \._lgen$/m.exec(lbl)[1], 16), ram = m.taskRam[h[12 + 6]];
-      ram[lg] = (ram[lg] + 1) & 255;
       return '';
     }
     return 'no chunk with the stairway up';
@@ -117,7 +114,12 @@ function dq0CarveStairs(m, p) {
       if (c === 13) {
         if (/^dq0 /.test(typed)) { ++g; seen = {}; }
         seen[typed] = (seen[typed] || 0) + 1;
-        if (!r.done && g === p.g && typed === p.line && seen[typed] === p.n) { const w = carve(); r.done = !w; r.why = w; }
+        if (!r.done && g === p.g && typed === p.line && seen[typed] === p.n) dq0SceneNow(m, () => { const w = carve(); r.done = !w; r.why = w; }, () => {
+          // (Once the steps are in place, the senses' grid made again: dq0p's lgen, its own RAM's; no scene op for it)
+          const h = m.dq0.bank(0), lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0p', 'dq0p.lbl'), 'latin1');
+          const lg = parseInt(/^al ([0-9A-F]+) \._lgen$/m.exec(lbl)[1], 16), ram = h && r.done && m.taskRam[h[12 + 6]];
+          if (ram) ram[lg] = (ram[lg] + 1) & 255;
+        }, 'dq0CarveStairs\' steps', true);
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
     }
@@ -164,8 +166,8 @@ function dq0AheadTest() {
         if (r === 0 && a.rdrf) {
           if (a.rx === 13) {
             if (/^dq0 /.test(typed)) { ++g; used.clear(); }
-            if (typed === 'inventory') {
-              const h = m.dq0.bank(0), { L } = m.dq0.layout(), sn = h[L.pcSn], S = stratumRec(m, sn), live = liveChunks(m, sn), FACE = { E: 2, W: 6, N: 0, S: 4 };
+            if (typed === 'inventory') dq0SceneNow(m, (h, L) => {   // (A scene's: the character's square and facing, the world's)
+              const sn = h[L.pcSn], S = stratumRec(m, sn), live = liveChunks(m, sn), FACE = { E: 2, W: 6, N: 0, S: 4 };
               const open = (b, x, y) => { const t = b[CK_TILE + y * 32 + x] & 15; return t === T_FLOOR || t === T_CORR; };
               let done = false;
               for (const k of Object.keys(live).sort()) {
@@ -182,7 +184,7 @@ function dq0AheadTest() {
                   }
                 }
               }
-            }
+            }, null, 'dq0ahead\'s put at an edge', true);
             typed = '';
           } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
         }
@@ -272,14 +274,14 @@ function dq0AheadDenTest() {
     expect: ['% echo $status'],
     start(m) {
       const t = this;
-      dq0Poke(m, [{ g: 1, line: 'inventory', n: 1, call: (h, L, K) => {
+      dq0Scene(m, [{ g: 1, line: 'inventory', n: 1, call: (h, L, K) => {
         const at = k => L.actor + k * L.actorSize, R = dq0Rec(m), sn = h[L.pcSn], S = stratumRec(m, sn);
         const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
         let k = 0;
         while (k < L.nactors && !(h[at(k) + L.aState] & 1)) k++;
         if (k === L.nactors) return;
         const x = S.x0 + ((px - S.x0) >> 5) * 32 + 36, y = py, far = 30000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), o = R.at(h[at(k) + L.aDen]);
-        h[L.pcsum + L.sSight] = 0;
+        h[L.pcsum + L.sSight] = 0;              // (The referee's summary: its RS_SCENE SCN_HUB's)
         h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
         h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
         h[at(k) + L.aFace] = 2;
@@ -334,9 +336,9 @@ module.exports = {
     {
       name: 'dq0', meaning: true, what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace, by what happens (the hub\'s events and state: sim/lib/dq0meaning.js, tests.js\'s dq0Turns): a character from hmchar\'s file (-c) begins in a room by the way out; commands typed ahead (each waits for its prompt): the way out shut, a shut door in the way, a door opened (turned to first), walked through to a passage, another opened and a room come into the first time, crossed, no stairs there, back to the first room; west and go west the same (no way there); the map, the help, a word the game doesn\'t know and a look taking no time, a wait a round; quit, the game\'s end (the ledges: dq0harm; the game running hmchar itself: dq0veraserial)',
       init: 't_rc', cycles: 800e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'look', 'u', 'go through the door behind me on my right', 'turn around',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm', 'look', 'u', 'go through the door behind me on my right', 'turn around',
         'open the door behind me on my right', 'go through it', 'open', 'go through it', 'e', 'u', 'go back to where I came in', 'w', 'go west', 'map', 'help', 'foo', 'look', 'wait', 'quit',
-        'echo $status']) },
+        'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], g = T.of('dq0 -p t -s 3 -c /ram/c.hm'), s = g.after;
@@ -373,7 +375,7 @@ module.exports = {
     {
       name: 'dq0deep', meaning: true, what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum), by the world\'s events, what the character perceives and the hub\'s cache: the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), come into the first time, mapped (the maker\'s map), and along a tunnel; the caves irregular (the user\'s, 2026-10-16: "not straight tunnels, not rectangular rooms"): the cache\'s chunks read, their chambers ragged, their tunnels bending, every open square reached, their edges met',
       init: 't_rc', cycles: 500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'sw', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'sw', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], d = T.of('d'), mp = T.of('map'), sw = T.of('sw');
@@ -388,14 +390,14 @@ module.exports = {
     {
       name: 'dq0fog', meaning: true, what: 'Dingus Quest Zero\'s map as the character knows the place (slice 4.2, DUNGEON.md\'s the map kept; the user\'s, 2026-10-16 and 2026-10-23: only what it sees now plain, the rest obscured, a mental map fading by its Intelligence and Will, the better kept where it\'s often been, a map drawn on paper while mapping as it goes), by the maker\'s map (the UI bank\'s rows and their layers, ML_*): at seed 3 (dq0 -T, a human hunter: INT 10, WIL 13) what it sees now with its heights, what it saw facing the other way faint (a floor a comma); its torch put out, all of it remembered, none seen now; an hour later its squares put off where they truly are (faded a tenth: it doesn\'t know north underground); three hours on, gone; the same place come to again four times (down the stairway and five minutes there each time) still on the map after three hours in the dark; with paper and charcoal (dq0 -k: the charcoal, in the pack, put in the pouch on its belt to be handy, HOUSE.md\'s handy tools) mapping as it goes, a map begun ("You begin a map."; Drawing opened by it the referee\'s, dq0rules\'), what it drew shown as drawn while it carries the map (its torch out, nothing seen now), not once it\'s put down, again as it\'s taken up',
       init: 't_rc', cycles: 4000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'turn around', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'wait 2 hours', 'map', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'douse the torch',
         'wait 3 hours', 'map', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal', 'put the charcoal in the pouch', 'map as I go', 'turn around',
         'turn around', 'douse the torch', 'map',
         'light the torch', 'drop the map', 'douse the torch', 'map', 'light the torch', 'take the map', 'douse the torch', 'map', 'quit',
-        'echo $status']) },
+        'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Prose(out), maps = T.filter(t => t.line === 'map');
@@ -424,9 +426,9 @@ module.exports = {
     {
       name: 'dq0mapturn', what: 'Dingus Quest Zero\'s map turned as the character faces (slice 4.2, DUNGEON.md\'s bearings underground; the user\'s, 2026-10-16: a dwarf\'s north up, anyone else\'s the way it faces up), by the maker\'s map and the words: at seed 3 (dq0 -T) a human facing north, the map north up, the character in its middle, a compass in its top right corner (N above +); facing east, east up (the rows turned a quarter: what\'s to its south to its right), the compass\'s N to the left of its +, "Facing E" beside it and no square given (its coordinates would give the true north away); a dwarf (hmchar -p k) at the same place facing east, north up (the window kept in the stratum, no compass; the window by the room\'s door where the human\'s north-up map has it, the human\'s facing east turned a quarter), its square given; its torch put out an hour, fewer squares remembered but none put off (a dwarf knows north)',
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 9 -p k -o /ram/d.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: ['hmchar -q -s 9 -p k -o /ram/d.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'face north', 'map', 'face east', 'map', 'quit',
-        'dq0 -p t -s 3 -c /ram/d.hm -T', 'face east', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/d.hm -T', 'face east', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], maps = T.filter(t => t.line === 'map');
@@ -464,11 +466,11 @@ module.exports = {
     {
       name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1; the scene set, slice 4.10\'s, as the shaft\'s rock now differs by the referee\'s pace: its oil two hours\' as it\'s first lit, dq0Poke\'s, the shaft longer under either referee, and twelve hours\' as it\'s lit again, the shaft through by it; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
       init: 't_rc', cycles: 3800e6,                // (3600e6 till slice 4.10; 2026-10-31 3415M under HarnMaster's referee, 2721M the null's)
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm', 'echo ml cli 95 >> /ram/m.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm', 'echo ml cli 95 >> /ram/m.hm',
         'dq0 -p t -s 3 -c /ram/m.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'fill the lantern', 'light the lantern', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
-        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status']) },
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status'] })) },
       start(m) {                                  // (The scene set, slice 4.10's: its lantern's oil two hours' as it's first lit,
-        dq0Poke(m, [{ g: 1, line: 'light the lantern', n: 1, fuel: { lantern: 120 } },   //   the light out in the dig's
+        dq0Scene(m, [{ g: 1, line: 'light the lantern', n: 1, fuel: { lantern: 120 } },   //   the light out in the dig's
           { g: 1, line: 'light the lantern', n: 2, fuel: { lantern: 720 } }]);   //   first part, under either referee; filled, twelve
       },                                          //   hours', the shaft through by its light: the rock harder in parts and
                                                   //   poor rock coming down into it, its spells as many as they come)
@@ -563,8 +565,8 @@ module.exports = {
     {
       name: 'dq0rock', near: ['map'], what: 'Dingus Quest Zero\'s rock (slice 4.10: DUNGEON.md\'s changing the dungeon, HOUSE.md\'s rock\'s kinds and hardness; dq0/rock.h, the world\'s dig_rock, the UI\'s words), by the words told: a skilled miner (Mining 95) with a pick at seed 3 by the stairway (dq0 -T) digs a shaft down, through the floor\'s flags (a spell) into the rock; the rock\'s told as the dig comes to it, after the floor ("You\'re into flaky rock", its looks one of the rocks\'), named only after a spell that went well ("...: shale." with "The work goes well."); stopped as it\'s told ("stop"), then quit',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo ml min 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'quit', 'echo $status'] })) },
       start(m) {
         dq0OnWords(m, [{ g: 1, line: 'dig down', n: 1, words: 'You\'re into', text: 'stop\r' }]);   // (Typed as it's told)
       },
@@ -590,7 +592,7 @@ module.exports = {
     {
       name: 'dq0rubble', near: ['map'], what: 'Dingus Quest Zero\'s age\'s collapse (slice 4.10: DUNGEON.md\'s rock and old places, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s rubble, caves.c\'s, by the stratum\'s age, twice where the rock is poor; world.h\'s T_RUBBLE), by the hub\'s cache: at seed 3 down the stairway (dq0 -T, d), the chunks of both strata read: rubble in old passages (seed 3\'s nine squares: the top stratum\'s chunk 3,1 and the caves\' 18,11 and 18,12), every square of it a passage\'s, in no room\'s bounds, every square beside it a passage\'s, the rock\'s or rubble (no doorway, no room\'s floor), never on a chunk\'s edge',
       init: 't_rc', cycles: 600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const f = [], ok = new Set([T_CORR, T_ROCK, T_WALL, 10]);
@@ -611,7 +613,7 @@ module.exports = {
     {
       name: 'dq0mixed', near: ['map'], what: 'Dingus Quest Zero\'s mixed strata (slice 4.10: DUNGEON.md\'s growing a chunk, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s cstyle), by the hub\'s cache: at seed 3 with every built stratum made mixed (dq0 -M, the tests\'), by the stairway (dq0 -T) and down it, the top stratum\'s chunks read: part natural (seed 3\'s 3,0 and 3,1: caves, every room a cave\'s chamber) and part built (2,0 and 2,1, the stairway\'s: no cave in them), and where a natural chunk meets a built one their edges\' open squares meet; the stratum below (natural) all caves',
       init: 't_rc', cycles: 600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -M', 'd', 'map', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -M', 'd', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const f = [], ks = cacheChunks(m, 0), open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
@@ -634,8 +636,8 @@ module.exports = {
     {
       name: 'dq0angles', near: ['map'], what: 'Dingus Quest Zero\'s diagonal ways (the user\'s, 2026-10-31: passages off the compass, step 1; HOUSE.md\'s diagonal ways), by the words told and the map: at seed 3 in the cell by the stairway (dq0 -T) a skilled miner (Mining 95) with a pick faces north, goes to the far right corner and digs northeast (the cell\'s corner wall, two feet: "You break through."), the square corner to corner a passage, its two corners cut (T_CUT); "go northeast" walks into it (a diagonal way from a room\'s floor: across\'s mouth), its end told ("The passage ends here; it goes back behind you."); the map draws the two cut corners as strokes along the way ("/" beside the @ and below it, no "\\"); "look southwest" sees back along the diagonal way into the cell (a look one way\'s, way.c\'s seen_on: "Down the passage ahead you see into the cell", 2026-11-01); "go southwest" walks back into the cell',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
-        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'face north', 'go to the far right corner', 'dig northeast', 'go northeast', 'map', 'look', 'look southwest', 'go southwest', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
+        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'face north', 'go to the far right corner', 'dig northeast', 'go northeast', 'map', 'look', 'look southwest', 'go southwest', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
@@ -661,8 +663,8 @@ module.exports = {
     {
       name: 'dq0heading', near: ['map'], what: 'Dingus Quest Zero\'s passages told by their real heading (the user\'s, 2026-10-31: ways off the compass, step 2; HOUSE.md\'s a passage\'s heading), by the words told and the map: at seed 3 down the stairway (dq0 -T, the caves dry and unfallen: -W -U) a staircase of short steps (south, then east and south by turns, eight squares: one square wide, not cut) made in the rock from the cave\'s wall two squares south and two west of the stairs as "look" is typed (dq0CarveStairs: the chunk cache\'s squares, the senses\' grid made again); two steps west, "go south" walks down it to its end without a turn told at every step (one bend at most, "The passage bends away southeast.", and no "The passage turns"); "look" at its end tells the way back by its shape, behind and to the left (its run\'s bearing as far as it\'s seen, northwest, the steps by turns, as it faces east: "it goes back behind you to your left"); the map draws what it shows of it as a slant (strokes of one kind, two or more, as the map\'s turned); "turn around" and "go ahead" walk back up it to the cave',
       init: 't_rc', cycles: 2000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U', 'd', 'look', 'face west', 'step forward', 'step forward', 'go south', 'look', 'map', 'turn around', 'go ahead', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U', 'd', 'look', 'face west', 'step forward', 'step forward', 'go south', 'look', 'map', 'turn around', 'go ahead', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) { this.carve = dq0CarveStairs(m, { g: 1, sn: 1, line: 'look', n: 1, at: [-2, 2], steps: [2, 2, 1, 2, 1, 2, 1, 2, 1] }); },
       check(m, out) {
@@ -689,8 +691,8 @@ module.exports = {
     {
       name: 'dq0slant', near: ['map'], what: 'Dingus Quest Zero\'s built passages on the diagonal (the user\'s, 2026-10-31: ways off the compass, step 3; HOUSE.md\'s built passages on the diagonal), by the chunks made and the words told: at seed 3 every built stratum\'s passages on the diagonal (dq0 -A, the tests\'), the dungeon made and entered as ever (its first look told); the chunks the cache has of its top stratum have rooms and passages with cut corners (T_CUT, three or more), each between two of a passage\'s squares that share only a corner with it on either side (a diagonal way\'s, chunk.c\'s slant: a staircase cut as the caves\' are, caves.c\'s slants), none in a room\'s bounds; "go east" from the kitchen by the way in walks a passage on the diagonal, told as it bends ("The passage bends away northeast.", HOUSE.md\'s a passage\'s heading), to its end; the map draws a cut corner ("/" or "\\")',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -A', 'look', 'go through the door to the east', 'map', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 3 -c /ram/c.hm -A', 'look', 'go through the door to the east', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
@@ -722,9 +724,9 @@ module.exports = {
     {
       name: 'dq0cavern', near: ['map'], what: 'Dingus Quest Zero\'s great caverns (slice 4.10\'s rest, 2026-11-02: DUNGEON.md\'s caverns across many chunks, HOUSE.md\'s great caverns; the maker\'s caves.c cavern, overlay 8), by the hub\'s cache and the words told: at seed 3 with every natural region a cavern (dq0 -V, the tests\'), down the stairway (dq0 -T) into the caves, the stairs\' foot in the cavern (its middle by the region\'s way): its parts in three or more of the cached chunks (world.h\'s R_CAVERN rooms), and where a part\'s floor is at a chunk\'s edge the next chunk\'s square open (its floor, a step\'s rise or fall at most) or a wall, never the bare rock (the parts grown from the seed alone, meeting: seed 3\'s at 8 squares or more); told "You are somewhere in a vast cavern, its walls beyond your light." as it comes in, and "You are in a vast cavern, by the light of your torch" with its walls in sight; "go north" and "go east" walk across it over the chunks\' edges (seed 3\'s 19,12 to 19,11, 19,11 to 20,11); the map drawn; the same game again, walked the other way about: every part in both the same, square for square and floor for floor (made from the seed alone)',
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'look', 'map', 'go north', 'look', 'go east', 'look', 'map', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'go east', 'go north', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'go east', 'go north', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) { this.snaps = []; dq0Where(this, m, l => { if (l === 'quit') this.snaps.push(cavernChunks(m, 1)); }); },
       check(m, out) {
@@ -774,8 +776,8 @@ module.exports = {
     {
       name: 'dq0ramp', near: ['map'], what: 'Dingus Quest Zero\'s long slopes between strata (slice 4.10\'s rest, 2026-11-02: raises and inclines; DUNGEON.md\'s openings and ways between strata, HOUSE.md\'s long slopes; level.h\'s O_RAMP_DOWN, O_RAMP_UP), by the words told and the strata\'s records: at seed 3 with every stairway down a long slope (dq0 -P, the tests\') by the top stratum\'s way down (dq0 -T): "look" tells "a long slope leading down" beside it; "d" walks down it ("You walk down the long slope"), into the stratum below at its foot (a long slope leading up, the same square: the top stratum\'s link down O_RAMP_DOWN, the one below\'s up O_RAMP_UP); "u" walks back up it ("You trudge up the long slope")',
       init: 't_rc', cycles: 2000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -P', 'look', 'd', 'look', 'map', 'u', 'look', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 3 -c /ram/c.hm -T -P', 'look', 'd', 'look', 'map', 'u', 'look', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, '');
@@ -796,8 +798,8 @@ module.exports = {
     {
       name: 'dq0diamond', near: ['map'], what: 'Dingus Quest Zero\'s rooms at 45 degrees (the user\'s, 2026-10-31: ways off the compass, step 3\'s rest; HOUSE.md\'s rooms on the diagonal; the maker\'s caves.c diamonds, overlay 8), by the chunks made and the words told: at seed 3 with every built stratum\'s rooms on the diagonal (dq0 -D, the tests\'), the dungeon made and entered as ever (its first look told); in the chunks the cache has of the top stratum, every room four squares or more each way that no way between strata comes out in cut to its diamond (no floor in its box\'s four corners, its walls there), its floor still there (half its box or more of the diamond\'s), every doorway in its old walls beside its floor still; "go east" walks out of the room it begins in',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -D', 'look', 'go through the door to the east', 'map', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 3 -c /ram/c.hm -D', 'look', 'go through the door to the east', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out).replace(/\[[.#]{10}\] /g, ''), S = stratumRec(m, 0), T_DOOR = 3;
@@ -828,8 +830,8 @@ module.exports = {
     {
       name: 'dq0incline', near: ['map'], what: 'Dingus Quest Zero\'s sloping tunnels (slice 4.10\'s rest, 2026-11-02: raises and inclines; HOUSE.md\'s moving and tiring; the maker\'s caves.c incline, overlay 8), by the chunks made and the words told: at seed 3 with every chunk that has room given one (dq0 -P, the tests\'; dry and unfallen, -W -U), down the stairway (dq0 -T) into the caves, the chunks\' sloping tunnels a straight way of 10 to 16 squares of passage, a foot a square, off a passage, a chamber of its own at its end (seed 3\'s 18,12: rising south), every step of them a walk\'s, the character set at its foot (the hub\'s square, the scene\'s) as "look" is typed; "go south" walks up it, told "The way rises." (two or more, a 4-foot rise at a time), its walk not stopped by a ledge, into the chamber ("cave"); "go north" walks back down it, told "The way falls away."',
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -P -W -U', 'd', 'wait', 'look', 'go south', 'look', 'map', 'go north', 'look', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 3 -c /ram/c.hm -T -P -W -U', 'd', 'wait', 'look', 'go south', 'look', 'map', 'go north', 'look', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
         this.runs = [];
@@ -855,9 +857,11 @@ module.exports = {
           this.runs = runs();
           const r = this.runs.find(q => q.dy === 1 && q.d === 1);
           if (!r) return;
-          const { L } = m.dq0.layout(), h = m.dq0.bank(0), w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
-          w16(L.pcX, r.x);
-          w16(L.pcY, r.y);
+          dq0SceneNow(m, (h, L) => {             // (A scene's: the character's square, the world's)
+            const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+            w16(L.pcX, r.x);
+            w16(L.pcY, r.y);
+          }, null, 'dq0incline\'s foot of the slope', true);
         });
       },
       check(m, out) {
@@ -876,8 +880,8 @@ module.exports = {
     {
       name: 'dq0rockwall', near: ['map'], what: 'Dingus Quest Zero\'s rock looked at (slice 4.10: "examine the wall", the world\'s wall_look, I_TRACE\'s TRC_WALL; HOUSE.md\'s rock\'s kinds and hardness), by the words told: at seed 3 by the stairway (dq0 -T) a cell\'s wall ahead masonry ("The wall\'s masonry"); down the stairway (natural caves) a skilled miner (Mining 95) examines the wall ahead and round it (the last "look at the wall", the verbs\' walllook), the bare rock, how it looks, and named (its Mining test, the appraisal\'s AP_ROCK: "The wall\'s the bare rock, buff: sandstone."), the name always the looks\' rock\'s',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the wall', 'd', 'examine the wall', 'turn left', 'examine the wall', 'turn left', 'look at the wall', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo ml min 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the wall', 'd', 'examine the wall', 'turn left', 'examine the wall', 'turn left', 'look at the wall', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out);
@@ -899,14 +903,14 @@ module.exports = {
     {
       name: 'dq0nodig', outfit: true, meaning: true, near: ['map', 'gear'], what: "Dingus Quest Zero's digs told why (the user's playtest, 2026-11-02, DECISIONS.md; HOUSE.md's digging, for review), by poked scenes at seed 374's cell, a closed door to the east of the start (the character by a stairway, facing south).  A hidden door (its portal's state poked in the chunks' cache, PS_HIDDEN, as its first look's typed): the dig takes it for a wall.  With no tool that bites (a knife; then none): told at once, no time spent, by what it carries (E_DIG D_NO_TOOL; 'Your knife only scratches', 'You need better tools'), the door still hidden, no refusal saying there's nothing to dig.  A chisel alone: 'You'd need a hammer to drive the chisel.'  A pick: begun as a wall's two feet, and a spell or so on the facing's off, the door found (D_FOUND: 'strikes wood', its PORTAL_STATE record no longer hidden), seen in the look after.  A hammer and a chisel: the wall west of the start worked at slowly, a stone's half foot a spell (D_GOOD or D_POOR, or asked).  A door in sight: D_PORTAL 'That's a door'; a portcullis (seed 1's guardroom, dq0tunnel's) 'Those are iron bars'.  A door hidden by magic: a pick makes no mark, and after two spells with nothing to show it's asked, soft ('This isn't getting anywhere'), no door told",
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'drop the torch', 'hold the chisel', 'hold the hammer', 'dig north', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
         'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
-        'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status']) },
+        'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status'] })) },
       start(m) {
         dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }, { g: 4, line: 'dig north', n: 1, words: 'You dig with your chisel', text: 'stop\r' }]);   // (Typed as it's told; the chisel's first spell enough)
         const a = m.acia, read = a.read;
@@ -917,11 +921,11 @@ module.exports = {
             const c = a.rx;
             if (c === 13) {
               if (/^dq0 /.test(typed)) ++g;
-              if (typed === 'look' && m.dq0 && !m.door[g]) {   // (The door east of the start hidden, by magic in the last game)
-                const { L } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+              if (typed === 'look' && m.dq0 && !m.door[g]) dq0SceneNow(m, (h, L) => {   // (The door east of the start hidden, by magic in the last game: a scene's, the chunks' cache the world's)
+                const u16 = o => h[o] | h[o + 1] << 8;
                 const x = u16(L.pcX) + 1, y = u16(L.pcY), p = dq0Portal(m, h[L.pcSn], x, y);
                 if (p) { p.b[p.state] = g === 5 ? 0x60 : 0x20; m.door[g] = { x, y, sn: h[L.pcSn] }; }
-              }
+              }, null, 'dq0nodig\'s door hidden, game ' + g, true);
               typed = '';
             } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
           }
@@ -967,12 +971,12 @@ module.exports = {
     {
       name: 'dq0pitfall', near: ['map', 'gear'], what: "Dingus Quest Zero's thing let fall into a pit (the user's, 2026-11-17: \"drop the candle stubs in the pit\" lets them fall: phase A's bugs; wwell2.c's well_put, a pit on the character's square or beside it, T_PIT), and the things' words begun empty for it (2026-11-17, built/2026-11-17-parse.md's noticed: \"put the rope down the hole\" after \"hit the door with the bar\" said \"You have no bar to hand.\", the last answer's words again; things.c's serve, IO_PUT's well, text_new): at seed 5 (dq0 -T, candle stubs and a rope more) the stubs dropped into the pit, none near: \"There's no well or shaft here for the candle stubs to fall down.\"; a pit made beside the character by a poke: dropped again, \"You let the candle stubs fall into the pit.\", that refusal not said again before it, the stubs lying in the pit's square; \"hit the door with the bar\" then \"put the rope down the hole\": the bar's words not said for the rope",
       init: 't_rc', cycles: 1600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: [
         "dq0 -p t -s 5 -c /ram/c.hm -T -k 'candle stubs,rope'", 'drop the candle stubs into the pit', 'drop the candle stubs into the pit', 'look',
-        'take the candle stubs', 'hit the door with the bar', 'put the rope down the hole', 'quit', 'echo $status']) },
+        'take the candle stubs', 'hit the door with the bar', 'put the rope down the hole', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
-        dq0Poke(m, [{ g: 1, line: 'drop the candle stubs into the pit', n: 2, call: () => {   // (The square east of it a pit, dq0rope's way)
+        dq0Scene(m, [{ g: 1, line: 'drop the candle stubs into the pit', n: 2, call: () => {   // (The square east of it a pit, dq0rope's way)
           const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
           const ox = (h[L.pcX] | h[L.pcX + 1] << 8) - st.x0, oy = (h[L.pcY] | h[L.pcY + 1] << 8) - st.y0;
           const [TILE] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)']);
@@ -1007,12 +1011,12 @@ module.exports = {
     {
       name: 'dq0rope', reach: true, near: ['map', 'gear'], what: "Dingus Quest Zero's rope and grapples (the user's A16, 2026-11-03: \"Queue rope rules\"; HOUSE.md's rope and grapples, for review), by the words, the item store and the referee's tests, each rule a scene: no drop, refused; a drop made beside the character by a poke (a ledge fifteen feet down), a rope got out by the hands routine (its steps told), a spike driven with a hammer (a minute's long task, its noise 7, the spike there for good), let down: a tied rope at its top, a hanging rope at its foot, seen; climbing down it by its help (every Climbing test on the rope 3 steps the better, the book's), at the foot the knot out of reach, climbing back up by it, untied: coiled at its feet, the hanging rope gone, the spike still driven, not taken, the rope taken; a thing that won't hold named, a chest that will, a pit's drop climbed into and out of by the rope; the second game every room a shaft (dq0sky=1): a mouth too high to reach, a grapple thrown up (a Throwing test at its band, the noise heard, told), the rope seen and looked at (a grapple's, how far), the grating (A18) barring the top as before, the grapple shaken loose from below, coiled at its feet, thrown again, its way out opened: climbed out by it; a grapple giving under the climber's weight (its record's RK_SLIP set: a marginal success's, one in four), its rope at its feet, the mouth too high again; the third game a rope let down a shaft from an iron ring (the maker's), the game saved and carried on: the rope still there, at its top and its foot, used to go down, still aided, its end poked out of reach from the foot: told, the shaft climbed unaided; a sack's tie, closed and opened",
       init: 't_rc', cycles: 4500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml thr 95 >> /ram/c.hm', 'echo ml cli 40 >> /ram/c.hm', 'dq0sky=0', 'dq0hour=128', 'dq0furn=0',
-        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'", 'tie the rope', 'look', 'tie the rope', 'look', 'look at the tied rope', 'd', 'look', 'untie the rope', 'u', 'untie the rope', 'look', 'take the driven spike', 'take the rope', 'inventory', 'quit',
-        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack'", 'drop the sack', 'tie the rope to the sack', 'tie the sack', 'untie the sack', 'drop the chest', 'wait', 'tie the rope to the chest', 'd', 'look', 'u', 'quit',
-        'echo ml cli 90 >> /ram/c.hm', 'dq0sky=1', 'dq0hour=12', "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'u', 'throw the grapple up', 'throw the grapple up', 'look', 'examine the hanging rope', 'untie the rope', 'untie the rope', 'untie the rope', 'look', 'take the rope', 'throw the rope up', 'throw the rope up', 'u',
-        "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'throw the grapple up', 'throw the grapple up', 'u', 'look', 'u', 'quit',
-        "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope'", 'go to the shaft', 'tie the rope', 'quit', 'dq0 -d /ram/s', 'look', 'd', 'look', 'u', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo ml thr 95 >> /ram/c.hm', 'echo ml cli 40 >> /ram/c.hm', 'echo sky 0 >> /ram/s.sc', 'echo hour 128 >> /ram/s.sc', 'echo furn 0 >> /ram/s.sc',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer' -S /ram/s.sc", 'tie the rope', 'look', 'tie the rope', 'look', 'look at the tied rope', 'd', 'look', 'untie the rope', 'u', 'untie the rope', 'look', 'take the driven spike', 'take the rope', 'inventory', 'quit',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack' -S /ram/s.sc", 'drop the sack', 'tie the rope to the sack', 'tie the sack', 'untie the sack', 'drop the chest', 'wait', 'tie the rope to the chest', 'd', 'look', 'u', 'quit',
+        'echo ml cli 90 >> /ram/c.hm', 'echo sky 1 >> /ram/s.sc', 'echo hour 12 >> /ram/s.sc', "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple' -S /ram/s.sc", 'go to the shaft', 'u', 'throw the grapple up', 'throw the grapple up', 'look', 'examine the hanging rope', 'untie the rope', 'untie the rope', 'untie the rope', 'look', 'take the rope', 'throw the rope up', 'throw the rope up', 'u',
+        "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple' -S /ram/s.sc", 'go to the shaft', 'throw the grapple up', 'throw the grapple up', 'u', 'look', 'u', 'quit',
+        "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope' -S /ram/s.sc", 'go to the shaft', 'tie the rope', 'quit', 'dq0 -d /ram/s -S /ram/s.sc', 'look', 'd', 'look', 'u', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
         const drop = (ft, pit) => () => {                 // (A floor square beside the character made a drop, or a pit)
@@ -1033,7 +1037,7 @@ module.exports = {
           }
         };
         const K_HUNG = (cat, L) => { for (let k = 1; k < 206; k++) { let n = ''; for (let j = 0; j < 14 && cat[k * L.kindSize + j]; j++) n += String.fromCharCode(cat[k * L.kindSize + j]); if (n === 'hanging rope') return k; } return -1; };
-        dq0Poke(m, [{ g: 1, line: 'tie the rope', n: 2, call: drop(15) }, { g: 2, line: 'tie the rope to the chest', n: 1, call: drop(0, 1) },
+        dq0Scene(m, [{ g: 1, line: 'tie the rope', n: 2, call: drop(15) }, { g: 2, line: 'tie the rope to the chest', n: 1, call: drop(0, 1) },
           { g: 3, line: 'look', n: 1, fuel: { 'hanging rope': 0x0B04 } }, { g: 3, line: 'u', n: 2, fuel: { 'hanging rope': 0x0B04 } }, { g: 4, line: 'u', n: 1, fuel: { 'hanging rope': 0x0B84 } },
           { g: 6, line: 'u', n: 1, call: () => {          // (Its end twenty feet up: a shorter rope's, out of reach from the floor)
             const { L } = m.dq0.layout(), cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
@@ -1046,7 +1050,7 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Prose(out);
         const say = (t, re, what) => { if (!re.test(o)) f.push('no words: ' + what); };
-        const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'");
+        const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer' -S /ram/s.sc");
         const climbs = t => t.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_CLIMB).map(r => r.steps);
         // A rope, tied off
         say(0, /tie the rope You lift the rope\. There's no drop here to let a rope down\./, 'no drop');
@@ -1078,14 +1082,14 @@ module.exports = {
         // What holds; a pit
         say(0, /tie the rope to the sack .{0,80}That won't hold a rope\./, 'a sack as an anchor');
         if (!/You tie the rope to the chest and let it down over the edge/.test(o)) f.push('tied to the chest, a pit\'s edge');
-        const g2 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack'");
+        const g2 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack' -S /ram/s.sc");
         const d2 = T.of('d', g2.k), u2 = T.after(d2, 'u');
         if (!climbs(d2).length || climbs(d2).some(s => s !== 3)) f.push('down into the pit not aided: ' + climbs(d2));
         if (!climbs(u2).length) f.push('out of the pit not climbed');
         if (u2.at && !(u2.at.pc.x === m.dropAt[0] && u2.at.pc.y === m.dropAt[1])) f.push('not in the pit: ' + JSON.stringify([u2.at.pc.x, u2.at.pc.y, m.dropAt]));
         // A grapple thrown up
         say(0, /The shaft's mouth is too high to reach\./, 'the mouth too high');
-        const g3 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'");
+        const g3 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple' -S /ram/s.sc");
         const th = T.of('throw the grapple up', g3.k);
         const P = th.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_THROW);
         if (!P.length || P[0].steps !== -4) f.push('its test not Throwing at its band: ' + JSON.stringify(P.map(r => [r.a, r.steps])));
@@ -1098,8 +1102,8 @@ module.exports = {
         // Its grapple giving
         say(0, /You put your weight on the rope: the grapple tears loose and comes clattering down\. The shaft's mouth is too high to reach\./, 'the grapple giving');
         // Kept
-        const g5 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope'");
-        const c5 = T.of('dq0 -d /ram/s', g5.k), d5 = T.of('d', c5.k);
+        const g5 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope' -S /ram/s.sc");
+        const c5 = T.of('dq0 -d /ram/s -S /ram/s.sc', g5.k), d5 = T.of('d', c5.k);
         if (!/You tie the rope to the iron ring and let it down the shaft/.test(o)) f.push('not tied to the maker\'s ring');
         if (!at(d5.at, 'tied rope').length) f.push('the rope not there carried on');
         if (!climbs(d5).length || climbs(d5).some(s => s !== 3)) f.push('the rope, carried on, no help: ' + climbs(d5));
@@ -1115,10 +1119,10 @@ module.exports = {
     {
       name: 'dq0tiepoints', reach: true, near: ['map', 'gear'], what: "Dingus Quest Zero's pillars and a window's bars tie points for a rope (the user's, 2026-11-17: DECISIONS.md's \"The one-path plan and phase A's questions: the user's answers\", \"Pillars and a window's bars are tie points for a rope\"; wrope.c's rp_tie: a pillar the place's own, a window's bars a portal's part, IW_PORTAL), by the words: at seed 5 (dq0 -T, a rope more) \"tie the rope to the pillar\", none beside it: \"You see no pillar here.\"; a pillar made beside the character by a poke (two squares by two of rock standing free, floor round it: a cavern's, dq0m/caves.c's) and a ledge to the east fifteen feet down: tied to it and let down (\"You tie the rope to the pillar and let it down over the edge: it reaches the foot.\"), looked at (\"It's tied to the pillar\"), climbed down by it; at seed 28 a barred window gone to: \"tie the rope to the bars\" its bars, no drop yet (\"There's no drop here to let a rope down.\", not \"That won't hold a rope.\"), a drop beside the character made by a poke, \"tie the rope to the window\" (its bars: \"You tie the rope to the iron bars and let it down over the edge\"), looked at, climbed down by it",
       init: 't_rc', cycles: 3200e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 5 -c /ram/c.hm -T -k rope', 'tie the rope to the pillar', 'tie the rope to the pillar', 'examine the tied rope', 'd', 'quit',
         'dq0 -p t -s 28 -c /ram/c.hm -k rope', 'go to the window', 'tie the rope to the bars', 'tie the rope to the window', 'examine the tied rope', 'd', 'quit',
-        'echo $status']) },
+        'echo $status'] })) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
         const poke = pick => () => {                       // (Squares about the character: rock, floor, a drop of ft feet)
@@ -1147,7 +1151,7 @@ module.exports = {
           for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if (tile(dx, dy) === T_FLOOR) return [{ dx, dy, ft: 15 }];
           return [];
         };
-        dq0Poke(m, [{ g: 1, line: 'tie the rope to the pillar', n: 2, call: poke(pillar) }, { g: 2, line: 'tie the rope to the window', n: 1, call: poke(beside) }]);
+        dq0Scene(m, [{ g: 1, line: 'tie the rope to the pillar', n: 2, call: poke(pillar) }, { g: 2, line: 'tie the rope to the window', n: 1, call: poke(beside) }]);
       },
       check(m, out) {
         const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
@@ -1167,8 +1171,8 @@ module.exports = {
     {
       name: 'dq0foundkey', near: ['map', 'gear'], what: "Dingus Quest Zero's found keys (the user's A17: \"fit something nearby\"; HOUSE.md's keys that fit, for review): by the item store and the chunks: in three seeds' first chunks a key the maker put down is numbered for a door in its own chunk, that door locked, mechanical; none has no lock; the same game the same number; the key given the character (a poke), put beside its door: \"You unlock it with its key.\", no Picklock test asked",
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0hour=128', 'dq0sky=0',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'look', 'wait', 'wait', 'unlock the door ahead', 'quit', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'quit', 'dq0 -p t -s 6 -c /ram/c.hm -T', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo hour 128 >> /ram/s.sc', 'echo sky 0 >> /ram/s.sc',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'look', 'wait', 'wait', 'unlock the door ahead', 'quit', 'dq0 -p t -s 5 -c /ram/c.hm -T -S /ram/s.sc', 'quit', 'dq0 -p t -s 6 -c /ram/c.hm -T -S /ram/s.sc', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
         const doors = () => {                             // (Every cached chunk's doors: their squares, states)
@@ -1207,7 +1211,7 @@ module.exports = {
           });
         };
         const put = (x, y) => { const h = m.dq0.bank(0), { L } = m.dq0.layout(); h[L.pcX] = x & 255; h[L.pcX + 1] = x >> 8; h[L.pcY] = y & 255; h[L.pcY + 1] = y >> 8; };
-        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: note(1) },
+        dq0Scene(m, [{ g: 1, line: 'look', n: 1, call: note(1) },
           { g: 1, line: 'wait', n: 1, call: () => {       // (It's found: in the character's hands, as if picked up; a search and a take are their own tests')
             const { L } = m.dq0.layout(), cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), k = m.found[1][0];
             for (let i = 0; cat && k && i < L.nitems; i++) {
@@ -1244,7 +1248,7 @@ module.exports = {
         }
         if (!n) f.push('no found key in the games');
         if (JSON.stringify(m.found[1].map(e => e.key)) !== JSON.stringify(m.found[4].map(e => e.key))) f.push('the same game, other keys');
-        const T = dq0Turns(m), K = m.dq0.layout().K, g1 = T.of('dq0 -p t -s 2 -c /ram/c.hm -T'), u = T.of('unlock the door ahead', g1.k);
+        const T = dq0Turns(m), K = m.dq0.layout().K, g1 = T.of('dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc'), u = T.of('unlock the door ahead', g1.k);
         if (!/You unlock the door with its key/.test(o)) f.push('its door not unlocked by it: ' + o.slice(o.indexOf('> unlock'), o.indexOf('> unlock') + 200));
         if (u.replies.some(r => /^slot/.test(r.req) && r.a === K.P_PICKLOCK)) f.push('a Picklock test asked');
         return f;
@@ -1253,8 +1257,8 @@ module.exports = {
     {
       name: 'dq0vast', meaning: true, what: 'Dingus Quest Zero\'s plans past PLAN_MAX regions (move 2.8: no fixed size of a stratum\'s plan), by what the character perceives and the maker\'s map: dq0 -T -T -T -T (the stratum below the top 27 regions each way, 729 of them, its plan paged to the save folder by the maker, plSS0000.dat, its pages of 42 regions in a bank of its own) and -C (16 of those pages, made way for as it grows) and -d: down the stairway, the stratum below grown, mapped; quit and carried on (its plan grown again, the same): seen the same, the map the same',
       init: 't_rc', cycles: 3600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -T -C -d /ram/kept', 'd',
-        'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -T -T -T -C -d /ram/kept', 'd',
+        'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], d = T.of('d'), c = T.of('dq0 -C -d /ram/kept'), m1 = T.of('map'), m2 = T.after(c, 'map');
@@ -1272,9 +1276,9 @@ module.exports = {
     {
       name: 'dq0soak', meaning: true, what: 'Dingus Quest Zero\'s stores paged to the save folder (move 2.8, DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back, a soak, by what the character perceives (the senses\' record) and the stores\' records: dq0 -C (the caches small: the chunks\' twelve slots, a change page, 24 of the item store\'s records, two of the denizens\' regions, two of the strata\'s slots, two seen maps) and -T -T -T (three strata grown below the top, the character on the second): the dagger put down by the stairway there, up (the strata\'s slots made way in: the top\'s record read back into a slot), the rations put down by the stairway on the top, down and up again and again, every cache made way in each time (the chunks made again from their seeds, the change records, the things and the denizens read back from their files, the seen maps too): each stratum seen each time as it was first (the dagger, the rations where they were put down), the giant rats by the stairway seen; the map; the folder\'s region files (rg, it, dn, sm, st); quit and carried on: where it was, seen the same, the map as it was, up again, the rations there; then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files of its stratum below gone, none of its things lying about (dq0page\'s and dq0strata\'s, these together)',
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept',
         'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
-        'rm /ram/kept/d1/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept/d1', 'echo $status']) },
+        'rm /ram/kept/d1/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept/d1', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], at = (s, n) => s && dq0Here(s).some(i => i.name === n);
@@ -1312,13 +1316,13 @@ module.exports = {
     {
       name: 'dq0stream', meaning: true, near: ['map'], what: "Dingus Quest Zero's streams (the user's, 2026-11-03: some run deep enough to swim, so a current can happen; HOUSE.md's the water in the dungeon): the maker's, by the seed alone: seed 17's stratum below has a stretch of stream six feet deep in the chunks cached, seed 2's a foot deep",
       init: 't_rc', cycles: 1200e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'quit', 'echo $status'] })) },
       start(m) {
         m.runs = [];
         const [WRUNS, WLEV0, NROOMS] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, wruns)', 'offsetof (struct chunk, wlev)', 'NROOMS']), WLEV = WLEV0 + NROOMS;   // (Its passages' running bit, their water: world.h's, the build's)
         const scan = () => { const r = []; for (let c = 0; c < 24; c++) { const b = m.dq0.bank(5 + Math.floor(c / 3)); if (!b) continue; const o = (c % 3) * 0xAA0; if (b[o + WRUNS] & 0x40) r.push(b[o + WLEV]); } m.runs.push(r); };
-        dq0Poke(m, [{ g: 1, line: 'quit', n: 1, call: scan }, { g: 2, line: 'quit', n: 1, call: scan }]);
+        dq0Scene(m, [{ g: 1, line: 'quit', n: 1, call: scan }, { g: 2, line: 'quit', n: 1, call: scan }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1333,8 +1337,8 @@ module.exports = {
     {
       name: 'dq0streamswim', near: ['map', 'body'], what: "Dingus Quest Zero's deep stream swum in play (the user's, 2026-11-03: some run deep enough to swim; HOUSE.md's the water in the dungeon, swimming; dq0stream's the maker's alone), by the hub and the words: seed 17's stream six feet deep along a passage on the cave's north side, the rats there held off (dq0Poke's): north from the landing into it, out of its depth (\"You're out of your depth: you swim.\"), its torch out, its swim told by the referee's grade, the hub's pc_wet six feet, pc_swim its squares a minute; along it east and back west, each a swimmer's square, longer than a walked one, still swimming; south out of it (\"You wade out of the water.\"), dry",
       init: 't_rc', cycles: 800e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'n', 'step east', 'step west', 'step west', 'step south', 'step south', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'n', 'step east', 'step west', 'step west', 'step south', 'step south', 'quit', 'echo $status'] })) },
       start(m) {
         m.wet = [];
         const off = (h, L, K) => {
@@ -1351,7 +1355,7 @@ module.exports = {
           h[L.denSeq] = h[L.denSeq] + 1 & 255;
         };
         const seen = line => (h, L) => m.wet.push({ line, wet: h[L.pcWet], swim: h[L.pcSwim], breath: h[L.pcBreath] });
-        dq0Poke(m, [{ g: 1, line: 'n', n: 1, call: off }, { g: 1, line: 'step east', n: 1, call: seen('n') }, { g: 1, line: 'step west', n: 1, call: seen('east') },
+        dq0Scene(m, [{ g: 1, line: 'n', n: 1, call: off }, { g: 1, line: 'step east', n: 1, call: seen('n') }, { g: 1, line: 'step west', n: 1, call: seen('east') },
           { g: 1, line: 'step west', n: 2, call: seen('west') }, { g: 1, line: 'step south', n: 1, call: seen('west 2') }, { g: 1, line: 'step south', n: 2, call: seen('south') }]);
       },
       expect: ['% echo $status'],
@@ -1380,8 +1384,8 @@ module.exports = {
     {
       name: 'dq0rockname', near: ['map'], what: "Dingus Quest Zero's rock named (the user's, 2026-11-03: \"Naming the rock\": HOUSE.md's told as it's come to): a middling miner (Mining 40, dq0 -R 2's dice) at seed 3 digs a shaft down: into the rock, a spell that fails tells only its looks, and the first good spell after it names it, though it's no first spell",
       init: 't_rc', cycles: 1800e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 40 >> /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick -a -R 2', 'dig down', 'stop', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo ml min 40 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick -a -R 2', 'dig down', 'stop', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out), told = [...s.matchAll(/You're into ([a-z -]+?) rock(: [a-z ]+)?\./g)];
@@ -1403,8 +1407,8 @@ module.exports = {
       // (dq0sky=0, 2026-11-03, a scene's: seed 7's kitchen's skylight takes the middle of its floor, its iron pot not stocked there; its window lit, the doorway's looks other; no fault)
       name: 'dq0lookway', meaning: true, what: 'Dingus Quest Zero\'s looking one way, listening and sniffing one way (HOUSE.md\'s slice 4.0, the user\'s: "look north", "look at the door", "listen at the door"; told by the facing alone), by the hub\'s events and the senses\' record (what the character perceives, and a look one way\'s own: WAY_SEEN): at seed 7 in the dark hall below the lit kitchen (lit by its sconce\'s torch, the character\'s first: nobody keeps it lit, slice 4.1\'s), a glance and then a look north from its doorway and from its far side: a look one way reaches twice a glance\'s squares (the ruleset\'s sight: 4 + 2 sight) in the quarter ahead, so the kitchen\'s iron pot straight up the passage is in the glance\'s record only within its reach and in the look one way\'s within twice it, and one of the two looks sees it where the glance doesn\'t; the look one way\'s own record what\'s beyond the hall\'s open door, the kitchen, lit (a room\'s kind, U_KITCHEN), or only the dark past the look\'s reach; each look one way the world\'s I_LOOK, E_VIEW V_LOOKED, 3 seconds; looking east at the closed door, turned to it first (V_FACING), not seen past (WB_SHUT); listening at the door, turned to it already, 3 seconds and no look, the watchfulness not set (not "listen as I go"); listening about and sniffing, 3 seconds each',
       init: 't_rc', cycles: 900e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c clothier -o /ram/c.hm', 'cp /ram/c.hm /ram/e.hm', 'echo att eye 5 >> /ram/e.hm',
-        'dq0 -p t -s 7 -c /ram/e.hm', 'light the torch in the sconce', 'face north', 'open the door behind me', 's', 'turn around', 'look north', 'move south 4 squares', 'face north',
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 5 -u feudal -c clothier -o /ram/c.hm', 'cp /ram/c.hm /ram/e.hm', 'echo att eye 5 >> /ram/e.hm',
+        'dq0 -p t -s 7 -c /ram/e.hm -S /ram/s.sc', 'light the torch in the sconce', 'face north', 'open the door behind me', 's', 'turn around', 'look north', 'move south 4 squares', 'face north',
         'look north', 'look east', 'listen at the door', 'listen', 'sniff', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -1453,8 +1457,8 @@ module.exports = {
     {
       name: 'dq0portc', meaning: true, what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the world works them, dq0w/wwin.c), by the world\'s events and what the character perceives: at seed 514 the kobold warren\'s gatehouse (its every way out a portcullis, raised), the one ahead lowered by its winch (walked up to first), seen down, never walked through while it\'s down, raised again by the winch, seen up, and gone through (broken, bent and the windows: dq0break)',
       init: 't_rc', cycles: 600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm', 'lower portcullis', 'n',
-        'raise portcullis', 'n', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 514 -c /ram/c.hm', 'lower portcullis', 'n',
+        'raise portcullis', 'n', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], seen = (t, open) => t.after && t.after.sight && t.after.sight.doors.some(d => d.rel === 0 && d.kind === 'PK_PORTCULLIS' && (d.state & 1) === open);
@@ -1476,9 +1480,9 @@ module.exports = {
     {
       name: 'dq0portcopen', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s portcullis opened and closed as it\'s raised and lowered (the user\'s, 2026-11-14: "open portcullis doesn\'t actually raise it ... raise portcullis does"; DECISIONS.md\'s "Opening a portcullis"), by the world\'s events, what the character perceives and the words: at seed 514 the kobold warren\'s gatehouse (dq0portc\'s), a strong character (Strength 18); from its winch\'s side the portcullis ahead lowered, opened (wound up, then up and seen up: the same words as raised), closed (let down, seen down: the same words as lowered), raised, and gone through (north, along the passage beyond); from the far side (walked back to it, let down meanwhile: its state poked in the chunks\' cache) heaved up by "open", neither closed nor lowered (its winch on the other side, the same words for both), let down again (poked) and heaved up by "raise", the same words as "open"; and gone back through',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/s.hm', 'echo att str 18 >> /ram/s.hm',
+      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/s.hm', lines: ['echo att str 18 >> /ram/s.hm',
         'dq0 -p t -s 514 -c /ram/s.hm', 'lower portcullis', 'open the portcullis', 'close the portcullis', 'raise the portcullis', 'n', 's',
-        'open the portcullis', 'close the portcullis', 'lower the portcullis', 'raise the portcullis', 's', 'quit', 'echo $status']) },
+        'open the portcullis', 'close the portcullis', 'lower the portcullis', 'raise the portcullis', 's', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
         let n = 0, r = 0;
@@ -1488,9 +1492,11 @@ module.exports = {
           const w = this.where[this.where.length - 1];
           if (l === 'close the portcullis' && !this.pq) this.pq = [w.sn, w.x, w.y - 1];
           if ((l === 's' && ++n === 1) || (l === 'raise the portcullis' && ++r === 2)) {
-            const p = this.pq && dq0Portal(m, ...this.pq), ok = !!p && p.kind === PK_PORTCULLIS && (p.b[p.state] & 1) === 1;
-            if (ok) p.b[p.state] &= ~1;
-            this.poked.push(ok);
+            dq0SceneNow(m, () => {               // (A scene's: the chunks' cache the world's)
+              const p = this.pq && dq0Portal(m, ...this.pq), ok = !!p && p.kind === PK_PORTCULLIS && (p.b[p.state] & 1) === 1;
+              if (ok) p.b[p.state] &= ~1;
+              this.poked.push(ok);
+            }, null, 'dq0portcopen\'s portcullis let down', true);
           }
         });
       },
@@ -1544,8 +1550,8 @@ module.exports = {
       init: 't_rc', cycles: 1400e6,
       machine: { input: (() => {
         const g = d => ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/' + d, 'step west', 's'];
-        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'mkdir /ram/i', ...['g', 'h', 'i'].map(d => 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/' + d + '/theme.txt'),
-          ...g('g'), 'close the door', '2', 'look', 'quit', ...g('h'), 'hit the door', '1', 'stop', 'quit', ...g('i'), 'kick the door', '1', 'stop', 'quit', 'echo $status']);
+        return dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'mkdir /ram/h', 'mkdir /ram/i', ...['g', 'h', 'i'].map(d => 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/' + d + '/theme.txt'),
+          ...g('g'), 'close the door', '2', 'look', 'quit', ...g('h'), 'hit the door', '1', 'stop', 'quit', ...g('i'), 'kick the door', '1', 'stop', 'quit', 'echo $status'] }));
       })() },
       start(m) {
         const away = (h, L, K, at) => {
@@ -1557,7 +1563,7 @@ module.exports = {
             for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
           }
         };
-        dq0Poke(m, [1, 2, 3].flatMap(g => [{ g, line: 'step west', n: 1, call: away }, { g, line: 's', n: 1, call: away }, { g, line: g === 1 ? '2' : '1', n: 1, call: away }]));
+        dq0Scene(m, [1, 2, 3].flatMap(g => [{ g, line: 'step west', n: 1, call: away }, { g, line: 's', n: 1, call: away }, { g, line: g === 1 ? '2' : '1', n: 1, call: away }]));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1581,11 +1587,11 @@ module.exports = {
     {
       name: 'dq0kept', meaning: true, what: "Dingus Quest Zero's lights kept (DUNGEON.md: light kept; the user's, 2026-10-16: \"why would all of the torches in the wall sconces be lit if no one is there to light them?\"): the kobold warren's Dung Tunnels (a mine, dq0 -T -T -T: four strata grown, the character on the second) at seed 527, the kobolds' keeping (their lair's chunk and their range, the denizens' places kept, KEPT_AT) lighting the room the character comes in to: lit by its sconce (\"On the wall to your right is a sconce, a lit torch in it.\"), the torch lit and tended (I_TENDED), the room's light kept (ROOM_LIT); the torch taken from it (a step nearer first), the room dark, a torch put back, the room's light as that torch is; at seed 535, a storeroom away from the kobolds dark, its sconce's torch cold, \"a torch in it\", lit there (light the torch in the sconce: the room lit by it, not tended), put out (dark again), lit again, kept in the save (-d) and carried on lit; every sconce in the item store at each lit and tended if and only if a keeping whose keepers live reaches it, each of those rooms' light kept; and the same seed again the same sconces, the same torches, the same places kept (a chunk always stocked the same: the world waits for a stratum's populations)",
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 527 -c /ram/c.hm -T -T -T', 'step forward', 'take the torch from the sconce', 'put the torch in the sconce', 'quit',
         'dq0 -p t -s 535 -c /ram/c.hm -d /ram/kp -T -T -T', 'light the torch in the sconce', 'put out the torch in the sconce',
         'light the torch in the sconce', 'quit', 'dq0 -d /ram/kp', 'look', 'quit',
-        'dq0 -p t -s 535 -c /ram/c.hm -T -T -T', 'quit', 'echo $status']) },
+        'dq0 -p t -s 535 -c /ram/c.hm -T -T -T', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], LIT = 1, TENDED = 0x80;
@@ -1651,7 +1657,7 @@ module.exports = {
     {
       name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not; knocked senseless by the hand-written theme\'s rats (dq0senseless\'s), tested as it\'s out; and the kobold warren (seed 517: its story\'s fall through a ruin\'s floor, its start fallen in), tested as it begins and again as it jumps down its gatehouse\'s ledge, ten feet; and a way walked often the easier (the user\'s, 2026-10-23: by the map\'s passings, the senses\' count of the times it\'s come to see a chunk again; its torch put out five minutes and lit again a passing): the bending passage east tested at 2 steps new, 6 with its end come to four times, untested at twelve',
       bearings: true, init: 't_rc', cycles: 5000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm',
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo ml awa 5 >> /ram/c.hm',
         'hmchar -q -s 5 -p dwarf -o /ram/d.hm', 'echo ml awa 5 >> /ram/d.hm',
         'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'turn left', 'face north', 'face northwest', 'f', 'go through the door to the east', 'turn around', 'f', 'go through the door to the east', 'turn around', 'f', 'go through the door to the east', 'status',
         'quit',
@@ -1663,7 +1669,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g', 'defend none', ...Array(12).fill('wait'), 'quit',
         'dq0 -p t -s 517 -c /ram/c.hm', 'turn half left', 'f', 'turn half right', 'f', 'u', 'u', 'turn around', 'jump down', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -d /ram/f', 'go through the door to the east', ...passings(3), 'turn around', 'f', 'go through the door to the east', ...passings(8), 'turn around', 'f', 'go through the door to the east', 'quit',
-        'echo $status']) },
+        'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
@@ -1742,7 +1748,7 @@ module.exports = {
         'go back to the kitchen', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       start(m) {
         dq0OnWords(m, [{ g: 1, line: 'go back to the grotto', n: 3, words: 'You head back toward the Grotto.', text: 'turn around\r' }]);   // (Typed as it's told)
-        dq0Poke(m, [{ g: 4, line: 'go back to the grotto', n: 1, hub: { pcSkew: 1 } }]);   // (Astray: its north an eighth off as it sets out, the scene set: the cave's diagonal ways, 2026-10-31, left its long walk's bearings tests true)
+        dq0Scene(m, [{ g: 4, line: 'go back to the grotto', n: 1, hub: { pcSkew: 1 } }]);   // (Astray: its north an eighth off as it sets out, the scene set: the cave's diagonal ways, 2026-10-31, left its long walk's bearings tests true)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1828,9 +1834,9 @@ module.exports = {
     {
       name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one and sets it off, the referee judges it), by the world\'s events (the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at these seeds): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T); the next door bursting at the first try (its load within its free pounds by Strength, D13\'s: a step the stronger; it held at the first before), open at the second; then a plate in a storeroom\'s floor walked onto (the walk stopped on it), its blade striking (HC_STRIKE: a wound), the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1 -u feudal -c thief, Lockcraft 95) a hidden dart trap on a door found by the third search, the door left shut while it\'s known, the trap made out (its mechanism assessed), then disarmed (Lockcraft: two checks, the user\'s), and the door opened',
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e',
         'force', 'force', 'e', 'e', 'quit', 'hmchar -q -s 1 -u feudal -c thief -o /ram/t.hm', 'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search',
-        'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status']) },
+        'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], fo = T.of('force');
@@ -1908,8 +1914,8 @@ module.exports = {
     {
       name: 'dq0stairtrap', meaning: true, what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun, a slip ending it at its floor: D13\'s, slice 4.4\'s), the pit seen open; climbed out again (climb up: a slip again, then out); then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
       init: 't_rc', cycles: 600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
-        'u', 'climb up', 'climb up', 'u', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
+        'u', 'climb up', 'climb up', 'u', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], w = T.of('walk to the door east'), u1 = T.of('u'), u2 = T.after(u1, 'u');
@@ -1934,8 +1940,8 @@ module.exports = {
     {
       name: 'dq0rebar', meaning: true, what: 'Dingus Quest Zero\'s doors barred again (the user\'s, 2026-10-16), by the world\'s events and the bar\'s record (a portal\'s part, IW_PORTAL, on the square of its side, or a thing carried or lying): at seed 4 the door\'s bar lifted out of its brackets and taken, then put back (bar the door: from its side, the door shut): out of the pack, in its brackets again, the door barred (opened: the bar lifted out again, at its feet); not while the door stands open; put back from the floor (put the bar back in its brackets); kept (dq0 -d), the door still barred and the bar in it as the game carries on (their words: dq0wordsfix)',
       init: 't_rc', cycles: 800e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 4 -c /ram/c.hm -d /ram/g', 'take the bar',
-        'bar the door', 'open', 'bar the door', 'close', 'put the bar back in its brackets', 'quit', 'dq0 -p t -d /ram/g', 'open', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 4 -c /ram/c.hm -d /ram/g', 'take the bar',
+        'bar the door', 'open', 'bar the door', 'close', 'put the bar back in its brackets', 'quit', 'dq0 -p t -d /ram/g', 'open', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [];
@@ -1970,10 +1976,10 @@ module.exports = {
     {
       name: 'dq0doorlies', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s "the door on the left" (the user\'s playtest, 2026-11-02: "if you say walk to the door on the left it doesn\'t always do what you expect"; HOUSE.md\'s going to anything): at seed 5, in a hall of four doors, from the centre and two corners, facing each of the four ways, each way a door can be said to lie: it means what the look\'s words mean by the facing at that moment (the record\'s rel its bearing as it faces, doors remembered too); the one that lies exactly so is walked up to, the nearest ahead of several; none exactly so, the one on that side (half the room), of several the question; none on that side, "You haven\'t seen a door that way." and no step',
       init: 't_rc', cycles: 4000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm', 'go to the far left corner', 'go to the far right corner', 'go to the near left corner',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 5 -c /ram/c.hm', 'go to the far left corner', 'go to the far right corner', 'go to the near left corner',
         ...['go to the centre', 'go to the near left corner', 'go to the far right corner'].flatMap(p => ['face north', 'face east', 'face south', 'face west'].flatMap(q =>
           ['on the left', 'on the right', 'ahead', 'behind me', 'ahead to my left', 'behind me on my right'].flatMap(w => [p, q, 'walk to the door ' + w]))),
-        'quit', 'echo $status']) },
+        'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], ans = dq0Answers(out), WANT = { 'on the left': 6, 'on the right': 2, 'ahead': 0, 'behind me': 4, 'ahead to my left': 7, 'behind me on my right': 3 };
@@ -2009,18 +2015,18 @@ module.exports = {
       // (dq0sky=0, 2026-11-03, a scene's: seed 7's second pot not stocked under the skylight, "head for the pot" nothing to ask)
       name: 'dq0moving', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s moving (the user\'s playtest, 2026-11-02: DECISIONS.md; HOUSE.md\'s straight walks, going to anything, crossing, inspecting walks over first), by the words told and the hub: at seed 8 a way word walks straight: north to the wall, told; south to a closed door, told; again, refused beside it; a door off to the side never walked to; a shut door it has handled opened as it goes, and on through; at seed 7 go to the centre (its sum near $8000), cross the room, go across the room, approach, walk to (no pace words), walk over to, head for, which asked of two pots, beside it not on it, "You haven\'t seen a rat here."; examine, assess out of reach walked over to, their words short; a plain look at from where it stands; things and doors remembered in the dark, named, walked to; leave, which asked; a walked-to take told short, no look, no "at your feet", and with hands and pack full refused as it gets there; a denizen gone up to with no blow, and where it was last seen (seed 2)',
       init: 't_rc', cycles: 5000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 8 -c /ram/c.hm', 'n', 's', 's', 'e', 'go through the door to the south', 'open', 'close', 'n', 's', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm', 'go to the centre', 'cross the room', 'go across the room', 'leave', 'go outside', 'go out', 'go to the rat', 'go to the far right corner', 'approach the pot', 'go to the far right corner', 'walk to the pot', 'go to the far right corner', 'head for the pot', '1',
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 8 -c /ram/c.hm -S /ram/s.sc', 'n', 's', 's', 'e', 'go through the door to the south', 'open', 'close', 'n', 's', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -S /ram/s.sc', 'go to the centre', 'cross the room', 'go across the room', 'leave', 'go outside', 'go out', 'go to the rat', 'go to the far right corner', 'approach the pot', 'go to the far right corner', 'walk to the pot', 'go to the far right corner', 'head for the pot', '1',
         'go to the far left corner', 'walk over to the sconce', 'go to the far left corner', 'examine the sconce', 'go to the far left corner', 'assess the sconce', 'drop the backpack', 'go to the far left corner', 'take the pot', 'go to the far right corner', 'take the pot', 'drop the pot',
         'douse the torch', 'go to the door', 'go to the far left corner', 'go to the sconce', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm', 'go to the closest rat', 'douse the torch', 'go to the window', 'go to the rat', 'quit',
-        'dq0 -p t -s 15 -c /ram/c.hm', 'bar the door', 'look at the door ahead to my left', 'go to the door ahead to my left', 'unbar the door', 'unbolt the door', 'bar the door', 'take the bar off', 'lift the bar', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'open', 'look', 'look at the door', 'quit',
-        'dq0 -p t -s 16 -c /ram/c.hm -T', 'go to the pit', 'go to the ledge', 'face east', 'force', 'e', 'force', 'force', 'e', 'e', 'go west', 'go to the trap', 'go west', 'go to the pit', 'quit',
-        'dq0 -p t -s 517 -c /ram/c.hm', 'ne', 'e', 'go to the ledge', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'read the door', 'read the sconce', 'douse the torch', 'read the sconce', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'examine the door ahead', 'quit', 'echo $status']) },
+        'dq0 -p t -s 2 -c /ram/c.hm -S /ram/s.sc', 'go to the closest rat', 'douse the torch', 'go to the window', 'go to the rat', 'quit',
+        'dq0 -p t -s 15 -c /ram/c.hm -S /ram/s.sc', 'bar the door', 'look at the door ahead to my left', 'go to the door ahead to my left', 'unbar the door', 'unbolt the door', 'bar the door', 'take the bar off', 'lift the bar', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -S /ram/s.sc', 'go through the door to the east', 'open', 'look', 'look at the door', 'quit',
+        'dq0 -p t -s 16 -c /ram/c.hm -T -S /ram/s.sc', 'go to the pit', 'go to the ledge', 'face east', 'force', 'e', 'force', 'force', 'e', 'e', 'go west', 'go to the trap', 'go west', 'go to the pit', 'quit',
+        'dq0 -p t -s 517 -c /ram/c.hm -S /ram/s.sc', 'ne', 'e', 'go to the ledge', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'read the door', 'read the sconce', 'douse the torch', 'read the sconce', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -S /ram/s.sc', 'step forward', 'examine the door ahead', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], ans = dq0Answers(out), T = dq0Turns(m), g = {};
@@ -2089,8 +2095,8 @@ module.exports = {
     {
       name: 'dq0steps', meaning: true, what: 'Dingus Quest Zero\'s small moves (the user\'s, 2026-10-16: "move left one space"; a square 5 feet, the game\'s), by where the character stands and faces (the hub\'s): at seed 12\'s first room (a small storeroom), facing northeast, a step forward (a square that way, its facing kept), a move to the right three spaces stopped by the wall (not moved), backing up 10 feet (the room\'s one square behind it, still facing northeast), a sidestep left into the wall; turned about, "run 2 squares east" (its pace set to a run, east one square to the wall, facing east) (a step stopped by a denizen in the way: dq0denizens; the look as a run ends, brief: dq0wordsthings)',
       init: 't_rc', cycles: 600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 12 -c /ram/c.hm', 'step forward',
-        'move right 3 spaces', 'back up 10 feet', 'sidestep left', 'turn around', 'run 2 squares east', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 12 -c /ram/c.hm', 'step forward',
+        'move right 3 spaces', 'back up 10 feet', 'sidestep left', 'turn around', 'run 2 squares east', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], p0 = (T.of('dq0 -p t -s 12 -c /ram/c.hm').after || {}).pc;
@@ -2117,8 +2123,8 @@ module.exports = {
       scene: false,   // (Its watchers count the loads as the game begins: none taken up, sim/lib/scenes.js)
       name: 'dq0layers', meaning: true, what: 'Dingus Quest Zero\'s dungeon made from its history (Phase 3D, games/dq0/HISTORY.md; D12, the user\'s: "A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense"): at seed 70018 (a region of its own, themegen\'s) the top stratum the tombs the hill-men built, fallen in, and the temple the sun-priests made of them after (its layers: built, ruined, reused): by the way in (those who came after came in that way) the chunks the maker made the temple\'s (a kitchen or a pantry among them, no main room a crypt), and by the way down (dq0 -T, the far side) the old tombs\' (each main room a crypt, no kitchen nor pantry); stratagen (bank/stratagen, a bank program: a stratum\'s layers chunk by chunk) loaded by themegen (its checker) and by the maker, once for all the maker\'s chunks, and with dq0 -C (the bank programs given up after each request) again and again; then at seed 70008 a keep the conquerors made of an older temple: in a guardroom of the keep\'s by the way in, the temple\'s chapel\'s candle stubs (the older layer\'s mark: a guardroom\'s own use leaves none)',
       init: 't_rc', cycles: 1300e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 70018 -c /ram/c.hm', 'quit',
-        'dq0 -p t -s 70018 -c /ram/c.hm -T -C', 'quit', 'dq0 -p t -s 70008 -c /ram/c.hm', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 70018 -c /ram/c.hm', 'quit',
+        'dq0 -p t -s 70018 -c /ram/c.hm -T -C', 'quit', 'dq0 -p t -s 70008 -c /ram/c.hm', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) { dq0Made(this, m); },
       check(m) {
@@ -2162,7 +2168,7 @@ module.exports = {
     {
       name: 'dq0plan', meaning: true, what: 'Dingus Quest Zero\'s built strata built to a plan (DUNGEON.md, the user\'s, 2026-10-16: "feast halls near kitchens near pantries and storage"; "Larger rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights"; "Prior usage can also inform ... what kinds of detritus"): at seed 3 the crypt\'s Upper Halls (their purpose halls: a domestic suite by the way in), the character beginning in a kitchen, its iron pot lying there (what its use left), and its well (there\'s water); the chunks made, read from the hub\'s cache (world.h\'s struct chunk in the shared segment\'s banks): a hall joined to a kitchen by a passage of its own, through no other room; every hall\'s ceiling higher than the passages\' (the chunk\'s pceil), every storeroom\'s, pantry\'s, cell\'s and bedchamber\'s flat at the passages\' height; every room\'s floor flat, at the stratum\'s one level (but a hall\'s dais, two feet up)',
       init: 't_rc', cycles: 500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const f = [], s = dq0Turns(m).of('dq0 -p t -s 3 -c /ram/c.hm').after, seen = s && s.sight;
@@ -2215,7 +2221,7 @@ module.exports = {
     {
       name: 'dq0gate', meaning: true, what: 'Dingus Quest Zero\'s fortified strata (DUNGEON.md: built to a plan; "Fortified versus not are built differently"): at seed 514 the kobold warren\'s Warren Mouth (its purpose a keep, fortified: theme.h\'s SP_FORT), the character beginning in its gatehouse (the room the way in comes out in), told so, a portcullis raised and an arrow slit in its walls; read from the hub\'s cache: the gatehouse\'s every way out a portcullis (none a door, none a bare doorway), murder holes in its vault (R_MURDER), its vault higher than the passages\'',
       init: 't_rc', cycles: 500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm', 'x portcullis', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 514 -c /ram/c.hm', 'x portcullis', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], s = T.of('dq0 -p t -s 514 -c /ram/c.hm').after, seen = s && s.sight;
@@ -2252,8 +2258,8 @@ module.exports = {
       init: 't_rc', cycles: seeds.length * 360e6,      // (A timeout: each game started, turned round and quit; 360M
       // a game since 2026-10-29, the sound layer's pulses as it walks (320M since 2026-10-27, 300M before: the outfits'
       // and the denizens' gear's bigger world and referee to load))
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        ...seeds.flatMap(s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm', 'turn around', 'go forward', 'turn around', 'go forward', 'quit']), 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [
+        ...seeds.flatMap(s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm', 'turn around', 'go forward', 'turn around', 'go forward', 'quit']), 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [];

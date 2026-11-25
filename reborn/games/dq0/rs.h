@@ -526,7 +526,11 @@ enum {
 #define SCN_LAME        4                       /*   lamed: a serious wound, its agility 1 (its getting up a test failed); */
 #define SCN_ATT         5                       /*   its attribute c (the ruleset's order) b; */
 #define SCN_TIRE        6                       /*   its body's fatigue: b levels, w1 its exertion, x[4-7] when last
-                                                **   reckoned) */
+                                                **   reckoned; */
+#define SCN_RAM         7                       /*   (any actor's) the referee's own main RAM at w1, c bytes of x[4-7]
+                                                **   (4 at most); */
+#define SCN_HUB         8                       /*   (any actor's) the hub's header's bytes the referee writes, at w1:
+                                                **   its summary, pcsum ...) */
 #define RD_DEITY        5                      /* (RS_DESCRIBE's b: the deity the character worships, its name) */
 
 #endif

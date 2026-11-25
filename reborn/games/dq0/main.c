@@ -3144,8 +3144,8 @@ int main (int argc, char* argv[])
             }
         }
         if (t_next () && (!busy || !held)) {
-            if (HUB->scene != HUB->scene_d) {
-                scene_wait ();                  /* (A test's scene posted as it was typed: in place first, part scene's) */
+            if ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d) {
+                scene_wait ();                  /* (A test's scene posted as it was entered: in place first, part scene's) */
             }
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
@@ -3505,9 +3505,9 @@ void __fastcall__ s_bg_words (unsigned char what)
 /* ==== Part scene: a line typed as a test's scene was posted (hub.h's scene, the tests' harness's: phase C's scene
 ** builder, scene1, 2026-11-24) waits for it to be in place, each part of it done by its owner, the world's then the
 ** minds' (scene_d), so its command's carried out in the scene; the world, the maker and the minds rung to it, a nap a
-** time, 65,535 at most (the harness tells it not in place: a chunk being made ahead finished first, 13M cycles).  Nothing in hand meanwhile (ui_keys let go, ui_cmd not yet), so the
-** maker serves what it's asked; the minds give way to the scene itself, their pass broken off (held's), and the world
-** carries out their intents posted (den_held's) */
+** at most (the harness tells it not in place: a chunk being made ahead finished first, 13M cycles).  Nothing in hand
+** meanwhile (its keys' hold let go, ui_keys; its command not yet, ui_cmd), so the maker comes round to it; the minds give
+** way to the scene itself, their pass broken off (held's), and the world carries out their intents posted (den_held's) */
 #pragma code-name (push, "SW_scene_CODE")
 #pragma rodata-name (push, "SW_scene_RODATA")
 void s_scene_wait (void)

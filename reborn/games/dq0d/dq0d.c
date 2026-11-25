@@ -6237,6 +6237,8 @@ void s_scene (void)
         } else if (k == SO_INTENT) {
             memcpy (&im, b, sizeof im);
             post (im.kind, im.who);
+        } else if (k == SO_DRAM) {              /* (Its own main RAM: the address, the bytes) */
+            memcpy ((char*) (b[0] | b[1] << 8), b + 2, n - 2);
         }
     }
     hub_map (0);

@@ -12,14 +12,18 @@ const TESTS = path.join(__dirname, '..');   // (The tests' folder: their fixture
 // chunk, three to a bank, CHUNK_SIZE apart): its chambers ragged (none its bounds filled, some with their rows'
 // ends uneven), its tunnels bending, every open square reached from every other, and a chunk's edges' open squares
 // met by its neighbours' (those in the cache); n chunks of stratum sn at least (CAVEDUMP=1: each one drawn)
-const CHUNK_SIZE = 0xAA0, CK_TILE = 443, CK_ROOM = 8;
+// (struct chunk's places, the cache's, a stratum's record: the build's layout, games/dq0/hubgen.js's, scene1, 2026-11-24)
+const HL = require('../../games/dq0/hubgen.js').load(), HO = (s, f) => HL.off(s, f);
+const CHUNK_SIZE = HL.C.CHUNK_SIZE, CK_TILE = HO('chunk', 'tile'), CK_ROOM = HO('chunk', 'room'), CK_ZONE = HO('chunk', 'zone'), CK_ELEV = HO('chunk', 'elev');
+const CK_NPORT = HO('chunk', 'nportals'), CK_PORTAL = HO('chunk', 'portal'), PORTAL_SIZE = HL.size('portal'), CK_NOPEN = HO('chunk', 'nopen'), CK_OPEN = HO('chunk', 'open');
+const CACHE0 = HL.C['CACHE_BANK (0)'], STRATUM_SIZE = HL.size('stratum'), CSLOT_SIZE = HL.size('cslot');
 const T_ROCK = 0, T_FLOOR = 1, T_WALL = 2, T_CORR = 4, T_WINDOW = 6;
 // The hub's chunk cache's banks (world.h's CACHE_BANK: 5 on, 8 of them), from its bank 0's (its magic "DQ") on: none
 // of the other banks taken for chunks by their looks (the UI bank's map's layers would pass, slice 4.2's)
 function cacheBanks(m) {
   const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
   const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
-  return hub === undefined ? [] : [0, 1, 2, 3, 4, 5, 6, 7].map(i => banks[hub + 5 + i]).filter(b => b);
+  return hub === undefined ? [] : [0, 1, 2, 3, 4, 5, 6, 7].map(i => banks[hub + CACHE0 + i]).filter(b => b);
 }
 function cacheChunks(m, sn) {
   const out = new Map();
@@ -113,10 +117,10 @@ dq0Life.C = name => { const v = dq0Hub().C[name]; if (v === undefined) throw new
 // of themes ({ name, text }) its { status, said, data, words }
 const THEMEC = themes => require('../../tools/themec.js').compile(themes);
 function builtChunks(m, sn) {
-  const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: CH_PCEIL };
+  const out = [], C = { room: CK_ROOM, zone: CK_ZONE, portal: CK_PORTAL, tile: CK_TILE, elev: CK_ELEV, pceil: CH_PCEIL };
   for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
-      const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
+      const o = k * CHUNK_SIZE, nr = b[o + 5], nz = b[o + 6], np = b[o + CK_NPORT];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
       if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 11)) continue;   // (T_CUT, 11, the diagonal ways')
       const rooms = [], zones = [], portals = [];
@@ -140,23 +144,23 @@ function builtChunks(m, sn) {
 
 // The hub's live chunks of stratum sn (dq0pure's): its world bank's cslot table (hub.h's struct wrec: the strata's
 // records, 8 of 79 bytes, then the slots, 8 bytes each: used, sn, cx, cy, stamp), each slot used holding a chunk of sn
-// read from its cache bank (world.h's CACHE_BANK: 5 + k / 3, CHUNK_AT: (k % 3) * 0xAA0), its 2,707 bytes (struct
+// read from its cache bank (world.h's CACHE_BANK: CACHE_BANK (0) + k / 3, CHUNK_AT: (k % 3) * CHUNK_SIZE), its 2,707 bytes (struct
 // chunk's), by its place: { 'cx,cy': bytes }; the hub's banks the shared ones from its bank 0's (its magic "DQ") on
 // (struct chunk's traps and what's after them, world.h's by the build's layout: a trap's knowers, 2026-11-23, made it 8
 // bytes, pceil and kept the later; CH_NTRAPS its count, CH_TRAP the first, TR_SIZE each, TR_STATE, TR_HIDE in it)
 const [CH_NTRAPS, CH_TRAP, TR_SIZE, TR_STATE, TR_HIDE, CH_PCEIL, CHUNK_KEPT, CHUNK_BYTES] = require('../../sim/lib/hubown.js').evaluate([
   'offsetof (struct chunk, ntraps)', 'offsetof (struct chunk, trap)', 'sizeof (struct trap)', 'offsetof (struct trap, state)',
   'offsetof (struct trap, hide)', 'offsetof (struct chunk, pceil)', 'offsetof (struct chunk, kept)', 'sizeof (struct chunk)']);
-const WORLD_BANK_N = 21, CSLOT_AT = 8 * 79;
+const WORLD_BANK_N = HL.C.WORLD_BANK, CSLOT_AT = HO('wrec', 'cslot');
 function liveChunks(m, sn) {
   const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
   const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), out = {};
   if (hub === undefined || !banks[hub + WORLD_BANK_N]) return out;
   const w = banks[hub + WORLD_BANK_N];
   for (let k = 0; k < 24; k++) {
-    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    const s = CSLOT_AT + k * CSLOT_SIZE, b = banks[hub + CACHE0 + Math.floor(k / 3)];
     if (!w[s] || w[s + 1] !== sn || !b) continue;
-    const o = (k % 3) * 0xAA0;
+    const o = (k % 3) * CHUNK_SIZE;
     out[(w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8)] = Buffer.from(b.subarray(o, o + CHUNK_BYTES));
   }
   return out;
@@ -170,7 +174,7 @@ function stratumRec(m, sn) {
   const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
   const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
   for (let i = 0; w && i < 8; i++) {
-    const r = w.subarray(i * 79, i * 79 + 79), u16 = k => r[k] | r[k + 1] << 8;
+    const r = w.subarray(i * STRATUM_SIZE, i * STRATUM_SIZE + STRATUM_SIZE), u16 = k => r[k] | r[k + 1] << 8;
     if (!r[0] || r[1] !== sn) continue;
     const links = [];
     for (let j = 0; j < Math.min(r[22], 8); j++) links.push({ kind: r[23 + j * 7], to: r[24 + j * 7], x: u16(25 + j * 7), y: u16(27 + j * 7), dug: r[29 + j * 7] });
@@ -220,14 +224,14 @@ function chunkDiff(a, b) {
   for (let i = 0; i < CHUNK_BYTES; i++) {
     let x = a[i], y = b[i];
     if (i >= CHUNK_KEPT && i < CHUNK_KEPT + 9) continue;      // (The world's memory of it, the maker's none)
-    if (i >= 443 && i < 1467) { x &= 0x2F; y &= 0x2F; }
-    if (i >= 8 && i < 56 && (i - 8) % 8 === 4) { x &= ~1; y &= ~1; }
+    if (i >= CK_TILE && i < CK_ELEV) { x &= 0x2F; y &= 0x2F; }
+    if (i >= CK_ROOM && i < CK_ZONE && (i - CK_ROOM) % 8 === 4) { x &= ~1; y &= ~1; }
     if (x === y) continue;
-    if (i >= 219 && i < 443 && [3, 8, 13].includes((i - 219) % 14)) d.portal++;
+    if (i >= CK_PORTAL && i < CK_TILE && [3, 8, 13].includes((i - CK_PORTAL) % PORTAL_SIZE)) d.portal++;
     else if (i >= CH_TRAP && i < CH_TRAP + 6 * TR_SIZE && (i - CH_TRAP) % TR_SIZE === TR_STATE) d.trap++;
-    else if (i >= 443 && i < 1467) d.square++;
-    else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x0F) !== (b[i - 1024] & 0x0F)) d.square++;   // (A changed square's floor)
-    else if (i === 7 || (i >= 188 && i < 218)) d.opening++;
+    else if (i >= CK_TILE && i < CK_ELEV) d.square++;
+    else if (i >= CK_ELEV && i < CK_ELEV + 1024 && (a[i - 1024] & 0x0F) !== (b[i - 1024] & 0x0F)) d.square++;   // (A changed square's floor)
+    else if (i === CK_NOPEN || (i >= CK_OPEN && i < CK_NPORT)) d.opening++;
     else d.other.push(i);
   }
   return d;
@@ -371,10 +375,10 @@ function dq0Doubled(m) {
   if (hub === undefined || !banks[hub + WORLD_BANK_N]) return f;
   const w = banks[hub + WORLD_BANK_N];
   for (let k = 0; k < 24; k++) {
-    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    const s = CSLOT_AT + k * CSLOT_SIZE, b = banks[hub + CACHE0 + Math.floor(k / 3)];
     if (!w[s] || !b) continue;
-    const o = (k % 3) * 0xAA0, at = w[s + 1] + ':' + (w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8);
-    for (const [what, n, from, size, max] of [['portals', b[o + 218], 219, 14, 16], ['traps', b[o + CH_NTRAPS], CH_TRAP, TR_SIZE, 6]]) {
+    const o = (k % 3) * CHUNK_SIZE, at = w[s + 1] + ':' + (w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8);
+    for (const [what, n, from, size, max] of [['portals', b[o + CK_NPORT], CK_PORTAL, PORTAL_SIZE, 16], ['traps', b[o + CH_NTRAPS], CH_TRAP, TR_SIZE, 6]]) {
       const on = new Map();
       for (let i = 0; i < n && i < max; i++) { const p = o + from + i * size, sq = b[p] + ',' + b[p + 1]; on.set(sq, (on.get(sq) || 0) + 1); }
       for (const [sq, c] of on) if (c > 1) f.push(at + ': ' + c + ' ' + what + ' at ' + sq);
@@ -420,7 +424,7 @@ function dq0Turns(m) {
   // (A dq0 line as the test wrote it: sim/test.js's -F, -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
   // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off: each once, the last added first, as sim/test.js
   // adds them, so a test's own flag before them is kept (dq0travel's -N; a test's own -R last of its own, taken off)
-  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -E$/, / -F$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
+  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -E$/, / -F$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+(?=(?: -S \S+)?$)/].reduce((x, re) => x.replace(re, ''), l);   // (A test's own -R before its scene's -S too)
   const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k), intents: of(all.intents, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
@@ -523,7 +527,7 @@ function dq0Portal(m, sn, x, y) {
   if (!w) return null;
   let S = null;
   for (let i = 0; i < 8 && !S; i++) {
-    const r = w.subarray(i * 79, i * 79 + 79), u16 = k => r[k] | r[k + 1] << 8;
+    const r = w.subarray(i * STRATUM_SIZE, i * STRATUM_SIZE + STRATUM_SIZE), u16 = k => r[k] | r[k + 1] << 8;
     if (r[0] && r[1] === sn) S = { x0: u16(11), y0: u16(13) };
   }
   if (!S) return null;
@@ -532,9 +536,9 @@ function dq0Portal(m, sn, x, y) {
     'offsetof (struct portal, kind)']));
   const cx = (x - S.x0) >> 5, cy = (y - S.y0) >> 5, lx = (x - S.x0) & 31, ly = (y - S.y0) & 31;
   for (let k = 0; k < 24; k++) {
-    const sl = CSLOT_AT + k * 8;
+    const sl = CSLOT_AT + k * CSLOT_SIZE;
     if (!w[sl] || w[sl + 1] !== sn || (w[sl + 2] | w[sl + 3] << 8) !== cx || (w[sl + 4] | w[sl + 5] << 8) !== cy) continue;
-    const b = banks[hub + 5 + Math.floor(k / 3)], o = (k % 3) * 0xAA0;
+    const b = banks[hub + CACHE0 + Math.floor(k / 3)], o = (k % 3) * CHUNK_SIZE;
     for (let i = 0; i < b[o + NPORT]; i++) {
       const q = o + PORTAL + i * PSIZE;
       if (b[q] === lx && b[q + 1] === ly) return { b, q, state: q + PSTATE, kind: b[q + PKIND] };
@@ -620,11 +624,22 @@ function sceneBuild(m, fn) {
     due: what => ctx.ops.push([C.SO_DUE, { burn: C.DU_BURN, trace: C.DU_TRACE, hold: C.DU_HOLD }[what]]),
   };
   m.dq0.bank = i => cp(rbank.call(m.dq0, i));
+  // (A task's own main RAM, the world's, the minds' or the referee's (by its label: a test's own reading of the build's): a
+  // copy too, its bytes changed each its owner's op, SO_WRAM, SO_DRAM, the referee's RS_SCENE SCN_RAM)
+  const rram = m.taskRam, h0 = rbank.call(m.dq0, 0), rams = new Map();
+  if (h0) for (const role of [S.world, S.dens, S.referee]) rams.set(h0[S.task + role], role);
+  const rcp = new Map();
+  m.taskRam = new Proxy(rram, { get: (t, p) => {
+    if (typeof p !== 'string' || !/^\d+$/.test(p) || !rams.has(+p) || !t[p]) return t[p];
+    if (!rcp.has(+p)) rcp.set(+p, { live: t[p], copy: Uint8Array.from(t[p]), role: rams.get(+p) });
+    return rcp.get(+p).copy;
+  } });
   m.sharedBanks = () => new Proxy(live, { get: (t, p) => typeof p === 'string' && /^\d+$/.test(p) ? cp(t[p]) : t[p] });
-  try { fn(sc); } finally { m.dq0.bank = rbank; m.sharedBanks = rshared; SCTX = null; }
+  try { fn(sc); } finally { m.dq0.bank = rbank; m.sharedBanks = rshared; m.taskRam = rram; SCTX = null; }
   // (The bytes changed, in runs of one owner each, 64 bytes at most)
   const hub = new Map(), w = [], d = [];
   for (let i = 0; i < C.HUB_BANKS; i++) { const b = rbank.call(m.dq0, i); if (b) hub.set(b, i); }
+  const refRun = (what, o, run) => { for (let i = 0; i < run.length; i += 4) { const x = run.slice(i, i + 4); rs(0, what, { which: x.length, ex: o + i }); ctx.ops[ctx.ops.length - 1].splice(7, x.length, ...x); } };
   const runs = (a, c, route, put) => {
     for (let o = 0; o < a.length;) {
       if (a[o] === c[o]) { o++; continue; }
@@ -641,9 +656,12 @@ function sceneBuild(m, fn) {
       if (g.allowed & 1 << S.world) return 'w';
       if (g.allowed & 1 << S.dens) return 'd';
       if (g.allowed & 1 << S.maker) return 'm';
+      if (bi === 0 && (g.allowed & 1 << S.referee)) return 'r';
       throw new Error('dq0Scene: the hub\'s ' + g.name + ' (bank ' + bi + ', ' + o + ') written, its owner ' + (S.H.tasks[g.owner] || 'none') + ': not the world\'s, the maker\'s nor the minds\'');
-    }, (r, o, run) => (r === 'd' ? d : w).push([{ w: C.SO_HUB, d: C.SO_DHUB, m: C.SO_MHUB }[r], bi, o & 255, o >> 8, ...run]));
+    }, (r, o, run) => r === 'r' ? refRun(C.SCN_HUB, o, run) : (r === 'd' ? d : w).push([{ w: C.SO_HUB, d: C.SO_DHUB, m: C.SO_MHUB }[r], bi, o & 255, o >> 8, ...run]));
   }
+  for (const { live, copy, role } of rcp.values()) runs(live, copy, () => role, (r, o, run) => r === S.referee ? refRun(C.SCN_RAM, o, run) :
+    (r === S.world ? w : d).push([r === S.world ? C.SO_WRAM : C.SO_DRAM, o & 255, o >> 8, ...run]));
   if (ctx.rec) runs(ctx.rec.live, ctx.rec.copy, () => 'r', (r, o, run) => d.push([C.SO_REC, o & 255, o >> 8, ...run]));
   return [...w, ...ctx.ops.filter(o => o[0] === C.SO_RS || o[0] === C.SO_DUE), ...d, ...ctx.ops.filter(o => o[0] === C.SO_INTENT)];
 }
@@ -682,7 +700,7 @@ function sceneSend(m, e, item) {
     };
     r.dq0SceneHook = true;
   }
-  item.seq = (h[S.scene] + 1) & 255;
+  item.seq = ((h[S.scene] & 0x7F) + 1 & 0x7F) | (item.cr !== undefined ? S.C.SCENE_LINE : 0);   // (A line's Enter's: the line waits)
   item.at = m.cpu.cyc;
   if (process.env.DQ0SCENE) console.log('scene ' + item.seq + ' posted at ' + item.at + ': ' + item.why + ' ' + JSON.stringify(item.ops));
   e.cur = item;
@@ -942,11 +960,11 @@ function dq0PortalAt(m, sn, x, y) {
   if (hub === undefined || !S || !banks[hub + WORLD_BANK_N]) return null;
   const w = banks[hub + WORLD_BANK_N], cx = (x - S.x0) >> 5, cy = (y - S.y0) >> 5;
   for (let k = 0; k < 24; k++) {
-    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    const s = CSLOT_AT + k * CSLOT_SIZE, b = banks[hub + CACHE0 + Math.floor(k / 3)];
     if (!w[s] || w[s + 1] !== sn || !b || (w[s + 2] | w[s + 3] << 8) !== cx || (w[s + 4] | w[s + 5] << 8) !== cy) continue;
-    const c = (k % 3) * 0xAA0;
-    for (let i = 0; i < b[c + 218]; i++) {
-      const o = c + 219 + i * 14;
+    const c = (k % 3) * CHUNK_SIZE;
+    for (let i = 0; i < b[c + CK_NPORT]; i++) {
+      const o = c + CK_PORTAL + i * PORTAL_SIZE;
       if (b[o] === ((x - S.x0) & 31) && b[o + 1] === ((y - S.y0) & 31)) return { b, o };
     }
   }
@@ -1017,7 +1035,7 @@ function dq0Timer(m) {
   const busy = () => {                          // (The UI's busy as a CR comes, the hub's T_UI its task; null with no game)
     try {
       if (busyAt === null) busyAt = parseInt(/^al ([0-9A-F]+) \._busy$/m.exec(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16);
-      const h = m.dq0 && m.dq0.bank(0), ui = h ? h[12] : 0;
+      const h = m.dq0 && m.dq0.bank(0), ui = h ? h[HO('hub', 'task')] : 0;
       return ui && m.taskRam[ui] ? m.taskRam[ui][busyAt] : null;
     } catch (e) { return null; }
   };
@@ -1209,7 +1227,7 @@ function dq0WhenFree(m) {
   const busy = () => {
     try {
       if (busyAt === null) busyAt = parseInt(/^al ([0-9A-F]+) ._busy$/m.exec(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16);
-      const h = m.dq0 && m.dq0.bank(0), ui = h ? h[12] : 0;
+      const h = m.dq0 && m.dq0.bank(0), ui = h ? h[HO('hub', 'task')] : 0;
       if (!h) return 0;
       const { L } = m.dq0.layout();             // (Fighting on, walking, any long task: the hub's pc_task, pc_going)
       return (ui && m.taskRam[ui] ? m.taskRam[ui][busyAt] : 0) || h[L.pcTask] || h[L.pcGoing];

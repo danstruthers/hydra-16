@@ -954,6 +954,10 @@ void __fastcall__ rf_answer (struct req* r)
         break;
     case RS_SCENE:                              /* (A test's scene: the character out till then, the null's one state;
                                                 **   a creature's none: 0xFF) */
+        if (RS_SCENE_WHAT (*r) == SCN_RAM || RS_SCENE_WHAT (*r) == SCN_HUB) {
+            memcpy ((char*) (RS_SCENE_WHAT (*r) == SCN_HUB ? HUB_WINDOW : 0) + RS_SCENE_EX (*r), r->x + 4, RS_SCENE_WHICH (*r) & 7);
+            break;
+        }
         if (r->actor || RS_SCENE_WHAT (*r) != SCN_OUT) {
             r->result = 0xFF;
             break;

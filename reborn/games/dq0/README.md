@@ -346,7 +346,12 @@ machine's load allows.
   - `-I`, no initiative, groping or facing tests;
   - `-R N`, a dice offset;
   - `-C`, small caches;
-  - `-m`, minutes on the status line.
+  - `-m`, minutes on the status line;
+  - `-S FILE`, a scene file: a test's start, a line a fact (`hour 128`, `sky 0`, `air 21`, `well 2`, `furn 0`: hub.h's
+    sc_*), in place of the environment's dq0hour, dq0sky, dq0air, dq0well and dq0furn (scene1, 2026-11-24).
+- **A test's scene as it plays** (hub.h's scene, tests/lib/dq0.js's dq0Scene): ops the harness writes in CMD_BANK, each
+  fact done by its owner at the top of its loop (the world's, the maker's, the minds', the referee's RS_SCENE), the
+  line typed waiting for it; each task's code in a swapped part, scene.
 - **The maker's flags** (GE_FLAGS "KWMUAVPD", hub.h:1633-1648): `-K` the old kit, `-W` no water, `-M` mixed strata,
   `-U` no rubble, `-A` diagonal passages, `-V` great caverns, `-P` ramps, `-D` rooms at 45 degrees.
 - Case matters: `-p`/`-P`, `-d`/`-D` and `-m`/`-M` are different switches.

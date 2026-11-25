@@ -2293,7 +2293,7 @@ struct wsave {
 **   own wrec.inuse[ASK_UI] ui
 **   own hub.scene none                                         (A test's scene: the harness's, no task's)
 **   own hub.scene_w world                                      (Its parts carried out, each by its owner)
-**   own hub.scene_d denizens
+**   own hub.scene_d denizens +world                           (The world's, a scene with none of the minds')
 **   own hub.sc_said ui                                         (A test's start: dq0 -S's)
 **   own hub.sc_hour ui
 **   own hub.sc_sky ui
@@ -2329,8 +2329,12 @@ enum {
     SO_RS,                                      /* The world's to ask the referee: RS_SCENE's actor, a, b, c, w1 (2) and
                                                 **   x[4-7] (4) */
     SO_DUE,                                     /* The world's: a job of its made due at once (DU_*) */
-    SO_MHUB                                     /* The maker's: as SO_HUB (a chunk's own, the maker's alone) */
+    SO_MHUB,                                    /* The maker's: as SO_HUB (a chunk's own, the maker's alone) */
+    SO_WRAM,                                    /* The world's own main RAM: an address (2, the build's label's), the bytes */
+    SO_DRAM                                     /* The minds' own main RAM: the same */
 };
+#define SCENE_LINE      0x80                    /* (hub.scene's: a line's Enter's scene, the line waiting for it; the
+                                                **   rest its number) */
 #define DU_BURN         1                       /* (SO_DUE's: the lights' minute, */
 #define DU_TRACE        2                       /*   the traces' journal taken in, */
 #define DU_HOLD         3                       /*   or the journal held, none of it to take in yet) */
