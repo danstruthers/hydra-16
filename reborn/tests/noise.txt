@@ -2,69 +2,50 @@
 # noise.txt - the transcripts' known noise: the tests whose words differ between two builds by the tasks' timing
 # alone, the game unchanged, and the sentences that do in any test, each with its reason.  sim/tools/sentdiff.js
 # marks their differences as known noise; any other difference is a change to what the player reads, to be meant.
-# (GAME-CRITIQUE.md's 6.4: a lockstep turns pace would end most of these; till then each is listed here, with why.)
+# The turns pace is a lockstep (GAME-CRITIQUE.md's 6.4: lock1's, lock2's, 2026-11-25): its games are the same whatever
+# the tasks' timing, so a reason that begins "@real" makes a test's (or a sentence's) noise its games' at a real pace
+# alone, its turns-pace games held exactly (sentdiff's); what's left at the turns pace is listed with its own cause.
 #
 # A test: its name, then its reason.  A sentence: in double quotes, then its reason.  # a comment.
 
-# The real-time paces: not reproducible by design (the minds decide whenever they get the CPU, one dice stream)
-dq0antidote     the real-time fight: its rounds and blows fall as the tasks' timing has them
-dq0denpace      the real-time fight: its rounds and blows fall as the tasks' timing has them
-dq0fightcmd     the real-time fight: its menacing and played games' rounds and blows fall as the tasks' timing has them
-dq0fightmid     the real-time fight: its lines typed mid-round, its rounds and blows fall as the tasks' timing has them
+# The real-time fights: not reproducible by design (the minds decide whenever they get the CPU)
+dq0fightcmd     @real the real-time fight: its menacing and played games' rounds and blows fall as the tasks' timing has them
+dq0fightmid     the real-time fight: its lines typed mid-round at the normal and menacing paces, its rounds and blows as the tasks' timing has them
+dq0felled       the real-time fight: its blows fall as the tasks' timing has them (the user's, 2026-11-23)
+dq0pcfelled     @real the real-time fight: its menacing and played games' bites, the character felled, as the tasks' timing has them (dice2's test)
 
-# Denizens met at other moments: the minds run as a background task, so where a denizen is when the character looks
-# moves with the tasks' timing, even at the turns pace (not a lockstep: hub.h's promise isn't kept yet)
-dq0answer       denizens met at other moments (the minds' timing)
-dq0jobs         denizens met at other moments (the minds' timing)
-dq0skykin       denizens met at other moments (the minds' timing)
-dq0mine         denizens met at other moments (the minds' timing)
-dq0prompt       denizens met at other moments (the minds' timing)
-dq0doff         denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0hold         denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0letcmd       denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0letdens      denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0letseveral   denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0letsight     denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0letstow      denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0letwhich     denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0torchwords   denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
-dq0passes       denizens met at other moments (the minds' timing)
-dq0highkinds    denizens met at other moments (the minds' timing: seed 374's bandits seen or not during the dig as the referee's and the minds' timing falls, fix2)
-dq0denportc     a come-round stir told as the UI reads the senses' record racing their next look (actor0, 0ee3de84)
-dq0paceword     "status" read as the character lies or stands: a race with its state's write (actor0, 0ee3de84)
-dq0robrest      denizens met at other moments (the minds' timing)
-dq0stopwords    denizens met at other moments (the minds' timing)
-dq0sway         denizens met at other moments (the minds' timing)
-dq0dug          denizens met at other moments (the minds' timing)
-dq0lookfar      denizens met at other moments (the minds' timing)
-dq0restbusy     denizens met at other moments (the minds' timing)
-dq0kit          denizens met at other moments (the minds' timing)
-dq0lair         denizens met at other moments (the minds' timing)
-dq0strip        denizens met at other moments (the minds' timing)
-dq0wornden      denizens met at other moments (the minds' timing)
-dq0denportal    denizens met at other moments (the minds' timing)
-dq0deadonce     denizens met at other moments (the minds' timing)
-dq0faced        denizens met at other moments (the minds' timing)
-dq0tiring       denizens met at other moments (the minds' timing)
+# Denizens met at other moments at the real paces: the minds run as a background task, so where a denizen is when the
+# character looks moves with the tasks' timing there (at the turns pace the lockstep holds them)
+dq0answer       @real denizens met at other moments in its normal and menacing games (the minds' timing)
+dq0jobs         denizens met at other moments at the real paces (the minds' timing)
+dq0prompt       denizens met at other moments at the normal pace (the minds' timing)
+dq0doff         @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0hold         @real denizens met at other moments in its real-pace games (the minds' timing; maker3, the chooser's give-way)
+dq0letcmd       @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0letdens      @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0letseveral   @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0letsight     @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0letstow      @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0letwhich     @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0torchwords   @real denizens met at other moments in its menacing and played games (the minds' timing; maker3, the chooser's give-way)
+dq0passes       denizens met at other moments at the normal pace (the minds' timing)
+dq0stopwords    @real denizens met at other moments in its normal-pace games (the minds' timing)
+dq0lookfar      denizens met at other moments at the real paces (the minds' timing)
+dq0throwheld    @real its normal-pace game's throw and rats as the tasks' timing has them (its dice keyed by the moment it lands)
+dq0tiring       @real its menacing game's searches stopped part way as the tasks' timing has them
 
-# The accepted races (the user's, 2026-11-11 and 12: DECISIONS.md's dq0reachstop): a line typed as words show at the
-# turns pace lands as the parser's speed has it
-dq0reachstop    the accepted race: a stop landing one step or one thing later
-dq0tiring       the accepted race: a stop landing one step or one thing later
-dq0noise        the turns pace's race: the denizens' turn after a line told as the UI's naps meet it (start1, da217652)
-dq0sleepsenses  the turns pace's race: the denizens' turn after a line told as the UI's naps meet it (start1, da217652)
-dq0line         the turns pace's race: the denizens' turn after a line told as the UI's naps meet it (start1, da217652)
+# At the turns pace, real time by design: stops typed at fixed cycles (lock2's, 2026-11-25)
+dq0stopsweep    stops typed at fixed cycles land a step earlier or later as the code's speed moves (its truth checks hold): real time by design
+dq0dug          a stop typed at fixed cycles as the dig goes (after its waits): where it lands, and so the clock its later spells' keyed dice go by, as the code's speed moves: real time by design
 
 # A run's end
 dq0peoplegen    its last prompt printed or not as its run ended
 
-# The sky by the clock: a look's words of the daylight go by the minute it lands
-dq0venom        its first look's skylight, at dawn's edge: its light ("daylight falling from it", "Fading light falls") by the minute the look lands (the user's, 2026-11-22)
+# Sentences told as the tasks' timing has them, at the real paces
+"Something stirs."   @real told or not as the minds' timing has a denizen move within hearing, at the real paces
+"Time passes."       @real told or not as the tasks' timing has the clock run on past a line, at the real paces
 
-# Sentences told as the tasks' timing has them, in any test
-"Something stirs."   told or not as the minds' timing has a denizen move within hearing
-"Time passes."       told or not as the tasks' timing has the clock run on past a line
-dq0farthing     denizens met at other moments (the minds' timing)
+# Not the game's
 dq0rules        the shell's prompt after "t_rules: PASS" caught or not
 tools           df's free space, as the card's files change size
 hmcharhl        a character seeded from the clock
@@ -74,7 +55,3 @@ philo           the OS demo's interleaving
 prodcons        the OS demo's interleaving
 race            the OS demo's interleaving
 round           the PC tool passes the host file's time and inode
-dq0stopsweep    stops typed at fixed cycles land a step earlier or later as the code's speed moves (its truth checks hold)
-dq0felled       the real-time fight: its blows fall as the tasks' timing has them (the user's, 2026-11-23)
-dq0robbed       bandits met at other moments as the tasks' timing has them (the user's, 2026-11-23)
-dq0denerrands   bandits met at other moments: one puts on its mail a wait sooner as the tasks' timing has it (names1)
