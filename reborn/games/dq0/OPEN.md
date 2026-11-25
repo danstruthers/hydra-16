@@ -80,9 +80,11 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
 - **F1. A "d" line's first letter as a denizen's kit is drawn** (fix2's open item 1; the fight-back round's part done
   by lock2, built/2026-11-25-lock2.md). The world draws a denizen's kit (part outfit, den_limbs, den_bodies: 170K of
   part copies) as the game's first "d" comes: 600-680K over the lag sweeps (dq0pcfelled's 657,158 in the last full
-  run, 91%).
-- **F2. The look across's pause** (fix3, section 8): about 1.05M of it is the senses' far look, 223K its four parts'
-  copies; it grows with the ground the maker built during the listen. 94% in one run, under 90% in the next.
+  run, 91%; 657,119 after lock4: the minds' schedule, part 9, copied in its window as the give-way lets go).
+- **F2. The look across's pause at the real paces** (fix3, section 8; lock4's, built/2026-11-25-lock2.md section 12):
+  the senses' far look and its four parts' copies (some 225K). At the turns pace it's fixed (2.12M -> 1.38M: the UI's
+  and the background's naps). At the real paces dq0lookfar's worst typing is 1,539,714 (86%), 97% in round 3's filler
+  layout. No merge of the senses' parts saves a copy; the lever left is the far look's own work.
 - **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
   or a pack in their outfits, so what they take or are given goes in it, not "hung at the belt"; then invknown.txt's
   loose entry goes. Watch dq0trade, dq0farthing and dq0hoard.
