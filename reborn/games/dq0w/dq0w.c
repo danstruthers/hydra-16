@@ -3600,6 +3600,11 @@ void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's: intent_m
 ** E_VIEW V_LOOKED; as nothing's in hand (look_due's, ui_long's) */
 void s_look_rest (void)
 {
+    if (HUB->way_want.st == WW_WANTED) {       /* (The turns pace's, look_due's: the chunk its eyes reached asked of the
+                                                **   maker now, the world waiting on it, not made ahead in the background:
+                                                **   the rest told before the prompt, the user's Ti4, 2026-11-25) */
+        ask_maker (M_CHUNK, HUB->way_want.sn, HUB->way_want.cx, HUB->way_want.cy);
+    }
     bodies_first ();
     HUB->way_want.st = WW_NONE;
     HUB->look.kind = LK_REST;
@@ -7728,7 +7733,10 @@ static unsigned free_t;                         /* (main's: the character free a
 static unsigned char look_due (void)
 {
     return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind && !(HUB->ui_keys | HUB->ui_cmd) &&
-        (unsigned) (hy_ticks () - free_t) >= REST_IDLE)) && !move.on;   /* (A rest as nothing's in hand, the senses' own
+        (unsigned) (hy_ticks () - free_t) >= REST_IDLE) || (!HUB->tpr && HUB->way_want.st && !HUB->pc_task.kind)) &&
+        !move.on;                               /* (At the turns pace the rest now, wanted or made, before its E_READY:
+                                                **   the look's own answer, whatever the keys' timing, the user's Ti4,
+                                                **   2026-11-25; look_job's) */   /* (A rest as nothing's in hand, the senses' own
                                                 **   rule (dq0p.c's look_rest: WW_MADE again as a line's in hand): at the
                                                 **   turns pace not a job owed as a line waits on the quiet, round and round
                                                 **   (dq0ahead's hang, lock2's) */

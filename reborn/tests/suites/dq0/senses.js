@@ -85,9 +85,14 @@ function lookSnap(m, ptr, game) {
 // trend.  And (the user's, 2026-11-17) typed once more at the menacing pace, and once as the game is played (the normal
 // pace without the runner's switches: DQ0_PLAYED), each held to the same targets, its measures its own (", menacing",
 // ", played"), the same scene set in each
-function dq0LookFarTest() {
-  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'], game = 'dq0 -p n -s 3 -c /ram/c.hm -T', N = 3;
-  const games = [...Array(N).fill(game), game.replace(' -p n', ' -p m'), DQ0_PLAYED + game], sfx = ['', '', '', ', menacing', ', played'];
+//
+// dq0lookrest (turns: 1): the same game at the turns pace, typed once (lock2's, 2026-11-25: the user's Ti4, "at the turns
+// pace a look ahead's rest is told before the prompt, its first words at once"): the look at once's rest, its chunk grown
+// for it, told in the look's own answer before the next prompt, with its lead-in ("Peering on, ..."), never after the prompt;
+// each look's first letter and its longest pause held to D17 all the same; the two layouts' table holds it the same
+function dq0LookFarTest(turns) {
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl'], game = 'dq0 -p ' + (turns ? 't' : 'n') + ' -s 3 -c /ram/c.hm -T', N = turns ? 1 : 3;
+  const games = turns ? [game] : [...Array(N).fill(game), game.replace(' -p n', ' -p m'), DQ0_PLAYED + game], sfx = turns ? [''] : ['', '', '', ', menacing', ', played'];
   const cmds = [{ line: 'look ahead', want: 'You peer ahead', id: 'the first look ahead', read: 1 }, { line: 'map', want: 'The map', id: 'the map', read: 1 },
     { line: 'turn left', want: 'You turn', id: 'the turn left' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look ahead turned', read: 1 },
     { line: 'listen', want: 'You listen', id: 'the listen' }, { line: 'look ahead', want: 'You peer ahead', id: 'the look across', read: 1, after: 16 },
@@ -96,8 +101,8 @@ function dq0LookFarTest() {
     ['echo $status', 0]];   // (The look across a player's pause after the listen: sixteen waits more, 32M cycles, some nine seconds; the
                               //   quit the same after the look at once: its rest told meanwhile, the user's, 2026-11-18)
   return {
-    name: 'dq0lookfar', near: ['senses', 'time'], meaning: true, outfit: true,
-    what: 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles), the map drawn with the maker first (16.3M before), a row at a time (2026-11-17), a chunk the line ahead does reach made ahead of the eyes as the character listens (2026-11-17), and a look into a chunk not made typed the moment the character\'s there, the chunk grown for it; the user\'s D17 targets (each first letter within 720,000 cycles, a look\'s and the map\'s words with no pause longer than 1.79M), the game typed three times at different moments, the median of the three held; and once at the menacing pace, and once as the game is played (without the tests\' switches), each held',
+    name: turns ? 'dq0lookrest' : 'dq0lookfar', near: ['senses', 'time'], meaning: true, outfit: true,
+    what: (turns ? "Dingus Quest Zero's look ahead's rest told before the prompt at the turns pace (lock2's, 2026-11-25: the user's Ti4): dq0lookfar's game at the turns pace, typed once; the look at once's rest, its chunk grown for it, in the look's own answer with its lead-in (\"Peering on, ...\"), never after the prompt; each look's first letter and longest pause held to D17. " : '') + 'Dingus Quest Zero\'s look one way into new ground (the delays\' round, 2026-11-05): the first look ahead makes only the chunks the eyes reach past a glance\'s: none with a wall in the way (seed 3\'s five before, 78.5M cycles), the map drawn with the maker first (16.3M before), a row at a time (2026-11-17), a chunk the line ahead does reach made ahead of the eyes as the character listens (2026-11-17), and a look into a chunk not made typed the moment the character\'s there, the chunk grown for it; the user\'s D17 targets (each first letter within 720,000 cycles, a look\'s and the map\'s words with no pause longer than 1.79M), the game typed three times at different moments, the median of the three held; and once at the menacing pace, and once as the game is played (without the tests\' switches), each held',
     init: 't_rc', cycles: 4400e6,
     machine: { input: typed.map(([l, w]) => '\u0101' + '\u0100'.repeat(w) + l + '\r').join('') },
     expect: ['% echo $status'],
@@ -160,12 +165,16 @@ function dq0LookFarTest() {
       // nothing told contradicted, the rest's own words only what's new, in this dark passage none)
       const sofar = (m.out.match(/feet of it so far\./g) || []).length;
       notes.push('the way on told "so far" ' + sofar + ' times');
-      if (sofar < games.length) f.push('the look across\'s way on to a chunk not made not told "so far" in each typing (' + sofar + ')');
+      if (!turns && sofar < games.length) f.push('the look across\'s way on to a chunk not made not told "so far" in each typing (' + sofar + ')');
       // (The look at once's rest, its light poked further, told after the prompt with its lead-in, "Peering on, down the
       // passage ...": the user's, 2026-11-19, L8; never its sentence without it)
       const p = dq0Prose(out), on = (p.match(/> Peering on, (down|through) /g) || []).length, bare = (p.match(/> Down the passage ahead you see \d+ feet of it\./g) || []).length;
       notes.push('the rest told with its lead-in ' + on + ' times, without it ' + bare);
-      if (!on || bare) f.push('the look\'s rest: with its lead-in ' + on + ' times, without it ' + bare);
+      if (turns) {                             // (Ti4: in the look's own answer, before the prompt; none after it)
+        const inside = (p.match(/[^>] Peering on, (down|through) /g) || []).length;
+        notes.push("the rest told in the look's answer " + inside + ' times');
+        if (on || bare || !inside) f.push("the look's rest at the turns pace: in its answer " + inside + ' times, after the prompt ' + (on + bare) + ' (Ti4: before the prompt)');
+      } else if (!on || bare) f.push('the look\'s rest: with its lead-in ' + on + ' times, without it ' + bare);
       // (Each typing's answers, by its game's place among those typed; its chunks made by the Enters' cycles, each command's
       // the next typed with its words, the game's quit after its last)
       const runs = games.map((x, g) => {
@@ -178,6 +187,7 @@ function dq0LookFarTest() {
         const before = grew(this.grown, at(4), at(5)), by1 = by(at(5), at(6));   // (Grown ahead as it listened; grown for the look's asking)
         notes.push('typing ' + (g + 1) + ': chunks made by the first look ahead ' + ahead + '; put: ' + JSON.stringify(this.put[g] || null) + '; chunks grown as it listened ' +
           before + ' (ahead of its eyes); chunks made by the look across ' + across + ', grown by it ' + by1.length + (by1.length ? ' (' + by1.join(' ') + ')' : ''));
+        if (turns) return r;                   // (The turns pace: its chunks made as its looks need them, the rest's in the answer)
         if (ahead) f.push('typing ' + (g + 1) + ': the first look ahead, a wall in the way, made ' + ahead + ' chunks');
         if (!this.put[g]) f.push('typing ' + (g + 1) + ': no straight run to a chunk\'s edge in the scene');
         else if (!before || by1.includes(this.put[g].to)) f.push('typing ' + (g + 1) + ': the chunk on the line ahead, ' + this.put[g].to + ', not made ahead as the character listened (grown then ' + before + ', by the look ' + by1.join(' ') + ')');
@@ -747,6 +757,7 @@ module.exports = {
       sdcard: true
     },
     dq0LookFarTest(),
+    dq0LookFarTest(true),
     dq0LookNearTest(),
     dq0AskHeldTest(),
     dq0RestBusyTest(),

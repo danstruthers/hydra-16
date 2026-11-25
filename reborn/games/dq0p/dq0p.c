@@ -384,7 +384,8 @@ static void look_rest (void)
     rcy = HUB->way_want.cy;
     v_way = 1;
     pc ();
-    if (rest_ok && (HUB->ui_cmd | HUB->ui_keys)) {
+    if (rest_ok && HUB->tpr && (HUB->ui_cmd | HUB->ui_keys)) {   /* (At the real paces; the turns pace's told now
+                                                **   whatever the keys, the look's own answer: the user's Ti4, 2026-11-25) */
         HUB->way_want.st = WW_MADE;             /* (A line being typed, or its command in hand: its rest asked again
                                                 **   as nothing's in hand, the world's look_due) */
         return;
