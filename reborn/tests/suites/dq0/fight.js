@@ -2142,7 +2142,10 @@ module.exports = {
       start(m) {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
-        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })));   // (A rat put before the character, hostile and fighting it, as the first command's typed)
+        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true,   // (A rat put before the character, hostile and fighting it, as the first command's typed)
+          rig: [{ kind: 'ATTACK', actor: -1, faces: [] }, { kind: 'ATTACK', faces: [99, 1] }] })));   // (The rats' bites a marginal failure
+        //   met by a marginal success, dodged, dice2; the character's blows as the keys have them: at the menacing pace a run of
+        //   bites felled the character, its shock rolls an hour's, and the played game's start ran out of the test's cycles)
         dq0FightPause(m);                       // (A player's pause before a line typed in the fight: the user's T3, 2026-11-22)
       },
       expect: ['% echo $status'],
