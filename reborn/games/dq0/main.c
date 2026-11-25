@@ -3244,7 +3244,10 @@ int main (int argc, char* argv[])
                                                 **   told as the last went begun again, s_noise_told's; not a soft
                                                 **   question's answer, its task the same, its sounds "again") */
             }
-            if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
+            if (l && busy && !out_told && (held = !k || (k = at_once (l)) != 1)) {
+                                                /* (Senseless, a line out_line let by (the quit, help) not held for
+                                                **   the character: it may lie an hour, busy at the fight it fell in;
+                                                **   the quit taken, whatever, the user's, 2026-11-13: fix2, 2026-11-25) */
                 if ((took = k >= 2) != 0) {
                     hub_map (0);
                     if (k == 3 && reach >= 5 && (!HUB->pc_task.kind || HUB->pc_task.kind == LT_FIGHT)) {
