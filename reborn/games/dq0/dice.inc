@@ -32,8 +32,21 @@
 .ifdef DICE_OVL
             .code
 _dice_key:  jsr         ovcall              ; (Its stub, ovcall's: the overlay, the function)
+.ifdef OVSTOV
+            .byte       <ovstubs            ; (dq0harn's 4-byte stubs, fix2's: its number, the overlay and the
+            .pushseg                        ;   function in the tables, as bank.s's OVFN; parts.js counts it)
+            .segment    "OVSTO"
+            .byte       DICE_OVL
+            .segment    "OVSTL"
+            .byte       <dice_entry
+            .segment    "OVSTH"
+            .byte       >dice_entry
+            .popseg
+ovstubs     .set        ovstubs + 1
+.else
             .byte       DICE_OVL
             .addr       dice_entry
+.endif
 
 ; .A = byte .Y of ptr1, the hub's (its bank sreg: the one the stub found there, ovstk's top), the window put back
 dk_rd:      ldx         BANKREG

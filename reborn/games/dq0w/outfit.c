@@ -106,8 +106,6 @@ static unsigned char __fastcall__ skills (unsigned char from, unsigned char want
 ** (read the first time), the draw begun (ost's state but a denizen's, the list empty): 1, or 0 (none, or not this
 ** version's: closed) */
 static int ofd = -1;
-static unsigned char of_out = 1;                /* (The file not read into its banks yet, OF_BANK's: the main RAM's DATA,
-                                                **   as ofd, not the part's own zeros) */
 static unsigned char opened (void)
 {
     unsigned char k;
@@ -124,6 +122,13 @@ static unsigned char opened (void)
         if ((ofd = open (b, O_RDONLY)) < 0) {
             return 0;
         }
+        for (k = 0; k < 2; ++k) {               /* (The file whole into its two banks as it's opened: as the game
+                                                **   begins (outfits_in); each section then read from them, part
+                                                **   outdraw's, not the card, fix2, 2026-11-24) */
+            hy_bank (OF_BANK (k));
+            read (ofd, (void*) 0x8000, 0x2000);
+        }
+        hub_map (0);
     }
     ost.fd = ofd;
     hub_map (CAT_BANK);                         /* (Its index into the catalogue's bank, the first time) */
@@ -144,25 +149,8 @@ static unsigned char opened (void)
         ofd = -1;
         return 0;
     }
-    if (of_out) {                               /* (The file whole into its two banks, the first time: as the game
-                                                **   begins, the character's outfit's; each section then read from
-                                                **   them, part outdraw's, fix2, 2026-11-24) */
-        lseek (ofd, 0, SEEK_SET);
-        for (k = 0; k < 2; ++k) {
-            hy_bank (OF_BANK (k));
-            read (ofd, (void*) 0x8000, 0x2000);
-        }
-        of_out = 0;
-    }
     hub_map (0);
     return 1;
-}
-
-/* The outfits' file opened and read into its banks as the game begins (the start's own work, dq0w.c's: a game
-** carried on draws no outfit of the character's, so its first denizen's kit read the file whole behind a command) */
-void s_outfits_in (void)
-{
-    opened ();
 }
 
 /* ---- A denizen's things (I_KIT's: ost's did, hx, hy, hsn, fac), each section m's a asks drawn by its kind (the
@@ -179,6 +167,15 @@ void __fastcall__ s_den_kit (const struct msg* m)
     unsigned char k, r;
     struct room* q;
 
+    if (!m) {                                   /* (0: the file opened and read into its banks, if the start's outfit
+                                                **   didn't: dq0w.c's start, a game carried on drawing no outfit of the
+                                                **   character's, its first denizen's kit read it whole behind a command,
+                                                **   fix2, 2026-11-24) */
+        if (ofd < 0) {
+            opened ();
+        }
+        return;
+    }
     if (!opened ()) {
         return;
     }

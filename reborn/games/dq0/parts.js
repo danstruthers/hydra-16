@@ -432,8 +432,9 @@ function make({ dir, objdir, compiled, own, sizes }) {
     if (new RegExp('^\\s*' + s + ':', 'm').test(text)) sizes.set(s, stubs.length);   //   its bank's own: room7, 2026-11-23)
   const bank = own.find(f => path.basename(f) === 'bank.s');   // (Its overlays' stubs, if its bank.s has OVFN: ovfn.inc)
   const ovs = bank && /^\.macro\s+OVFN\b/m.test(fs.readFileSync(bank, 'latin1')) ? ovstubs(text, compiled, own) : null;
+  const dice = ovs && /^DICE_OVL\s*=/m.test(fs.readFileSync(bank, 'latin1')) ? 1 : 0;   // (dice.inc's stub, by hand, in them too)
   if (sizes && ovs) for (const s of ['OVSTO', 'OVSTL', 'OVSTH'])   // (The overlays' stubs' tables, a byte a stub each,
-    if (new RegExp('^\\s*' + s + ':', 'm').test(text)) sizes.set(s, ovs.length);   //   bank.s's ovcall's: dq0harn's, fix2)
+    if (new RegExp('^\\s*' + s + ':', 'm').test(text)) sizes.set(s, ovs.length + dice);   //   bank.s's ovcall's: dq0harn's, fix2)
   const placed = sizes ? spread(text, list, sizes, src) : banks(text, list, new Map(), src);
   const put = { ...list, parts: list.parts.map(p => ({ ...p, ov: placed.at.get(p.n) })) };
   fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, put, stubs));
