@@ -36,16 +36,7 @@ merged:
 ## The rule-level questions
 
 - Q1-Q4 were answered on 2026-11-24 (DECISIONS.md, "The rule-level round"); their rules are in WORLD-MODEL.md (P6, S1, section 7).
-- **Q5. Tuning by play** (old U2, U3; difficulty and balance).
-  - **Proposed rule:** a number the book doesn't give is a realistic house figure, marked tunable, which the engineer
-    sets now (AGENTS.md's Scope). The user tunes them later, by play:
-    - each occupation's worth in the game, not only its points (U2);
-    - how far each sound carries and how well each actor hears, by ear, once the real environmental sounds are in (U3).
-  - **It settles:** U2 and U3. Till then the house figures that ASSUMED.md lets stand (D5's, H18's, R2's, R5's) are
-    the stand-ins.
-  - **The question:** is that the rule? And for U2: should each occupation be evened out to the same worth in play, or
-    left as the book makes them?
-  - Sources: HOUSE.md:4287-4292; DECISIONS.md:526, 729; SOUND.md:128.
+- Q5 was answered on 2026-11-25 (DECISIONS.md, "The second rule-level round"); its rule is in WORLD-MODEL.md's P1. No rule-level question is open.
 
 ## Engineering backlog
 

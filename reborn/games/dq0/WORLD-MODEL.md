@@ -8,7 +8,7 @@ The numbers in brackets are lines of DECISIONS.md, where the user's own words ar
 
 ## 0. Precedence (when rules conflict, the earlier wins)
 
-- **P1. Realism first.** The world behaves as a real, Harn-like, 12th-century world would (44, 1609). Where HarnMaster 3.5 speaks, the book rules. Where it is silent, the house rule is what the real world would do, not what is cheapest to build.
+- **P1. Realism first.** The world behaves as a real, Harn-like, 12th-century world would (44, 1609). Where HarnMaster 3.5 speaks, the book rules. Where it is silent, the house rule is what the real world would do, not what is cheapest to build. A number the book doesn't give is a realistic house figure, marked tunable, which the user tunes later by play (2566). The occupations are as the book makes them, not evened out (2568).
 - **P2. One path.** Every actor, the character included, is a body that acts on the world by the same rules and the same code (2309). Actors differ only in their data: sheet, species, body, kit and mind. An asymmetry between the character and a creature is a bug, never a question.
 - **P3. Generalize.** A rule stated for one case holds for every case of the same class (476). Apply it to the class.
 - **P4. Verbs do what they say.** Every verb attempts a meaningful action in the world (1911). "Wear" takes only what can be worn.
@@ -83,6 +83,7 @@ The numbers in brackets are lines of DECISIONS.md, where the user's own words ar
 - **Ti1. One clock.** Every act takes the act table's time, whoever acts. Typing costs nobody time; an actor behind the clock catches up in full (2242, 2437).
 - **Ti2. Long tasks are one system** for every actor. They can be broken off by "stop", or by the world (476, 2347).
 - **Ti3. The save is the whole state.** Whatever is in force survives a save and load.
+- **Ti4. The turns pace is real time free.** At the turns pace nothing the player sees depends on how fast they type: a look ahead's rest is told before the prompt, its first words at once (2563).
 
 ## 6. Actions
 

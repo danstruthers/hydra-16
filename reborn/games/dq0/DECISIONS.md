@@ -2557,3 +2557,12 @@ After OPEN.md was triaged against WORLD-MODEL.md (docs2), the user answered its 
 - **Sight's detail falls with distance and light** (Q4, old U1): first movement, then a shape, then a kind, then who
   it is. The look and the minds name only what is made out, for every looker. Built after the one-path rewrite gives
   every looker one sense code; till then a look one way reaches 31 squares at most.
+
+## The second rule-level round: the user's answers (2026-11-25)
+
+- **At the turns pace, a look ahead's rest is told before the prompt** (lock2's open question 1): the look's answer
+  waits for the far ground to be made and tells it all before the prompt comes back. The first words still come at
+  once. The real paces keep the rest asked after three seconds free.
+- **Numbers the book doesn't give are tuned by play later** (Q5, old U2 and U3): the engineer sets a realistic house
+  figure now, marked tunable; the user tunes them by playing.
+- **The occupations are left as the book makes them** (Q5, U2): not evened out to the same worth in play.
