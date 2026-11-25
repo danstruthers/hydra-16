@@ -882,10 +882,11 @@ static unsigned char __fastcall__ looked (unsigned char first)
                                                 **   the first look, drawn: how true, part portals's) */
     }
     hub_post (&HUB->look, T_SENSES);
-    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : HUB->tpr ? 16 : 4) && !HUB->quit) {  /* (Asleep meanwhile, a request rung waking it: the
+    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : 16) && !HUB->quit) {  /* (Asleep meanwhile, a request rung waking it: the
                                                 **   senses' stock, the UI's things; else sixteen ticks, the clock on from
                                                 **   the ticks gone (a tick's, a fifth of the CPU a look took from it;
-                                                **   four's, a look one way's answer the later, 2026-11-18); as
+                                                **   four's, a look one way's answer the later, 2026-11-18; at the turns
+                                                **   pace too, no clock to keep, lock4's, 2026-11-25); as
                                                 **   the game starts, no clock to keep: 2M cycles of the start's.  The
                                                 **   game ending, the senses may be gone: no reply to wait for, a look's
                                                 **   after the death's quit in the same round, the fight soak's hang) */

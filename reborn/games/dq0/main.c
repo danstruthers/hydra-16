@@ -1063,6 +1063,23 @@ void o_fore_sync (void)
         o_fore_set (fored = f);
     }
 }
+
+/* The UI's nap four times as long, nothing said (main's): while the senses work a look one way out at the real paces
+** (LK_WAY ... LK_NEAR, its near part told: not its rest's, after the prompt, a line perhaps typed meanwhile); at the turns
+** pace all the while what it set going is under way, the world's quiet not come (ui_want, w_idle: the lockstep's), its
+** rest's too, told in the answer there (Ti4).  Its events, the world's quiet and the replies ring it as ever; only the
+** keys wait the longer: each look at them the UI's loop and the console's call, some 13,000 cycles a fourth tick, a
+** sixth of the answer's CPU (lock4's, 2026-11-25) */
+unsigned char o_nap_long (void)
+{
+    unsigned char r[2], w[2];
+    unsigned t;
+
+    hub_mem (0, &t, (const void*) &HUB->tpr, 2);
+    hub_mem (0, w, (const void*) &HUB->ui_want, 2);        /* (ui_want, w_idle) */
+    hub_mem (0, r, (const void*) &HUB->look.state, 2);     /* (Its state, kind: RQH's) */
+    return (!t && w[0] != w[1]) || (r[0] == REQ_POSTED && (unsigned char) (r[1] - LK_WAY) <= LK_NEAR - LK_WAY);
+}
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -3442,9 +3459,7 @@ int main (int argc, char* argv[])
         HUB->ui_dq = (unsigned char) dplace;
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
         k = t_wrote;
-        hub_nap (k && t_haskey () ? 0 : quick && k ? (--quick, 1) : HUB->tpr && !k &&
-            HUB->look.state == REQ_POSTED && (unsigned char) (HUB->look.kind - LK_WAY) <= LK_NEAR - LK_WAY ? nap << 2 :
-            nap);  /* (Keys that came as
+        hub_nap (k && t_haskey () ? 0 : quick && k ? (--quick, 1) : !k && nap_long () ? nap << 2 : nap);  /* (Keys that came as
                                                 **   it said something,
                                                 **   a line typed as an answer or a look went out: no nap, taken at
                                                 **   once, 2026-10-30.  A fiftieth of a second: the keys looked
@@ -3465,7 +3480,8 @@ int main (int argc, char* argv[])
                                                 **   at the first prompt 823,616 cycles, dq0fightcmd's); and while the senses work a look one way
                                                 **   out, nothing said, four times the nap: their look the CPU (not its
                                                 **   rest's, after the prompt, a line perhaps typed meanwhile),
-                                                **   2026-11-18) */
+                                                **   2026-11-18; at the turns pace a command's whole answer, and its
+                                                **   rest's, lock4's: nap_long's) */
     }
     finish ();
     return 0;

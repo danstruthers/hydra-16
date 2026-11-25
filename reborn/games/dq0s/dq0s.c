@@ -604,10 +604,12 @@ int main (int argc, char* argv[])
         }
         k = tend ();
         hub_map (0);
-        if (!playing && HUB->tpr && HUB->ui_cmd) {
+        if (!playing && (HUB->tpr ? HUB->ui_cmd : HUB->ui_want != HUB->w_idle)) {
             k = 40;                             /* (Nothing playing, a command's answer in hand at the real paces:
                                                 **   looked at four times as seldom, the answer's tasks the CPU; the
-                                                **   world's events ring it, 2026-11-18) */
+                                                **   world's events ring it, 2026-11-18; at the turns pace all the while
+                                                **   what the UI set going is under way, the world's quiet not come:
+                                                **   lock4's, 2026-11-25) */
         }
         ++HUB->beat[T_SOUND];
         hy_sleep_ticks (HUB->starting ? 50 : k);    /* (Nothing to hear as the game starts: a quarter second's nap, not

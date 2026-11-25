@@ -368,6 +368,8 @@ unsigned char still_out (void);                 /* (Overlay 13's) The character 
 unsigned char line_free (void);                 /* (Overlay 13's) A line entered taken now: main's, the lockstep's */
 void fore_sync (void);                          /* (Overlay 13's) The answer's tasks in the foreground or out, as
                                                 **   a line's in hand or not (main.c's) */
+unsigned char nap_long (void);                  /* (Overlay 13's) The UI's nap four times as long: an answer's
+                                                **   CPU its tasks' (main.c's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
