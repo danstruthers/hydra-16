@@ -122,6 +122,13 @@ static unsigned char opened (void)
         if ((ofd = open (b, O_RDONLY)) < 0) {
             return 0;
         }
+        for (k = 0; k < 2; ++k) {               /* (The file whole into its two banks as it's opened: as the game
+                                                **   begins (outfits_in); each section then read from them, part
+                                                **   outdraw's, not the card, fix2, 2026-11-24) */
+            hy_bank (OF_BANK (k));
+            read (ofd, (void*) 0x8000, 0x2000);
+        }
+        hub_map (0);
     }
     ost.fd = ofd;
     hub_map (CAT_BANK);                         /* (Its index into the catalogue's bank, the first time) */
@@ -160,6 +167,15 @@ void __fastcall__ s_den_kit (const struct msg* m)
     unsigned char k, r;
     struct room* q;
 
+    if (!m) {                                   /* (0: the file opened and read into its banks, if the start's outfit
+                                                **   didn't: dq0w.c's start, a game carried on drawing no outfit of the
+                                                **   character's, its first denizen's kit read it whole behind a command,
+                                                **   fix2, 2026-11-24) */
+        if (ofd < 0) {
+            opened ();
+        }
+        return;
+    }
     if (!opened ()) {
         return;
     }

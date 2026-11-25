@@ -141,31 +141,36 @@ ovl_out:
             ldx         ovx
             rts
 
-; A stub's call (its jsr's: the overlay's number and the function's address after it): the overlay put in, its
-; function called, the bank put back, its arguments and its value as they are.  (A stub its call and its numbers, 6
-; bytes: 11 before, its own ldy, jsr ovl_in, jsr and jmp ovl_out; some 30 cycles a call more for the main RAM's
-; room, 2026-11-11: ../dq0/bank.s's)
+; A stub's call (its jsr's: its number after it): the overlay put in, its function called, the bank put back, its
+; arguments and its value as they are.  The stub's overlay and its function's address are in three tables of a byte a
+; stub (the config's segments OVSTO, OVSTL, OVSTH) in overlay OVSTOV's bank, read with it in the window: a stub 4
+; bytes, not 6, the main RAM's room (fix2, 2026-11-24: the 59 stubs 118 bytes, ovcall 7 more), some 14 cycles a call
+; more.  (6 bytes: 11 before, its own ldy, jsr ovl_in, jsr and jmp ovl_out; some 30 cycles a call more for the main
+; RAM's room, 2026-11-11: ../dq0/bank.s's)
+OVSTOV      = 9                     ; (The stubs' tables in overlay 9's bank: dq0harn.cfg's OVSTO ...)
+            .import     __OVSTO_LOAD__, __OVSTL_LOAD__, __OVSTH_LOAD__
 ovcall:
             sta         ova
             stx         ovx
-            pla                             ; (The stub's jsr: the numbers follow it)
+            pla                             ; (The stub's jsr: its number follows it)
             sta         ovip
             pla
             sta         ovip + 1
-            ldy         #2
-            lda         (ovip),y
-            sta         @go + 1
-            iny
-            lda         (ovip),y
-            sta         @go + 2
-            ldx         ovsp                ; (ovl_in's, here: the bank there kept,
+            ldx         ovsp                ; (ovl_in's, here: the bank there kept)
             lda         BANKREG
             sta         ovstk,x
             inc         ovsp
-            ldy         #1                  ;   the overlay's put in)
-            lda         (ovip),y
+            ldy         #1
+            lda         (ovip),y            ; (Its number)
             tay
-            lda         _ovbank - 1,y
+            lda         _ovbank + OVSTOV - 1    ; (The tables' bank in the window meanwhile)
+            sta         BANKREG
+            lda         __OVSTL_LOAD__,y    ; (Its function)
+            sta         @go + 1
+            lda         __OVSTH_LOAD__,y
+            sta         @go + 2
+            ldx         __OVSTO_LOAD__,y    ; (Its overlay, put in)
+            lda         _ovbank - 1,x
             sta         BANKREG
             lda         ova
             ldx         ovx
@@ -173,14 +178,26 @@ ovcall:
             jmp         ovl_out
 
 ; A stub: name() calls overlay ov's o_name(), its arguments and its value as they are (.Y isn't an argument of a
-; function that isn't variadic)
+; function that isn't variadic): its call and its number, its overlay and its function in the tables
+ovstubs     .set        0
 .macro      OVFN        name, ov
             .export     .ident(.concat("_", .string(name)))
             .import     .ident(.concat("_o_", .string(name)))
 .ident(.concat("_", .string(name))):
+.if ovstubs > 255
+            .error      "More than 256 overlay stubs: ovcall reads one page of each table"
+.endif
             jsr         ovcall
+            .byte       <ovstubs
+            .pushseg
+            .segment    "OVSTO"
             .byte       ov
-            .addr       .ident(.concat("_o_", .string(name)))
+            .segment    "OVSTL"
+            .byte       <.ident(.concat("_o_", .string(name)))
+            .segment    "OVSTH"
+            .byte       >.ident(.concat("_o_", .string(name)))
+            .popseg
+ovstubs     .set        ovstubs + 1
 .endmacro
 
 ; The overlays' functions (dq0harn.h has them with their overlays)

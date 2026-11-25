@@ -1103,9 +1103,9 @@ unsigned long heard_at;
 unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
 unsigned char heard_rel = 0xFF;
 char heard_what[20];
-static unsigned heard_sum[3];                   /* (The sounds told as the character's busy, each its words' sum, and */
-static unsigned char heard_rep;                 /*   how far told: two bits a sound, 1 once, 2 again and again; 0 at
-                                                **   its command's end: s_noise_told's, nothing told twice) */
+static unsigned heard_sum[3];                   /* (The sounds told since the last line was typed, each its words' sum, */
+static unsigned char heard_rep;                 /*   and how far told: two bits a sound, 1 once, 2 again and again; 0
+                                                **   as a line's typed: s_noise_told's, nothing told twice) */
 
 
 /* The character senseless still as event m came (the user's, 2026-11-14: a knocked-out character senses nothing): out_told
@@ -1162,11 +1162,12 @@ static void heard (void)
 static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
-    static unsigned char given;
+    static unsigned char given, said0;
     unsigned char k, n = 0;
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
+        said0 = saidc;
         numb (&m);                              /* (Come round by it, or senseless still: out_told) */
         given = !m.who && (busy | owed) && (m.kind != E_VIEW || E_VIEW_WHY (m) != V_STIR);   /* (The character's news:
                                                 **   a command's answer begun, its intent out; not a denizen stirring,
@@ -1179,7 +1180,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = step_k = journeyed = heard_rep = 0;
+                busy = step_k = journeyed = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
@@ -1336,11 +1337,14 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         }
-        if (given) {
+        if (given && (saidc != said0 || m.kind == E_READY || !took)) {
             hub_map (0);
             HUB->ui_cmd = owed = 0;             /* (Its answer given: as its words are told, not before, the world's
                                                 **   held jobs (the denizens' intents, part den_bodies) not let in beside the
-                                                **   telling, the menacing sit's 2026-11-19) */
+                                                **   telling, the menacing sit's 2026-11-19; a line that took a fight's
+                                                **   round over (took), an event of the character's that tells nothing (a
+                                                **   fight-back begun, a beat) not its answer, its round's blow to come
+                                                **   still: dq0fightcmd's wait, fix2, 2026-11-24) */
         }
     }
     return n;
@@ -3235,7 +3239,15 @@ int main (int argc, char* argv[])
                 }
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
-            if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
+            if (l && !held) {
+                heard_rep = 0;                  /* (A command typed, not held for the character before: the sounds
+                                                **   told as the last went begun again, s_noise_told's; not a soft
+                                                **   question's answer, its task the same, its sounds "again") */
+            }
+            if (l && busy && !out_told && (held = !k || (k = at_once (l)) != 1)) {
+                                                /* (Senseless, a line out_line let by (the quit, help) not held for
+                                                **   the character: it may lie an hour, busy at the fight it fell in;
+                                                **   the quit taken, whatever, the user's, 2026-11-13: fix2, 2026-11-25) */
                 if ((took = k >= 2) != 0) {
                     hub_map (0);
                     if (k == 3 && reach >= 5 && (!HUB->pc_task.kind || HUB->pc_task.kind == LT_FIGHT)) {
@@ -3253,7 +3265,13 @@ int main (int argc, char* argv[])
                                                 **   first, a flight held past the next line: reach1's, 2026-11-20) */
                     }
                 }
-                HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
+                HUB->ui_cmd = took != 0;        /* (Held: the next waits for the character, not parsed again.  One
+                                                **   that takes its task over (took) a command in hand all the same
+                                                **   till the character's news comes (events' given): the round it's
+                                                **   behind given way to by the world's jobs, the denizens' intents,
+                                                **   the minds, the senses and the maker, as a line typed with the
+                                                **   character free is (gw.s's); its first letter was the whole
+                                                **   round's and the background's, 1M cycles, dq0fightcmd, fix2) */
                 l = 0;
             }
         } else {
@@ -3449,10 +3467,12 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
         }
     }
     heard_words (d | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
-    if (busy && (p = strrchr (lb, '.')) != 0) { /* (The same sound again as the character's busy at one command: told
-                                                **   once, then "again", then "again and again", then no more till the
-                                                **   command's done; the 240 squeaks of a two hours' sleep three
-                                                **   sentences, nothing told twice: WORLD-MODEL.md's 7) */
+    if ((p = strrchr (lb, '.')) != 0) {         /* (The same sound again between one line typed and the next, busy at
+                                                **   its command or idle after it: told once, then "again", then
+                                                **   "again and again", then no more till a line's typed; the 240
+                                                **   squeaks of a two hours' sleep three sentences, a rat squeaking
+                                                **   as the character stands idle the same, nothing told twice:
+                                                **   WORLD-MODEL.md's 7; as it was busy alone till fix2, 2026-11-24) */
         for (s = 0, q = lb; *q; ++q) {
             s = (s << 1 | s >> 15) ^ (unsigned char) *q;
         }

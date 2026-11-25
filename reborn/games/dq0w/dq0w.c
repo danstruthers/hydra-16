@@ -102,6 +102,7 @@ unsigned char toward_middle (void);            /* Part dungeon_begin */
 void __fastcall__ across (unsigned char h, unsigned char r);   /* Part across */
 void __fastcall__ intent_more (struct msg* m);  /* Part intent_more */
 void __fastcall__ intent_few (struct msg* m);   /* Part intent_few */
+void __fastcall__ den_kit (const struct msg* m);    /* Part outfit's: 0, the outfits' file opened and read in (outfit.c) */
 unsigned char tripped (void);                   /* Part dark_way */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part dark_end */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part bearings */
@@ -3494,6 +3495,8 @@ void __fastcall__ s_start (const char* dir)
     hub_map (0);
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     s_begin ();
+    den_kit (0);                                /* (The outfits' file into its banks, if the start's own outfit didn't
+                                                **   open it: part outfit's, fix2, 2026-11-24) */
     tr_flush (0);                               /* (The traces' store begun as the game starts, not at its first flush:
                                                 **   its two banks cleared, its kinds read, some 1.2M cycles, a command's
                                                 **   answer kept waiting behind it, 2026-10-27: dq0answer's normal pace,
@@ -7290,6 +7293,13 @@ static void turn (void)
     hub_ring (T_DENIZENS);
     for (t0 = hy_ticks (); !late && BEHIND && (unsigned) (hy_ticks () - t0) < TURN_WAIT; ) {
         hub_sleep (1);                          /* (Waited for here, a tick at a time at most) */
+        if (HUB->scene != HUB->scene_w) {
+            scene ();                           /* (A test's scene posted meanwhile, its part done here as at the main
+                                                **   loop's top (no intent's body in hand), so the minds, held for it
+                                                **   till it's in place, can put theirs and take their turn: thirty
+                                                **   seconds waited, the minds late through a whole rest after, till
+                                                **   fix2, 2026-11-24: dq0sleepsenses's bandit come too late to ask) */
+        }
         if (DEN_INTENTS ()) {
             den_intents ();                     /* (Their intents carried out as they come: on its way, the wait
                                                 **   begun again, so a long turn that's going isn't left late, only a
@@ -7863,7 +7873,13 @@ int main (int argc, char* argv[])
         jobs (JOBS_EARLY);                      /* (The early jobs: the chunks stocked, the map making's, the traces',
                                                 **   the denizens' intents) */
         dj = 0;
-        while (hub_take (&m)) {
+        hub_map (0);
+        if (!uf || (HUB->ui_eq == (unsigned char) HUB->eq_head && HUB->ui_dq == (unsigned char) HUB->dq_head))
+        while (hub_take (&m)) {                    /* (A command in hand at the real paces, and news not yet seen to by the
+                                                **   UI (a round's blow it's behind): its words told first, the next
+                                                **   intent's parts not copied in beside them, ui_first's hold (GW_CMD at
+                                                **   most; ui_cmd let go as the news says something, events'); dq0fightcmd's
+                                                **   wait typed mid-round, its first letter 1M cycles, fix2, 2026-11-24) */
             tin = 1;                            /* (The line whose intent it is: a task it begins not held for it,
                                                 **   pc_held's; a task begun in the pass its line came in, 2026-11-06) */
             lsq = HUB->cq.seq;

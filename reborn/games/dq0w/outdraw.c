@@ -291,9 +291,16 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
     unsigned char k, n;
     const unsigned char* p = sec + 8;
 
-    if (!off || lseek (ost.fd, off, SEEK_SET) != (long) off || read (ost.fd, sec, ost.slen ? ost.slen : SEC_MAX) <= 8) {
+    if (!off) {
         return 0;
     }
+    for (k = 0; k < SEC_MAX; ++k, ++off) {      /* (From the file's banks, read in as it was opened: outfit.c's; not
+                                                **   the card's seek and read, some 140,000 cycles, fix2, 2026-11-24;
+                                                **   its offset the index's, in the file, 14K) */
+        hy_bank (OF_BANK (off >> 13));
+        sec[k] = *(const unsigned char*) (0x8000 | (off & 0x1FFF));
+    }
+    hub_map (0);
     ost.sflags = sec[0];
     ost.bent = sec[1];
     ost.keep = sec[2];

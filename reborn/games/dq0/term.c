@@ -361,12 +361,14 @@ void __fastcall__ o_t_status (const char* left, const char* right)
 /* ---- The story */
 
 #pragma register-vars (push, on)                /* (Its pointers in the zero page: a look's hundreds of letters) */
+unsigned char saidc;                            /* (Each say's: a count, main.c's events, words told or not) */
 void __fastcall__ say (const char* s)
 {
     register const char* p;
     register const char* w;
     static unsigned char n, c, lim;
 
+    ++saidc;
     if (names_n && (w = strchr (s, '#')) != 0 && w[1] >= '0' && w[1] <= '9') {
         s = names_say (s);                      /* (A thing the character's named, the things' mark of it: its name,
                                                 **   names.c's) */

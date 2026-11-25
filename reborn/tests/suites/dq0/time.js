@@ -923,6 +923,9 @@ module.exports = {
           // (Rigged, dice2: the ledge's climb a round without a hold first (a marginal failure), then made; the third search
           // stopped part way finding the trap it reaches, at the full chance dq0traps' whole one has)
           { g: 2, line: 'u', n: 1, rig: [{ kind: 'TEST', a: 'P_CLIMB', actor: -1, uses: 1, grade: 'fail' }, { kind: 'TEST', a: 'P_CLIMB', actor: -1, grade: 'pass' }] },
+          // (And the first two searches of each failing, fix2's: whole, nothing found, as the test has them; with the keyed
+          // dice at fix2's timing the second of game 4 found the trap)
+          ...[4, 5].map(g => ({ g, line: 'search', n: 1, rig: [{ kind: 'TEST', a: 'P_SEARCH', actor: -1, grade: 'fail' }] })),
           { g: 5, line: 'search', n: 3, rig: [{ kind: 'TEST', a: 'P_SEARCH', actor: -1, grade: 'pass' }] }]));
       },
       expect: ['% echo $status'],

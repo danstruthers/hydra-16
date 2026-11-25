@@ -211,8 +211,15 @@ void o_den_words (void)
         tell_one (&now_[i]);
     }
     if (heard) {
-        add (" ");
-        den_list (0, LF_HEARD << 8, 0, 0);      /* (" You hear something close behind you.") */
+        if (lbe - lb < sizeof lb - 40) {
+            add (" ");
+            den_list (0, LF_HEARD << 8, 0, 0);  /* (" You hear something close behind you.") */
+        } else {
+            heard = 0;                          /* (No room left in lb, a long look made whole (names given, not
+                                                **   streamed): not told here, nor kept as told, so a stir tells
+                                                **   it; it ran past lb's end till fix2, 2026-11-24, its full stop
+                                                **   on lbe and lbe's own bytes said after it: dq0sway's "you.O") */
+        }
     }
     keep (i);
 }
