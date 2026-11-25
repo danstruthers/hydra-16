@@ -5,7 +5,7 @@
 const { typed } = require('../../lib/common.js');
 const fs = require('fs');
 const path = require('path');
-const { dq0StatusRows, dq0Typed, dq0Game, DQ0_MAKE, dq0Story, dq0Prose } = require('../../lib/dq0.js');
+const { dq0StatusRows, dq0Typed, dq0Game, DQ0_MAKE, dq0Story, dq0Prose, dq0Scene } = require('../../lib/dq0.js');
 // (dq0played's lines: the play test's first game, 2026-11-16, review/play's g1.json, as typed, but its three "break the
 // door" with the lantern named, the tool the game chose for it till then: a bare "break the door" punches since the things
 // branch's nothing battered with a light, 2026-11-17, and the weak scribe's fists put it in shock before the door gives, the
@@ -205,6 +205,13 @@ module.exports = {
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 77 -u feudal -c scribe -o /ram/c.hm', lines: ['dq0 -p t -s 271828 -c /ram/c.hm',
         ...PLAYED, 'quit', 'echo $status'] })) },
+      start(m) {   // (The door's blows rigged, dice2, the play test's game kept on its way: the kick no mark and no hurt (the keyed
+        //   dice knocked the scribe senseless, its battering then too weak to break the door), the second battering with the
+        //   lantern well struck, the door broken down by it as the game broke it then)
+        dq0Scene(m, [{ g: 1, line: 'kick the door', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [99] }] },
+          { g: 1, line: 'break the door with the lantern', n: 1, rig: [] }, { g: 1, line: 'break the door with the lantern', n: 2, rig: [{ kind: 'ATTACK', actor: -1, grade: 'well' }] },
+          { g: 1, line: 'status', n: 2, rig: [] }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out), far = s.match(/ (lie|lies) \([A-Z]\) something (small|large)/g) || [];

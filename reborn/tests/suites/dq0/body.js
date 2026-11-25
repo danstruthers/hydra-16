@@ -408,7 +408,9 @@ module.exports = {
       start(m) {   // (Its water and food: a five days\' rest without them its death of thirst, slice 4.9\'s; so the scene\'s want
         // set low as each sleep\'s typed, its levels as they are at eight hours, none to rise: the wounds\' healing the test\'s)
         const want = { pcHunger: 0, pcHungerHi: 0, pcThirst: 0, pcThirstHi: 0, pcWant: 0x11 };
-        dq0Scene(m, [...Array(20).keys()].map(k => ({ g: 1, line: 'sleep', n: k + 1, hub: want })).concat([{ g: 2, line: 'sleep', n: 1, hub: want }]));
+        dq0Scene(m, [...Array(20).keys()].map(k => ({ g: 1, line: 'sleep', n: k + 1, hub: want })).concat([{ g: 2, line: 'sleep', n: 1, hub: want },
+          { g: 1, line: 'jump down', n: 1, rig: [{ kind: 'HARM', a: 'HC_FALL', uses: 1, faces: [1, 1, 92] }] }]));   // (The fall's dice rigged, dice2: 2 on
+          //   the hard floor's two d6, a mid strike's 92 the right calf: the bruise the test tends)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -439,6 +441,9 @@ module.exports = {
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
         'turn around', 'jump down', 'heal', 'status', 'heal', 'healing', 'heal my shoulder', 'quit', 'echo $status'] })) },
+      start(m) {   // (The fall's dice rigged, dice2, dq0tend's: the bruise to the right calf the test tends)
+        dq0Scene(m, [{ g: 1, line: 'jump down', n: 1, rig: [{ kind: 'HARM', a: 'HC_FALL', uses: 1, faces: [1, 1, 92] }] }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out);

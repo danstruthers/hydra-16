@@ -14,6 +14,33 @@ const {
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+// (dq0fetch's seed 21 rat won over in two coaxes, dice2: the character's P_ANIMALS tests rigged, a pass (wary to
+// indifferent) then a critical success (indifferent to allied), as the game was written for)
+const RAT_WON = [{ kind: 'TEST', a: 'P_ANIMALS', actor: -1, uses: 1, grade: 'pass' }, { kind: 'TEST', a: 'P_ANIMALS', actor: -1, uses: 1, grade: 'well' }];
+// (dq0hoard's second game's robber, dice2: the brown orc carrying its takings home (the minds' akeep AK_TAKE) found its
+// way blocked by its mates come to watch the character, and fled for good; its mates sent off, it goes home now (its
+// fled and its ready the minds' and the hub's, poked): a scene's call)
+const robberHome = m => (h, L, K, at) => {
+  const ram = dq0LaterRam(m), ad = dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'));
+  const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && (ram[ad('akeep') + j] & 0x80));
+  if (k === undefined) return;
+  dq0Alone(m, h, L, K, at, k);
+  ram[ad('fled') + k] = 0;
+  for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = h[L.hubNow + i];
+};
+// (A scene's call: the first bandit put dx, dy from the character, standing, about its business, facing face if given
+// (dq0lurk's and dq0robrest's robbers, dice2: since the minds' keyed decisions they keep to their hall, none coming to
+// sense it))
+const BANDIT_AT = (m, dx, dy, face) => (h, L, K, at, named) => {
+  const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+  if (k === undefined) return;
+  const x = (h[L.pcX] | h[L.pcX + 1] << 8) + dx, y = (h[L.pcY] | h[L.pcY + 1] << 8) + dy, o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
+  h[o + L.aX] = x & 255; h[o + L.aX + 1] = x >> 8; h[o + L.aY] = y & 255; h[o + L.aY + 1] = y >> 8; h[o + L.aSn] = h[L.pcSn];
+  h[o + L.aPos] = K.POS_STANDING; h[o + L.aDoing] = K.DO_ROAM;
+  if (face !== undefined) h[o + L.aFace] = face;
+  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = h[L.pcSn];
+  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+};
 // The world's act table's rows by name (games/dq0w/acts.txt, acts.js's read: the one-path plan's stage 1, 2026-11-19): each
 // act's time, test, noise (loud; nz the character's E_NOISE's what, de an actor's E_DEN's), the same for every actor
 const dq0Acts = () => Object.fromEntries(require(path.join(TESTS, '..', 'games', 'dq0w', 'acts.js')).read(require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load()).map(r => [r.name, r]));
@@ -231,7 +258,7 @@ module.exports = {
       name: 'dq0tunnel', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
-        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait 2 hours', 'wait', 'quit', 'echo $status'] })) },
       start(m) {
         dq0OnWords(m, [{ g: 1, line: 'wait 2 hours', n: 1, words: 'A fresh tunnel opens', text: 'stop\r' }]);   // (Stopped as it's told: 2026-11-03)
@@ -316,7 +343,7 @@ module.exports = {
       name: 'dq0mine', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's miners at their work (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 374: their home south-west of the start, a copper seam crossing their chunk eight squares east of it, rock.h's; wary; a miner digs with the pick it carries, kinds.txt's ways m, outfits.txt's [role khuzmin]), the hour 8 in the morning (dq0hour: a diurnal miner's working hours, part 9's day), the character waiting in its cell six hours, out of their sight; the portcullis on their mine's way across raised (the scene set as the first long wait's typed: its state in the chunks' cache poked; a lowered one ends a mine's way, the minds raising none yet).  At its work (by the clock, part 9's SC_WORK: never polled) a miner digs its faction's mine (dq0d's work_dig, part 15's): from its lair's home across to its region's vein (rock.h's rock_vein: a seam of ore or quartz), then along it, the open squares and doorways on it walked through, its stand the square before its first wall, rock or rubble; a spell at a time, the world's (wdig.c, I_KIT's KT_DIG, by the character's rules: its pick's rate, its Strength test by its sheet), heard (E_DEN DE_DIG, 'a scraping in rock'), each square through a passage (DE_DUG) on the mine's line (the home's row between the home and the vein, or the vein's own squares at their row), none of them hostile",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 8 >> /ram/s.sc',
-        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 374 -c /ram/c.hm -T -d /ram/g -R 1 -S /ram/s.sc',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 374 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'wait 2 hours', 'wait 2 hours', 'wait 2 hours', 'quit', 'echo $status'] })) },
       start(m) {
         const a = m.acia, read = a.read;
@@ -516,7 +543,7 @@ module.exports = {
       name: 'dq0denportc', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's portcullis worked by a denizen (2026-11-02: the minds' leftovers of Phase 3C's one path, DENIZENS.md's a portcullis and a lock, HOUSE.md's denizens and doors, for review): dq0tunnel's scene, the dwarf's tries at the portcullis not given up: kept from the character by the portcullis let down (from the character's side, its winch's), it heaves at it from the far side (E_DEN DE_HEAVES, the character's code: wwin.c's heave, P_LIFT by its sheet), and raises it (DE_RAISES) or, held twice, strains at its bars (DE_BENDS), each told seen or heard, and each heard as the character's own would be (the user's, 2026-11-17, GAME-CRITIQUE.md's 4.2: the sound task's), a portcullis raised (the world's *chains), a strain a work noise (*dig); its way there found (the minds' ways: a field made, dq0d's rb).  [dq0tunnel's what, for the scene:] Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
       init: 't_rc', cycles: 7000e6,   // (2026-11-08, one line of sight: the dwarf sees the character through the bars, heaves the portcullis up and comes at it, knocking it out: the game runs on till it comes round, 6.1G cycles; 3000e6 before)
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
-        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status'] })), ymLog: true },
       start(m) {
         m.portc = true;
@@ -926,8 +953,17 @@ module.exports = {
       name: 'dq0follow', near: ['denizens'], what: 'Dingus Quest Zero\'s following (the verbs plan\'s B6, 2026-11-10: DECISIONS.md\'s "Prayer, fasting, swimming and following"), by the words, the sway\'s replies and the character\'s squares: "follow me" an ally\'s order still (dq0fetch\'s seed 21 rat befriended twice, an ally: SW_ORDER OR_FOLLOW, SR_OK); at seed 5, "follow the sack" refused ("The sack isn\'t going anywhere."); down the ladder, "follow the rat" trails a giant rat that keeps its distance ("You follow the giant rat.", walked after it, the world\'s close-in re-aimed each time, looked round for as it goes behind), till it\'s lost ("You\'ve lost the giant rat.", "track" offered); out of reach as it begins, said so once then ("You follow the giant rat. You can\'t get near enough to the giant rat.", the user\'s, 2026-11-17: "A follow out of reach says so once, when it starts"), never again as it\'s re-aimed',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm',
-        'dq0 -p t -s 21 -c /ram/a.hm -T -R 117', 'befriend the rat', 'befriend the rat', 'follow me', 'quit',
+        'dq0 -p t -s 21 -c /ram/a.hm -T', 'befriend the rat', 'befriend the rat', 'follow me', 'quit',
         'dq0 -p t -s 5 -c /ram/a.hm -T', 'follow the sack', 'd', 'wait', 'follow the rat', 'quit', 'echo $status'] })) },
+      start(m) {
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },
+          { g: 2, line: 'follow the rat', n: 1, call: (h, L, K, at, named) => {   // (The rats near but the furthest sent off: the
+            const u16 = o => h[o] | h[o + 1] << 8, d = k => Math.max(Math.abs(u16(at(k) + L.aX) - u16(L.pcX)), Math.abs(u16(at(k) + L.aY) - u16(L.pcY)));
+            const near = [...Array(L.nactors).keys()].filter(k => named(k) === 'giant rat' && h[at(k) + L.aState] && d(k) <= 4).sort((x, y) => d(y) - d(x));
+            dq0Alone(m, h, L, K, at, [...Array(L.nactors).keys()].filter(k => k === near[0] || !near.includes(k)));
+          } }]);                                //   keyed minds put one there, and the follow's way round it turned it
+                                                //   twice, told twice, dice2; the one ahead followed as before)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), o = dq0Prose(out), f = [];
@@ -953,7 +989,9 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) {
         m.lurked = [];
-        dq0Scene(m, Array.from({ length: 12 }, (_, i) => ({ g: 1, line: 'wait', n: i + 1, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) m.lurked.push(h[at(k) + L.aState]); } })));
+        dq0Scene(m, [...Array.from({ length: 12 }, (_, i) => ({ g: 1, line: 'wait', n: i + 1, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) m.lurked.push(h[at(k) + L.aState]); } })),
+          { g: 1, line: 'wait', n: 1, call: BANDIT_AT(m, 0, 3, 0) }]);   // (A bandit in the dark passage past the cell's open door, three squares off,
+          //   facing it: BANDIT_AT's)
       },
       check(m, out) {
         const f = [];
@@ -970,7 +1008,8 @@ module.exports = {
       expect: ['% echo $status'],
       start(m) {
         const R = this.R = { hid: [], during: [] }, a = m.acia, cpu = m.cpu;
-        dq0Scene(m, [{ g: 1, line: 'wait', n: 12, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) R.hid.push(h[at(k) + L.aState]); } }]);
+        dq0Scene(m, [{ g: 1, line: 'wait', n: 12, call: (h, L, K, at) => { for (let k = 0; k < L.nactors; k++) R.hid.push(h[at(k) + L.aState]); } },
+          { g: 1, line: 'wait', n: 1, call: BANDIT_AT(m, 0, 3, 0) }]);   // (dq0lurk's bandit in the dark passage past the open door: BANDIT_AT's)
         const read = a.read;
         let cur = '', on = false, next = 0, n0 = -1;
         a.read = (r, c) => {
@@ -1015,6 +1054,10 @@ module.exports = {
         "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h -S /ram/s.sc", 'douse the torch', 'sleep', 'quit', 'echo $status']) },   // (A folder of its own: the first's a life gone on
                                                 // with, its coins gone; quit as it's asked, the fight with the robber not fought)
       expect: ['% echo $status'],
+      start(m) {                                // (A bandit put near the sleeper as it lies down, dice2: BANDIT_AT's; at seed 1 in the dark
+        dq0Scene(m, [{ g: 1, line: 'sleep', n: 1, call: BANDIT_AT(m, 0, 3), rig: [{ kind: 'TEST', a: 'P_FILCH', grade: 'well' }] },   //   passage past the open
+          { g: 2, line: 'sleep', n: 1, call: BANDIT_AT(m, 3, 1), rig: [{ kind: 'TEST', a: 'P_FILCH', grade: 'badly' }] }]);   //   door, at seed 4 across the
+      },                                        //   room; its Legerdemain rigged, unnoticed at 1, caught at 4)
       check(m, out) {
         const T = dq0Turns(m), f = [], RS_TEST = m.dq0.layout().K.RS_TEST, STEALTH = 4, FILCH = m.dq0.layout().K.P_FILCH, SOUND = 1, A = dq0Answers(out).filter(a => a.cmd === 'inventory');
         const gs = T.filter(t => /^dq0 -p t/.test(t.line)), sl = gs.map(g => T.of('sleep', g.k));
@@ -1042,6 +1085,12 @@ module.exports = {
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Foes | cultist | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc", 'douse the torch', 'sleep', 'echo $status']) },   // (Dead of it: the game over)
+      start(m) {      // (The cultists held half a minute as the torch is put out, dice2: come on the character asleep, not as it's dousing it)
+        dq0Scene(m, [{ g: 1, line: 'douse the torch', n: 1, call: (h, L, K, at) => {
+          const t = (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16) + 300;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName]) for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = t >>> (8 * i) & 255;
+        } }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], RS_ATTACK = m.dq0.layout().K.RS_ATTACK, sl = T.of('sleep'), s = dq0Prose(out);
@@ -1190,13 +1239,15 @@ module.exports = {
     {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
       init: 't_rc', cycles: 1400e6,
-      // (-R 117: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
-      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept -R 117',
+      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept',
         'persuade the rat', 'examine the rat', 'befriend the rat', 'befriend the rat', 'befriend the rat', 'name the rat grub', 'tell grub to wait', 'turn around',
-        'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept -R 117', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T -R 117', 'attack the rat',
+        'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T', 'attack the rat',
         'examine the rat', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
+      start(m) {
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },   // (Won over in two coaxes, then asked no more: RAT_WON's)
+          { g: 1, line: 'tell grub to wait', n: 1, name: 'Grub', beside: 1 }]);   // (Grub waiting north-east of it, out of its way east, dice2: come to its east side)
+      },
       check(m) {
         const T = dq0Turns(m), f = [];
         const sw = (t, want, what) => { if (!dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t.replies.filter(r => r.req === 'sway')) + ')'); };
@@ -1233,10 +1284,13 @@ module.exports = {
     {
       name: 'dq0fetch', near: ['denizens'], what: 'Dingus Quest Zero\'s errands and gifts (slice 4.8, DENIZENS.md\'s fetching and influence; HOUSE.md\'s fetching and gifts, for review): at seed 21 (dq0sway\'s game) a giant rat befriended, won over and named Grub; two rations put down and the character two squares off, turned round to see them; Grub told to fetch the rations ("tell Grub to fetch the rations": the order\'s word not the thing\'s, the parser\'s), going to fetch them, picking them up in its mouth (two pounds: a beast\'s 3 lb at most) and handing them back to the character as it waits (E_TASK TE_FETCHED, FT_TOOK then FT_GAVE; the rations the character\'s again); asked to fetch a thing it can\'t see, refused; offered the tinderbox (no food: a beast has no use for it, SR_CANT); given a ration ("give 1 ration to Grub": its worth and food, the gift taken, a lot\'s one split off, FT_GOT, the character\'s rations one fewer); told to follow at 3 squares (SR_OK)',
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T',
         'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop 2 rations', 'move east 2 squares', 'turn around', 'tell grub to fetch the rations', 'wait', 'wait',
         'inventory', 'tell grub to fetch the anvil', 'give the tinderbox to grub', 'give 1 ration to grub', 'inventory', 'tell grub to follow me at 3 squares',
         'quit', 'echo $status'] })) },
+      start(m) {
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }]);
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [];
@@ -1267,9 +1321,12 @@ module.exports = {
     {
       name: 'dq0fetchlid', near: ['denizens', 'gear'], what: 'Dingus Quest Zero\'s ally\'s errand to a chest\'s lid (the user\'s, 2026-11-16: every reader of a thing\'s place by its compartment, the errand\'s fetch among them; DECISIONS.md\'s "Compartments: the second stage"): dq0fetch\'s seed 21 rat befriended and named Grub, with a chest besides (dq0 -k): the chest set down, two rations put on its lid, the character two squares off and turned round; Grub told to fetch the rations: found where they lie (on the chest\'s lid, open to the hand, not in a thing closed), picked up and handed over (FT_TOOK, FT_GAVE), the rations the character\'s again',
       init: 't_rc', cycles: 1600e6,
-      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117 -k chest',
+      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -k chest',
         'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop the chest', 'close the chest', 'put 2 rations on the chest', 'move east 2 squares', 'turn around',
         'tell grub to fetch the rations', 'wait', 'wait', 'inventory', 'quit', 'echo $status'] })) },
+      start(m) {
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }]);
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [];
@@ -1373,7 +1430,7 @@ module.exports = {
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'mkdir /ram/h', 'echo hour 128 >> /ram/s.sc',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
         'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns -S /ram/s.sc', 'hide the crowns', 'look', 'search', 'quit',
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k crowns -R 17 -S /ram/s.sc',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k crowns -S /ram/s.sc',
         'hide the crowns', 'close the door', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'put out the torch', 'turn around', 'go left', 'hide',
         'wait', 'wait 1 minute', 'wait 1 minute', 'wait', 'quit', 'echo $status'] })) },
       start(m) {
@@ -1395,7 +1452,21 @@ module.exports = {
             if (p && p.kind === 0) S.door[g] = { x: x + i, y: y + j, sn };
           }
         };
-        const secret = g => { const d = S.door[g], p = d && dq0Portal(m, d.sn, d.x, d.y); if (p) { p.b[p.state] |= 0x20; d.made = 1; } };
+        const secret = g => {
+          const d = S.door[g], p = d && dq0Portal(m, d.sn, d.x, d.y);
+          if (!p) return;
+          p.b[p.state] |= 0x20; d.made = 1;
+          // (Its change record too, as kept once the character's shut and opened it (game 2's), dice2: else the record, the
+          // check's, said it found whatever the bandit's test (passed at -R 17: since the keyed dice, a failure))
+          const { L, K } = m.dq0.layout(), wb = m.dq0.bank(L.worldBank), per = Math.floor(0x2000 / L.chPage), u16 = (b, o) => b[o] | b[o + 1] << 8;
+          for (let q = 0; wb && q < L.ncpages; q++) {
+            const c = L.wCpage + q * L.cpSize, b = wb[c + L.cpUsed] ? m.dq0.bank(L.chBank0 + Math.floor(q / per)) : null;
+            for (let i = 0; b && i < wb[c + L.cpN]; i++) {
+              const o = (q % per) * L.chPage + i * L.chSize;
+              if (b[o + L.chLink] === K.PORTAL_STATE && b[o + L.chSn] === d.sn && u16(b, o + L.chX) === d.x && u16(b, o + L.chY) === d.y) b[o + L.chTile] |= 0x20;
+            }
+          }
+        };
         // (Game 2's: a bandit on the crowns' square, hostile, drawn on to it: where it last sensed the character, dq0denfound's)
         const searcher = (h, L, K, at, named) => {
           const H = S.hid[2];
@@ -1414,7 +1485,9 @@ module.exports = {
           ram[ad('drawn') + k] = 8; ram[ad('sres') + k] = 0; ram[ad('asrch') + k] = 0;
           ram[ad('lsx') + 2 * k] = H[0] & 255; ram[ad('lsx') + 2 * k + 1] = H[0] >> 8;
           ram[ad('lsy') + 2 * k] = H[1] & 255; ram[ad('lsy') + 2 * k + 1] = H[1] >> 8;
-          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+          const al = ((h[L.hubNow] | h[L.hubNow + 1] << 8 | h[L.hubNow + 2] << 16 | h[L.hubNow + 3] << 24) >>> 0) + 300;   // (Still a while, a
+          for (let i = 0; i < 4; i++) ram[ad('alert') + 4 * k + i] = al >>> (8 * i) & 255;   //   noise heard, dice2: so it searches there at once, not a
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;                                                //   coarse move off first, unseen, since the keyed dice)
           S.put = { k, at: [H[0], H[1]] };
           S.world = h[12 + 1];                  // (The world's task and an actor's ready's offset: its search's start, below)
           S.rd = L.aReady;
@@ -1423,6 +1496,8 @@ module.exports = {
         const ready = (h, L) => { if (S.put) { const o = L.actor + S.put.k * L.actorSize + L.aReady; S.ready.push((h[o] | h[o + 1] << 8 | h[o + 2] << 16 | h[o + 3] << 24) >>> 0); } };
         dq0Scene(m, [{ g: 1, line: 'look', n: 1, call: (h, L, K) => { scene(1)(h, L, K); secret(1); } },
           { g: 2, line: 'close the door', n: 1, call: scene(2) }, { g: 2, line: 'wait', n: 1, call: searcher },
+          { g: 2, line: 'go left', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, []) },   // (The guardroom's bandits sent off as it crosses to the
+          //   chest to hide, dice2: since the minds' keyed decisions one stood in its way, watching it)
           { g: 2, line: 'wait 1 minute', n: 1, call: ready }, { g: 2, line: 'wait 1 minute', n: 2, call: ready }, { g: 2, line: 'wait', n: 2, call: ready }]);
         // (Its search's real start and end: its ready as the world takes the search up and as it's done, the body's copy
         // (bd, bk) as its stub den_search is entered, the bandit's own, and as that call returns to its caller (its return
@@ -1502,8 +1577,12 @@ module.exports = {
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'echo hour 128 >> /ram/s.sc',
         'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns -S /ram/s.sc', 'hide the crowns', 'quit',
         "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger -S /ram/s.sc',
-        'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(20).fill('wait'), 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status'] })) },   // (Two
-                                                // minutes more: the robber carries its takings home, hidden there as it gets there, the user's C10, 2026-11-23)
+        'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(22).fill('wait'), 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status'] })) },   // (Two
+                                                // minutes more: the robber carries its takings home, hidden there as it gets there, the user's C10, 2026-11-23;
+                                                // 22 waits, 20 before dice2: the orc comes on two waits later)
+      start(m) {
+        dq0Scene(m, [{ g: 2, line: 'wait 1 minute', n: 1, call: robberHome(m) }]);   // (Its way home clear: robberHome's, dice2)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], A = dq0Acts(), { K } = m.dq0.layout();
@@ -1704,7 +1783,7 @@ module.exports = {
     },
     {
       // (Only what it's found: the user's, 2026-11-17; GAME-CRITIQUE.md's 3.1 and E4)
-      name: 'dq0denfound', outfit: true, near: ['denizens'], what: "Dingus Quest Zero's denizens taking only what they've found (the user's, 2026-11-17: \"Denizens find hidden things only by a search of their own, by skill and time, where they can see or feel the place; what they haven't found they don't take\", and follow the character's compartment rules; GAME-CRITIQUE.md's 3.1: a robber took what the character hid, through walls, in the dark), by the item store's records, the hub's dig_t (what a denizen's take saw, told its mind) and the words: at seed 1 (dq0robcoins' wary bandits, robbers by their kind; the start's cell lit by its sconce) the crowns the character hid (a minute's work, its Conceal test) at its feet, a bandit put beside it: not taken, still hidden; the crowns let fall by the door, shut, a bandit put beyond it, two squares off: not seen through the shut door (no TW_SEEN told its mind), not taken; the same with the door open: seen (TW_SEEN told its mind as its look comes due; it shuts the door, the character beyond it); the crowns put in the pouch and the pouch tied shut, the character senseless and a bandit beside it engaged: robbed, the pouch untied for them (a robbery's reach by the compartments' rules); and the crowns hidden at the start (their hiding made the easiest), the character gone through the door, shut, its torch out, hiding itself: a bandit put on the crowns' square, hostile, drawn on to where it last sensed the character there, searches it (its own search, a minute's, by its sheet: the referee's P_SEARCH, a creature's by its Dexterity; the dice's offset 17, one it passes) and finds them, taken up",
+      name: 'dq0denfound', outfit: true, near: ['denizens'], what: "Dingus Quest Zero's denizens taking only what they've found (the user's, 2026-11-17: \"Denizens find hidden things only by a search of their own, by skill and time, where they can see or feel the place; what they haven't found they don't take\", and follow the character's compartment rules; GAME-CRITIQUE.md's 3.1: a robber took what the character hid, through walls, in the dark), by the item store's records, the hub's dig_t (what a denizen's take saw, told its mind) and the words: at seed 1 (dq0robcoins' wary bandits, robbers by their kind; the start's cell lit by its sconce) the crowns the character hid (a minute's work, its Conceal test) at its feet, a bandit put beside it: not taken, still hidden; the crowns let fall by the door, shut, a bandit put beyond it, two squares off: not seen through the shut door (no TW_SEEN told its mind), not taken; the same with the door open: seen (TW_SEEN told its mind as its look comes due; it shuts the door, the character beyond it); the crowns put in the pouch and the pouch tied shut, the character senseless and a bandit beside it engaged: robbed, the pouch untied for them (a robbery's reach by the compartments' rules); and the crowns hidden at the start (their hiding made the easiest), the character gone through the door, shut, its torch out, hiding itself: a bandit put on the crowns' square, hostile, drawn on to where it last sensed the character there, searches it (its own search, a minute's, by its sheet: the referee's P_SEARCH, a creature's by its Dexterity; its test rigged a pass) and finds them, taken up",
       init: 't_rc', cycles: 6000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns -S /ram/s.sc',
@@ -1712,7 +1791,7 @@ module.exports = {
         'mkdir /ram/h', 'cp /ram/g/d1/theme.txt /ram/h/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k crowns -S /ram/s.sc', 'open the door', 'close the door', 'drop the crowns', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
         'mkdir /ram/i', 'cp /ram/g/d1/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns -S /ram/s.sc', 'close the door', 'open the door', 'drop the crowns', 'wait', 'wait', 'quit',
         'mkdir /ram/j', 'cp /ram/g/d1/theme.txt /ram/j/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/j -k crowns -S /ram/s.sc', 'put the crowns in the pouch', 'close the pouch', 'i', 'wait', 'wait', 'i', 'quit',
-        'mkdir /ram/k', 'cp /ram/g/d1/theme.txt /ram/k/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/k -k crowns -R 17 -S /ram/s.sc',
+        'mkdir /ram/k', 'cp /ram/g/d1/theme.txt /ram/k/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/k -k crowns -S /ram/s.sc',
         // (Game 5's walk on down the guardroom before the searcher's put, gw3's, 2026-11-19: with facing, a denizen turned senses
         // again, and the searcher on the crowns' square found the character in the guardroom beyond the portcullis, as it
         // would, and went for it: the character out of its senses, the search its own)
@@ -1743,7 +1822,7 @@ module.exports = {
           m.found.put[g] = put(h, L, K, at, named, u16(L.pcX) + 2 * dx, u16(L.pcY) + 2 * dy);
         };
         // (Game 5's: on the crowns' square, hostile, drawn on to it: where it last sensed the character)
-        const searcher = (h, L, K, at, named) => {
+        const searcher = (h, L, K, at, named, sc) => {
           const H = m.found.hid;
           m.found.who = [...Array(L.nactors).keys()].map(j => [named(j), h[at(j) + L.aState], h[at(j) + L.aSn]]);
           if (!H) return;
@@ -1754,6 +1833,7 @@ module.exports = {
             ram[ad('lsx') + 2 * k] = H[0] & 255; ram[ad('lsx') + 2 * k + 1] = H[0] >> 8;
             ram[ad('lsy') + 2 * k] = H[1] & 255; ram[ad('lsy') + 2 * k + 1] = H[1] >> 8;
           });
+          if (m.found.put[5]) sc.rig([{ kind: 'TEST', a: 'P_SEARCH', actor: m.found.put[5].k, grade: 'pass' }]);   // (Its search a pass, dice2: -R 17 before)
         };
         // (Game 5's: the crowns hidden at the character's feet made the easiest to find, hide 0, as it sets out)
         const easy = (h, L, K) => {
@@ -1772,7 +1852,8 @@ module.exports = {
           { g: 2, line: 'wait', n: 1, call: beyond(2) }, ...[2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: digt(2) })), { g: 2, line: 'quit', n: 1, call: digt(2) },
           { g: 3, line: 'wait', n: 1, call: beyond(3) }, { g: 3, line: 'wait', n: 2, call: digt(3) }, { g: 3, line: 'quit', n: 1, call: digt(3) },
           { g: 4, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 4, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) },
-          { g: 5, line: 'close the door', n: 1, call: easy }, { g: 5, line: 'wait', n: 1, call: searcher }]);
+          { g: 5, line: 'close the door', n: 1, call: easy }, { g: 5, line: 'go left', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, []) },   // (The
+          { g: 5, line: 'wait', n: 1, call: searcher }]);   //   guardroom's bandits sent off, the walk down it clear, as it was, dice2)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1816,7 +1897,7 @@ module.exports = {
       name: 'dq0allyportc', meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's portcullis opened by a denizen as the character's is (2026-11-17: DECISIONS.md's \"Opening a portcullis\", its open question 1: a denizen's PA_OPEN at a portcullis raised it at once, untimed), by the denizens' events and the portcullis's state: at seed 1 (dq0denportc's wary dwarf miners in their guardroom) the portcullis the character came in by let down behind it by its winch, the character a step back from it; a dwarf put before it on the winch's side, an ally sent to open it (the minds' aorder OR_OPEN, its square, an errand's: \"ask it to open the door\"): it winds the winch, its long work begun (E_DEN DE_WINDS: the world's timed raise, the character's own, half a minute), and raises it as it's asked again, its time up (DE_RAISES), the portcullis up; then follows again",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
-        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'step back', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'] })) },
       start(m) {
         m.ally = null;
@@ -1955,7 +2036,8 @@ module.exports = {
           { g: 1, line: 'wake the bandit', n: 1, name: 'bandit', set: { attitude: 0, doing: 10 }, beside: 4 },
           { g: 1, line: 'taunt the bandit', n: 1, name: 'bandit', set: { attitude: 3, doing: 1 }, beside: 4 },
           { g: 1, line: 'pretend dead', n: 1, name: 'bandit', set: { attitude: 0, doing: 1 }, beside: 4 },
-          { g: 2, line: 'knock on the north wall', n: 1, traps: { hide: 0, plates: true } }]);
+          { g: 2, line: 'knock on the north wall', n: 1, traps: { hide: 0, plates: true },
+            rig: [{ kind: 'TEST', a: 'P_NOTICE_SOUND', actor: -1, grade: 'pass' }] }]);   // (Its hearing's tests rigged, dice2: the hollow heard, the door found)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1987,8 +2069,8 @@ module.exports = {
       name: 'dq0tongue2', outfit: true, near: ['denizens'], what: "Dingus Quest Zero's tongues (the user's, 2026-11-03: \"Book, plus leaders\": HOUSE.md's words reach a creature): a hunter with Rhetoric 95: a dwarf out of its reach (SR_TONGUE), its elder not, who knows common too; with a file's language khuzdul=10, the dwarf reached, the skill through it capped at its mastery (its test's steps down to 10); and hmchar's Scribe has a language line, a hunter none",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml rhe 95 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc', 'open the door', 'south', 'wait', 'persuade the dwarf', 'quit', 'cp /ram/c.hm /ram/d.hm', 'echo language khuzdul=10 >> /ram/d.hm', 'dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/h -R 7 -S /ram/s.sc', 'open the door', 'south', 'wait', 'persuade the dwarf', 'quit',
-        'mkdir /ram/e', "echo 'faction | Hold | khuzeld | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e -R 7 -S /ram/s.sc', 'open the door', 'south', 'wait', 'persuade the dwarf elder', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', 'open the door', 'south', 'wait', 'persuade the dwarf', 'quit', 'cp /ram/c.hm /ram/d.hm', 'echo language khuzdul=10 >> /ram/d.hm', 'dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/h -S /ram/s.sc', 'open the door', 'south', 'wait', 'persuade the dwarf', 'quit',
+        'mkdir /ram/e', "echo 'faction | Hold | khuzeld | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e -S /ram/s.sc', 'open the door', 'south', 'wait', 'persuade the dwarf elder', 'quit',
         'hmchar -q -s 5 -u feudal -c scribe -o /ram/s.hm', 'cat /ram/s.hm', 'grep language /ram/c.hm', 'echo $status'] })) },
       start(m) {
         const put = (g, line) => [{ g, line, n: 1, name: line.slice(13), set: { attitude: 3, doing: 0 }, beside: 4 }];
@@ -2020,7 +2102,9 @@ module.exports = {
         'name the bandit bob', 'buy the oil from bob', 'inventory', 'drop the rope', 'sell the rope to bob', 'how much for the rope', 'inventory', 'haggle for the rope', 'inventory', 'sing to bob', 'quit', 'echo $status'] })) },
       start(m) {
         dq0Scene(m, ['inventory', 'give the bandit 8 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil', 'name the bandit bob'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }))
-          .concat(['buy the oil from bob', 'sell the rope to bob', 'how much for the rope', 'haggle for the rope', 'sing to bob'].map(line => ({ g: 1, line, n: 1, name: 'Bob', set: { attitude: line[1] === 'i' ? 3 : 4, doing: 0 }, beside: 4 }))));
+          .concat(['buy the oil from bob', 'sell the rope to bob', 'how much for the rope', 'haggle for the rope', 'sing to bob'].map(line => ({ g: 1, line, n: 1, name: 'Bob', set: { attitude: line[1] === 'i' ? 3 : 4, doing: 0 }, beside: 4,
+            call: (h, L, K, at, named) => { for (let k = 0; k < L.nactors; k++) if (named(k) === 'Bob') for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = h[L.hubNow + i]; } }))));
+        // (Bob free to act at once as each line's typed, dice2: its keyed waits had it hand the oil over a line late)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -2344,11 +2428,13 @@ module.exports = {
     {
       name: 'dq0regard', near: ['denizens'], what: 'Dingus Quest Zero\'s gifts, reputation and an ally moving aside (slice 4.8: DENIZENS.md\'s allies and influence, HOUSE.md\'s fetching, gifts and reputation, D10), scenes set by pokes: at seed 21 (dq0fetch\'s game) a giant rat won over and named Grub, the character two squares on and turned round; Grub set in its way as it steps back (the hub\'s actor\'s square, the poke\'s): the step stopped short of it (E_NOWAY, N_DEN), Grub moving aside at once, the step taken again past it; Grub set wary of the character as a ration\'s given it (the poke\'s attitude): its attitude moved by the gift (food, to a beast, the house\'s steps for its worth); set beside the character again (an ally no more, it doesn\'t follow) and given another, its faction\'s regard raised by the two (dq0d\'s head, fatt: a step for its deeds\' points, four)',
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T',
         'befriend the rat', 'befriend the rat', 'name the rat grub', 'move east 2 squares', 'turn around', 'move west 1 square', 'move west 1 square',
         'give 1 ration to grub', 'give 1 ration to grub', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },   // (Grub won over in two coaxes: RAT_WON's)
+          { g: 1, line: 'move east 2 squares', n: 1, name: 'Grub', beside: 1 }]);   // (Grub north-east of it, out of its way east, dice2: come to its east side)
         // (Its scenes: Grub put ahead of the character as the first step back's typed; set wary as the first gift's; the
         // denizens' head's factions' attitudes read as the gifts' lines and the quit are typed)
         const a = m.acia, read = a.read, self = this;
@@ -2479,7 +2565,7 @@ module.exports = {
       name: 'dq0allythrow', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's ally's thing thrown by the character's own throw (2026-11-04: Phase 3C's one path, the things' rest; DENIZENS.md's things handled): dq0denportc's scene, the portcullis let down between them: a dwarf miner made the character's ally, beyond it in its sight, brought back a thing of its own (its errand's state poked: OR_FETCH, taken up); no way nearer, it throws it (I_ROB FE_THROW: things.c's s_throw_at, its name 0; E_BEAT WB_THREW or WB_FELL, seen), the thing no more its own, lying on the character's square or by a band's end on the line",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
-        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status'] })) },
       start(m) {
         const lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
@@ -2570,8 +2656,12 @@ module.exports = {
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Tribe | rat | 0-0 | 5 | garking | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k dagger',
         'defend none', 'hold the dagger', ...Array(16).fill('wait'), 'stand up', 'open the chest', 'open the chest', 'look in the chest', 'take the dagger from the chest', 'quit',
         "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'echo hour 128 >> /ram/s.sc', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger -S /ram/s.sc',
-        'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(20).fill('wait'), 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status'] })) },   // (Two
-                                                // minutes more: the robber carries its takings home, the user's C10, 2026-11-23)
+        'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(22).fill('wait'), 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status'] })) },   // (Two
+                                                // minutes more: the robber carries its takings home, the user's C10, 2026-11-23;
+                                                // 22 waits, 20 before dice2: the orc comes on two waits later)
+      start(m) {
+        dq0Scene(m, [{ g: 2, line: 'wait 1 minute', n: 1, call: robberHome(m) }]);   // (Its way home clear: robberHome's, dice2)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], I = DQ0_I, s = dq0Story(out);
@@ -2614,16 +2704,14 @@ module.exports = {
     {
       name: 'dq0peoples', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's peoples (Phase 4: the user's answer 11, the HarnWorld Bestiary's Khuzdul, Sindarin, men and Gargun; DENIZENS.md's the peoples, HOUSE.md's for review), each in a hand-written theme's faction on the top stratum (seed 1, south of the start): dwarves wary, seen in mail and armed (\"A dwarf in mail, armed, ...\", \"Two dwarves\" (or three, as many as are told together: the dice by who asks, 2026-10-30): AG_MAIL, the plural), examined their arms and mail (outfits.txt's [role khuzwar]), deaf to the common tongue (\"doesn't speak any tongue you know\"), heard by a character who speaks khuzdul (its file's language line: the faction's tongue, factions.txt's); a tribe of brown orcs and black orcs under a king, hostile, seen armed, their own weapons made (a mankar or a mang: the catalogue's, Combat 3's (G)); elves keeping their distance (shy), a longknife at the belt and a hartbow worn; every one's sheet the referee's from its own key (RS_NEW_ACTOR answered 0: the bestiary's, beasts.c's).  The scene set (since the denizens' day, 2026-10-31: the dwarves, the brown orcs and the elves keep watches, the black orcs asleep by day): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before; and an elf put beside the character, keeping its distance, as it first waits (dq0Poke, 2026-11-01: the elves' wariness, not where a walk's beats happen to look about: the walk south, its jog told as one bend since a passage's heading, step 2 of the ways off the compass, met them at another moment)",
       init: 't_rc', cycles: 4000e6,
-      // (-R 7: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/k.hm', 'echo hour 128 >> /ram/s.sc', 'echo language khuzdul >> /ram/k.hm',
         'mkdir /ram/g', 'mkdir /ram/g2', 'mkdir /ram/h', 'mkdir /ram/e',
-        "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/g2/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc',
+        "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/g2/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'open the door', 'south', 'wait', 'examine the dwarf', 'talk to the dwarf', 'quit',
-        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/g2 -R 7 -S /ram/s.sc', 'open the door', 'south', 'wait', 'talk to the dwarf', 'quit',
-        "echo 'faction | Tribe | hyeka khanu | 0-0 | 96 | garking | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -R 7 -S /ram/s.sc',
+        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/g2 -S /ram/s.sc', 'open the door', 'south', 'wait', 'talk to the dwarf', 'quit',
+        "echo 'faction | Tribe | hyeka khanu | 0-0 | 96 | garking | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -S /ram/s.sc',
         'open the door', 'south', ...Array(8).fill('wait'), 'quit',
-        "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e -R 7 -S /ram/s.sc',
+        "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e -S /ram/s.sc',
         'open the door', 'south', 'wait', 'wait', 'examine the elf', 'quit', 'echo $status'] })) },
       start(m) {                                  // (The elves' scene set, 2026-11-01: an elf put beside the character as it waits,
         dq0Scene(m, [{ g: 4, line: 'wait', n: 1, name: 'elf', beside: 2, set: { doing: m.dq0.layout().K.DO_SHY } }]);   //   keeping its distance: their
@@ -2959,12 +3047,12 @@ module.exports = {
     },
     {
       // (Digging, every actor's: the one-path plan's stage 2, 2026-11-23, ONE-PATH.md's 2.1 and 2.7, the act audit's E1, G-13)
-      name: 'dq0digact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's digging, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, digging, 2026-11-23; the user's, 2026-11-17: \"the player and any agent's interaction with the world are handled the same, in all cases\"): the character with a pick digs the wall north of seed 374's start (\"dig north\": asked as it begins whether anything it has bites, the referee's RS_DIG_QUERY, actor 0; each spell the act table's dig row, ten minutes, its noise the row's, the referee's P_DIG test by its sheet, its rate the house's pick's by the grade, the pick worn), and dq0tunnel's dwarf miner digs round the portcullis let down (seed 1, -R 7: its own dig, the same spell, dq0w.c's dig_spell: asked as it begins, actor its own; each spell the row's ten minutes on its ready, its noise told at the row's loudness, the same test by its own sheet, the same rate by the grade for the same tool chosen by the referee among its things, its own pick worn); and a dwarf miner kept from the character by its cell's door made secret (its portal's state, PS_HIDDEN, poked; its search done already, the minds' asrch, so it's the dig that finds it) digs at the door as the wall it seems, and finds it as its facing comes off (E_DEN DE_DIGFOUND at the door, the act table's digfound row: the door no longer hidden, a find for every one, as the character's own dig finds one)",
+      name: 'dq0digact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's digging, every actor's by the same code (ONE-PATH.md's 2.1 and 2.7: the one-path plan's stage 2, digging, 2026-11-23; the user's, 2026-11-17: \"the player and any agent's interaction with the world are handled the same, in all cases\"): the character with a pick digs the wall north of seed 374's start (\"dig north\": asked as it begins whether anything it has bites, the referee's RS_DIG_QUERY, actor 0; each spell the act table's dig row, ten minutes, its noise the row's, the referee's P_DIG test by its sheet, its rate the house's pick's by the grade, the pick worn), and dq0tunnel's dwarf miner digs round the portcullis let down (seed 1: its own dig, the same spell, dq0w.c's dig_spell: asked as it begins, actor its own; each spell the row's ten minutes on its ready, its noise told at the row's loudness, the same test by its own sheet, the same rate by the grade for the same tool chosen by the referee among its things, its own pick worn); and a dwarf miner kept from the character by its cell's door made secret (its portal's state, PS_HIDDEN, poked; its search done already, the minds' asrch, so it's the dig that finds it) digs at the door as the wall it seems, and finds it as its facing comes off (E_DEN DE_DIGFOUND at the door, the act table's digfound row: the door no longer hidden, a find for every one, as the character's own dig finds one)",
       init: 't_rc', cycles: 4500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'mkdir /ram/h', 'echo hour 128 >> /ram/s.sc',
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T -S /ram/s.sc', 'dig north', 'quit',
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7 -S /ram/s.sc', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait 2 hours', 'wait', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', 'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait 2 hours', 'wait', 'quit',
         'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -S /ram/s.sc', 'open the door', 'close the door', 'wait 1 minute', 'wait 30 minutes', 'wait 30 minutes', 'look', 'quit',
         'echo $status'] })) },
       start(m) {
@@ -2978,7 +3066,10 @@ module.exports = {
           if (p) { p.b[p.state] |= 0x20; m.secret = { x, y, sn: h[L.pcSn] }; }
           ram[ad('asrch') + k] = 1;
         });
-        dq0Scene(m, [{ g: 2, line: 'wait 2 hours', n: 1, call: others }]);   // (The other miners let be: this one's the scene)
+        dq0Scene(m, [{ g: 2, line: 'wait 2 hours', n: 1, call: others },   // (The other miners let be: this one's the scene)
+          { g: 3, line: 'wait 30 minutes', n: 1, call: (h, L, K, at, named, sc) => {   // (Game 3's dwarf, come through, its blows rigged to miss
+            if (m.door && m.door !== m.g2) sc.rig([{ kind: 'ATTACK', actor: m.door.k, faces: [99, 2] }]);   //   (its d100 99, the character's 2), dice2:
+          } }]);                                                                                                //   the character alive for the look
         dq0DoorScene(m, 'wait', 'dwarf miner', (h, o, L, K) => {
           const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ad = dq0Ad(lbl), ram = dq0LaterRam(m);
           const k = (o - L.actor) / L.actorSize, f = h[L.pcFace];
@@ -3505,13 +3596,13 @@ module.exports = {
     {
       // (Things and robbery, the user's decisions of 2026-11-23: robbing one held or asleep; a filch the character's
       //   Legerdemain; one that catches it, its attitude moved by its nature)
-      name: 'dq0robheld', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's character robbing one held or asleep, as well as one senseless (the user's, 2026-11-23: DECISIONS.md's stage 2's questions, first round), a filch its Legerdemain against the victim's hearing, and one that catches it moved against it by its own nature: at seed 1 (dq0pcrob's wary bandits) a bandit put beside the character, awake and free: 'rob the bandit' refused ('isn't helpless'); the same bandit held (the world's grip and the hub's pc_grip, the character's grapple's, poked): 'rob the bandit' goes through its things (its I_ROB FE_ROBBED let through the hold, not made a try to break free), what it holds and its coins taken, each told; a bandit asleep beside it, robbed, each game its own (the character's Legerdemain 5, at two of the dice's offsets, -R 1 and 2, then 95), caught in one game at least and not in another: the character's Legerdemain (the referee's P_FILCH, actor 0) against its hearing (P_NOTICE_SOUND, its own sheet), the better caught: 'wakes as you go through their things!', its attitude two steps the worse (a bandit neither shy nor bold nor a killer: kinds.txt's ways fr), told ('They seem ... now'); else its things taken, its attitude as it was",
+      name: 'dq0robheld', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's character robbing one held or asleep, as well as one senseless (the user's, 2026-11-23: DECISIONS.md's stage 2's questions, first round), a filch its Legerdemain against the victim's hearing, and one that catches it moved against it by its own nature: at seed 1 (dq0pcrob's wary bandits) a bandit put beside the character, awake and free: 'rob the bandit' refused ('isn't helpless'); the same bandit held (the world's grip and the hub's pc_grip, the character's grapple's, poked): 'rob the bandit' goes through its things (its I_ROB FE_ROBBED let through the hold, not made a try to break free), what it holds and its coins taken, each told; a bandit asleep beside it, robbed, each game its own (the character's Legerdemain 5, twice, the first game's dice rigged to catch it, then 95), caught in one game at least and not in another: the character's Legerdemain (the referee's P_FILCH, actor 0) against its hearing (P_NOTICE_SOUND, its own sheet), the better caught: 'wakes as you go through their things!', its attitude two steps the worse (a bandit neither shy nor bold nor a killer: kinds.txt's ways fr), told ('They seem ... now'); else its things taken, its attitude as it was",
       init: 't_rc', cycles: 5000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/d.hm', 'echo ml leg 5 >> /ram/c.hm',
         'echo ml leg 95 >> /ram/d.hm', 'mkdir /ram/g', 'mkdir /ram/h1', 'mkdir /ram/h2', 'mkdir /ram/i', 'echo hour 128 >> /ram/s.sc',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", ...['h1', 'h2', 'i'].map(d => 'cp /ram/g/theme.txt /ram/' + d + '/theme.txt'),
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k sack -S /ram/s.sc", 'wait', 'rob the bandit', 'wait', 'rob the bandit', 'quit',
-        ...[1, 2].flatMap(r => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h" + r + " -k sack -S /ram/s.sc -R " + r, 'wait', 'rob the bandit', 'wait', 'quit']),
+        ...[1, 2].flatMap(r => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h" + r + " -k sack -S /ram/s.sc", 'wait', 'rob the bandit', 'wait', 'quit']),
         "dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/i -k sack -S /ram/s.sc", 'wait', 'rob the bandit', 'wait', 'quit', 'echo $status'] })) },
       start(m) {
         const S = m.prob = { k: {}, did: {} };
@@ -3536,7 +3627,9 @@ module.exports = {
         };
         const asleep = g => (h, L, K, at) => { if (S.k[g] !== undefined) { h[at(S.k[g]) + L.aDoing] = K.DO_SLEEP; far(h, L, S.k[g]); h[L.denSeq] = h[L.denSeq] + 1 & 255; } };
         dq0Scene(m, [{ g: 1, line: 'wait', n: 1, call: put(1) }, { g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g: 1, line: 'wait', n: 2, call: held },
-          ...[2, 3, 4].flatMap(g => [{ g, line: 'wait', n: 1, call: put(g) }, { g, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g, line: 'wait', n: 1, call: asleep(g) }])]);
+          ...[2, 3, 4].flatMap(g => [{ g, line: 'wait', n: 1, call: put(g) }, { g, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g, line: 'wait', n: 1, call: asleep(g) }]),
+          { g: 2, line: 'rob the bandit', n: 1, call: (h, L, K, at, named, sc) => sc.rig([{ kind: 'TEST', a: 'P_FILCH', actor: -1, uses: 1, grade: 'fail' },   // (Caught,
+            { kind: 'TEST', a: 'P_NOTICE_SOUND', actor: S.k[2], uses: 1, grade: 'pass' }]) }]);   //   dice2: its filch failed, the sleeper's hearing a pass; -R 1 and 2 before)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -4085,11 +4178,11 @@ module.exports = {
     },
     {
       // (Building, every actor's: the user's, 2026-11-23, "The character builds anywhere, with materials"; build2)
-      name: 'dq0buildact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's building, every actor's by the same code (the user's, 2026-11-23: \"The character builds anywhere, with materials\"; ONE-PATH.md's 2.7, the act audit's G-17): at seed 1 (-R 7, a theme of dwarf miners, dq0 -k hammer) the character opens its cell's door, the door broken down (its portal's state poked, PS_WRECKED); with its hammer dropped, \"hang the door\" refused (\"You have no hammer.\"); with it, the door hung again (the things' IO_BUILD, wbuild.c's: the referee's Timbercraft, P_TIMBER, actor 0, the act table's hang row's steps; its noise the row's; its time the row's ten minutes, the UI's wait; done, the door's PORTAL_STATE shut and whole, else nothing); \"wall up\" facing the door refused; turned to the cell's wall, the square ahead made a passage (poked), \"wall up\" refused for want of stones, then with rubble poked beside it walled up (P_MASONRY, the wallup row's hour, the passage a wall, the rubble's square cleared); then a dwarf miner put beyond the door broken down again, its builder's intent posted as its mind would (I_KIT KT_BUILD at the door, then at a passage beyond it with rubble beside): the same test by its own sheet at the same steps, the same time on its ready, its noise the same row's (E_DEN DE_HANGS, DE_WALLS, told seen or heard), the same effects",
+      name: 'dq0buildact', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's building, every actor's by the same code (the user's, 2026-11-23: \"The character builds anywhere, with materials\"; ONE-PATH.md's 2.7, the act audit's G-17): at seed 1 (a theme of dwarf miners, dq0 -k hammer) the character opens its cell's door, the door broken down (its portal's state poked, PS_WRECKED); with its hammer dropped, \"hang the door\" refused (\"You have no hammer.\"); with it, the door hung again (the things' IO_BUILD, wbuild.c's: the referee's Timbercraft, P_TIMBER, actor 0, the act table's hang row's steps; its noise the row's; its time the row's ten minutes, the UI's wait; done, the door's PORTAL_STATE shut and whole, else nothing); \"wall up\" facing the door refused; turned to the cell's wall, the square ahead made a passage (poked), \"wall up\" refused for want of stones, then with rubble poked beside it walled up (P_MASONRY, the wallup row's hour, the passage a wall, the rubble's square cleared); then a dwarf miner put beyond the door broken down again, its builder's intent posted as its mind would (I_KIT KT_BUILD at the door, then at a passage beyond it with rubble beside): the same test by its own sheet at the same steps, the same time on its ready, its noise the same row's (E_DEN DE_HANGS, DE_WALLS, told seen or heard), the same effects",
       init: 't_rc', cycles: 4500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k hammer -R 7 -S /ram/s.sc', 'open the door', 'wait', 'drop the hammer', 'hang the door', 'take the hammer',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k hammer -S /ram/s.sc', 'open the door', 'wait', 'drop the hammer', 'hang the door', 'take the hammer',
         'hang the door', 'wall up', 'turn left', 'wait', 'wall up', 'wait', 'wall up', 'turn right', 'wait', 'wait', 'wait', 'quit', 'echo $status'] })) },
       start(m) {
         const S = m.build = { notes: [] };

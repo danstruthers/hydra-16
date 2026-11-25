@@ -396,17 +396,19 @@ module.exports = {
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt', 'echo ml clu 60 >> /ram/c.hm',
         'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 3', 'step west', 's', 'go west', 'go west', 'douse the lit torch', ...Array(5).fill('wait 1 minute'), 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'step west', 's', 'go west', 'go west', 'douse the lit torch', ...Array(5).fill('wait 1 minute'), 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/h', 'step west', 's', 'go west', 'go west', 'douse the lit torch', ...Array(5).fill('wait 1 minute'), 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
-      // (-R 3, op2b's, 2026-11-21: the rats' store sniffs tested now, the character's sniff's test, three seconds each; at the
-      // dice as they were they came on and fought it within one minute's wait, never seen coming at a minute's end; at -R 1, 2, 4
-      // a fight scattered them or a critical failure lost one the trail)
+      // (op2b's, 2026-11-21: the rats' store sniffs tested now, the character's sniff's test, three seconds each; the first on
+      // its trail come on and fight it within one minute's wait.  Its pin, -R 3, gone with dice2's keyed dice, 2026-11-24: the
+      // rats' bites rigged to miss (their d100 a marginal failure; the character's blows as they fall), so it isn't felled (felled,
+      // they roam): the first down in the passage, the rats behind still coming on along its trail)
       start(m) {      // (The scene set, 2026-11-03: the rats put in the room and held, till it's round the corner, then on its trail)
         const hold = (h, L) => { const now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, t = now + 900; for (let k = 0; k < L.nactors; k++) { const o = L.actor + k * L.actorSize + L.aReady; if (h[L.actor + k * L.actorSize + L.aName]) { h[o] = t & 255; h[o + 1] = t >> 8 & 255; h[o + 2] = t >> 16 & 255; h[o + 3] = 0; } } };
         const room = sq => (h, L) => { const R = dq0Rec(m); let n = 0; for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) { const a = L.actor + k * L.actorSize, o = R.at(h[a + L.aDen]), [x, y] = sq[n++ & 3]; h[a + L.aX] = R.mem[o + R.X] = x & 255; h[a + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[a + L.aY] = R.mem[o + R.Y] = y & 255; h[a + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8; } h[L.denSeq] = h[L.denSeq] + 1 & 255; hold(h, L); };
         const held = g => [{ g, line: 'douse the lit torch', n: 1, call: hold }, { g, line: 's', n: 1, call: hold }, { g, line: 'go west', n: 1, call: hold }, { g, line: 'go west', n: 2, call: hold }];
         dq0Scene(m, [{ g: 1, line: 'step west', n: 1, call: room([[32722, 32721], [32722, 32722], [32721, 32721], [32721, 32722]]) }, ...held(1),     // (Beside its trail)
+          { g: 1, line: 'wait 1 minute', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [] }, { kind: 'ATTACK', faces: [99] }] },   // (Its fight's dice: above)
           { g: 2, line: 'step west', n: 1, call: room([[32719, 32721], [32720, 32721], [32719, 32722], [32720, 32722]]) }, ...held(2)]);              // (Not)
       },
       check(m) {
@@ -583,7 +585,13 @@ module.exports = {
           if (extra.attitude !== undefined) h[at(k) + L.aAttitude] = extra.attitude;
           if (extra.state) h[at(k) + L.aState] = extra.state;
         };
-        dq0Scene(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: put(0, 2) }, ...[1, 2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: put(0, n & 1 ? 1 : 2) })), ...[0, 1, 2, 3, 4, 5].map(k => ({ g: 3, line: 'drop the cask', n: 1, k, set: { attitude: 2 } })), { g: 3, line: 'attack', n: 1, call: put(0, 1, { attitude: 0 }) }, { g: 4, line: 'wait 1 minute', n: 1, call: put(0, 1, { state: 3 }) }]);
+        dq0Scene(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: put(0, 2) }, ...[1, 2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: put(0, n & 1 ? 1 : 2) })), ...[0, 1, 2, 3, 4, 5].map(k => ({ g: 3, line: 'drop the cask', n: 1, k, set: { attitude: 2 } })), { g: 3, line: 'attack', n: 1, call: put(0, 1, { attitude: 0 }) }, { g: 4, line: 'wait 1 minute', n: 1, call: put(0, 1, { state: 3 }) },
+          { g: 2, line: 'hide', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [1, 99] }, { kind: 'ATTACK', faces: [99] }] },
+          { g: 3, line: 'attack', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [99, 1] }] }]);
+        // (Its fights rigged, dice2: found, the bandits' blows missing (their d100 a marginal failure) and its own fists landing,
+        // none parried and struck back (a marginal success, the defence a marginal failure), so it lives to its status; the blow
+        // from hiding a marginal failure, the Ignore table's one die a 1: the bandit not felled, so the reply's w2 isn't its
+        // tenths out and keeps RS_ASLEEP as the check reads it)
       },
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Prose(out), STEALTH = 4, RS_TEST = m.dq0.layout().K.RS_TEST, RS_ATTACK = m.dq0.layout().K.RS_ATTACK;
@@ -1389,6 +1397,10 @@ module.exports = {
         'echo vol 1 0 0 0 0 >> /ram/t.hm', 'echo pace 4 0 5990 >> /ram/t.hm', 'dq0 -p t -s 16 -c /ram/t.hm -T', 'face east', 'force', 'e', 'quit',
         'echo vol 2 0 0 0 0 >> /ram/r.hm', 'dq0 -p t -s 16 -c /ram/r.hm -T', ...Array(61).fill('z'), 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
+      start(m) {   // (The door east forced and its blade dodged, dice2: the walks beyond it the test's, not in shock nor shut out)
+        const dodge = { kind: 'TEST', a: 'P_DODGE_HAZARD', actor: -1, grade: 'pass' };
+        dq0Scene(m, [{ g: 1, line: 'force', n: 1, rig: [dodge] }, { g: 2, line: 'force', n: 1, rig: [{ kind: 'TEST', a: 'P_FORCE', actor: -1, grade: 'pass' }, dodge] }]);
+      },
       check(m) {
         const T = dq0Turns(m), f = [], s = T.of('search for traps as I go'), e1 = T.after(s, 'e'), e2 = T.after(e1, 'e');
         if (!s.after || !(s.after.pc.watch & 1)) f.push('not searching for traps as it goes');
