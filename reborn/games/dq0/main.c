@@ -3215,9 +3215,8 @@ int main (int argc, char* argv[])
             if (!held) {
                 ntold = 0;                      /* (Its answer: no look's sentence said yet, no harm's state; a
                                                 **   line held for the character, taken again, the same answer:
-                                                **   what its task's end told meanwhile not told again; the
-                                                **   sounds told as it went begun again, s_noise_told's) */
-                harm_told = heard_rep = 0;
+                                                **   what its task's end told meanwhile not told again) */
+                harm_told = 0;
             }
             asked = 0;                          /* (Its long task, if it's one: not asked of a sound yet) */
             hub_map (0);
@@ -3235,6 +3234,11 @@ int main (int argc, char* argv[])
                     l = 0;
                 }
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
+            }
+            if (l && !held) {
+                heard_rep = 0;                  /* (A command typed, not held for the character before: the sounds
+                                                **   told as the last went begun again, s_noise_told's; not a soft
+                                                **   question's answer, its task the same, its sounds "again") */
             }
             if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
                 if ((took = k >= 2) != 0) {
