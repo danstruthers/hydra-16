@@ -168,7 +168,7 @@ void __fastcall__ xs_jump (unsigned long n);    /* (Overlay 10's: xsjump.c) The 
 void __fastcall__ rouse (harn_char* c, unsigned long* o, unsigned char i);    /* (Overlay 10's: sheet.c) A senseless
                                                 **   one's shock rolls due by now, one a round as its time comes */
 void unrouse (void);                            /* (Overlay 10's: sheet.c) The character not senseless, its rolls none:
-                                                **   a file read (load_pc's; overlay 4's room, part 1's image there) */
+                                                **   a file read (load_pc's; overlay 4's room, part sheets's image there) */
 extern unsigned long ko_at[NACTORS + 1];        /* (sheet.c's: each senseless one's fall, 0 the character, an actor's
                                                 **   entry plus 1; */
 extern unsigned ko_n[NACTORS + 1];              /*   its shock rolls since) */

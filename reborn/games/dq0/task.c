@@ -198,7 +198,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         parts_in (PO_STOP);                     /* (Asked: the rest of a list isn't its answer, and goes as a stop's does) */
     }
     switch (k) {
-    case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
+    case TE_BODY:                               /* (What time did to its body: the referee's words, part tend's; 8 dead
                                                 **   of it, slice 4.3's; then a robbery at rest, as it's up: its coins
                                                 **   gone told, TASK.coins) */
         if (!(p = body_words ()) && pursed) {
@@ -217,7 +217,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         said_s[0] = strcpy (lb + 340, DOING (named));
         break;
     case TE_IDLE:                               /* (TASK.idle: its arg 0, nothing to stop; 1, between two steps of the
-                                                **   reach, they stop, the pack's place told, part 19's; "take all"'s
+                                                **   reach, they stop, the pack's place told, part reach_steps's; "take all"'s
                                                 **   later things with them, 2026-11-06; 2, engaged, a step a round's
                                                 **   action, no long task: that step not done) */
         if (reach >= 5) {
@@ -294,7 +294,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             lb[300] = 0;
         }
         break;
-    case TE_PACKED:                             /* (The reach's: part 19's) */
+    case TE_PACKED:                             /* (The reach's: part reach_steps's) */
     case TE_FUMBLE:
     case TE_KINDLED:
         reach_said (w, named);
@@ -304,7 +304,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   2026-10-22) */
         p = w >> 8;
         if (p & LT_STEP) {
-            reach_said (w, named);              /* (A step of the reach: part 19's) */
+            reach_said (w, named);              /* (A step of the reach: part reach_steps's) */
             return 0;
         }
         if ((p == LT_FORCE || p == LT_HEAVE) && n) {    /* (What's forced or heaved at, its words obj: the piece

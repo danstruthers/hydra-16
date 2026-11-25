@@ -1,12 +1,14 @@
 # parts.txt - the senses' swapped parts (../dq0/swap.inc's: code run in the main RAM's top, a part at a time, copied
-# there from the overlay bank its image is kept in as it's called).  A line a part: its number, its overlay bank
-# (dq0p.cfg's OVn: its wish; a bank too full, the build puts it in another of its file's), what it's for.  Which
-# functions are in each is the C's (#pragma code-name "SWnCODE"); the stubs and the config's lines for them are the
-# build's (../dq0/parts.js: obj/games/dq0p/parts.inc and dq0p.cfg).
-1   1   A look's squares seen (view.c, cast.s), its walk felt
-2   2   What the character perceives made (sight.c)
-3   3   A look one way's own record, its near part's (way.c)
-4   3   What the character keeps of a look (view.c's kept: slice 4.2's)
-5   4   The sound layer's pulse (sound.c, pulse.s: slice 4.5's)
-6   4   The denizens' senses answered, the sound layer read (sense.c, sound.c)
-7   5   A look one way's near part: what its far part may see more of (dq0p.c's far_may: the main RAM's room); a look's lamps (things.c, light.c: part 1's room; part 3's, loaded again for way.c, 2026-11-18)
+# there from the overlay bank its image is kept in as it's called).  A line a part: its name (what the C's #pragma
+# code-name "SW_name_CODE" and rodata-name "SW_name_RODATA" say), the bank it wishes ("-" none, the packer's choice;
+# N dq0p.cfg's OVN; GROUP a file's banks, "rop" NAME.rop's; GROUP:N that file's Nth: a bank too full, the build puts
+# it in another of its file's), what it's for.  Its number is its place here, the build's: add a part at the end, by
+# a name of its own, and two branches' new parts merge with none renumbered (.gitattributes: a union merge).  The
+# stubs and the config's lines are the build's (../dq0/parts.js: obj/games/dq0p/parts.inc and dq0p.cfg).
+look        1      A look's squares seen (view.c, cast.s), its walk felt
+perceive    2      What the character perceives made (sight.c)
+way_record  3      A look one way's own record, its near part's (way.c)
+kept        3      What the character keeps of a look (view.c's kept: slice 4.2's)
+pulse       4      The sound layer's pulse (sound.c, pulse.s: slice 4.5's)
+den_senses  4      The denizens' senses answered, the sound layer read (sense.c, sound.c)
+way_near    5      A look one way's near part: what its far part may see more of (dq0p.c's far_may: the main RAM's room); a look's lamps (things.c, light.c: part look's room; part way_record's, loaded again for way.c, 2026-11-18)

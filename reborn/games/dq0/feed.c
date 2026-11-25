@@ -1,5 +1,5 @@
 /*
-** feed.c - (dq0, swapped part 16: swap.inc) eating and drinking, the UI's part (slice 4.9: HOUSE.md's water, hunger and
+** feed.c - (dq0, swapped part feed: swap.inc) eating and drinking, the UI's part (slice 4.9: HOUSE.md's water, hunger and
 ** thirst): "eat", "drink", the world's things asked (IO_USE, IO_FIND), the referee told (rf/want.c's)
 */
 
@@ -10,8 +10,8 @@
 #include "rs.h"
 #include "actions.h"
 
-#pragma code-name ("SW16CODE")
-#pragma rodata-name ("SW16RODATA")
+#pragma code-name ("SW_feed_CODE")
+#pragma rodata-name ("SW_feed_RODATA")
 #pragma local-strings (on)
 
 /* ---- Eating and drinking (slice 4.9: HOUSE.md's water, hunger and thirst, every ruleset's): "eat" a meal (five minutes,

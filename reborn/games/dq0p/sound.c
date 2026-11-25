@@ -6,7 +6,7 @@
 ** arrow slit; a shut door or a closed window muffling it, DOOR_SND squares more; a room's wall four a square of it,
 ** SOUND.md's; never the rock a passage is cut in), each square's
 ** byte marked SND_AIR if a shut door or a closed window was on the way (the air doesn't pass: the air layer's); worked
-** out (part 5's pulse, pulse.s's) as a denizen's senses ask and it's out of date: the character moved, the world's
+** out (part pulse's pulse, pulse.s's) as a denizen's senses ask and it's out of date: the character moved, the world's
 ** doors or squares changed (light.c's E_LIGHT), a chunk it reached not in the cache.  With it the background that
 ** masks quieter sounds, its sources in the squares it reaches: water (a well's, a cistern's: 2), wind in a shaft or at
 ** the way out (the draught's), each the less a level every four squares off, and a crowd (three or more others within
@@ -28,10 +28,10 @@ extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's b
 
 #pragma static-locals (on)
 
-void __fastcall__ pulse (unsigned char sn, unsigned x, unsigned y);    /* (Part 5's: bank.s's stub) */
-unsigned char __fastcall__ snd_mask (unsigned x, unsigned y, unsigned char k);  /* (Part 6's) */
+void __fastcall__ pulse (unsigned char sn, unsigned x, unsigned y);    /* (Part pulse's: bank.s's stub) */
+unsigned char __fastcall__ snd_mask (unsigned x, unsigned y, unsigned char k);  /* (Part den_senses's) */
 extern unsigned char bk;                        /* (Its background's kind: snd_mask's) */
-void __fastcall__ pulse_run (unsigned char* centre);                    /* (pulse.s's, part 5's) */
+void __fastcall__ pulse_run (unsigned char* centre);                    /* (pulse.s's, part pulse's) */
 void __fastcall__ fill_rect (unsigned char h);                         /* (pulse.s's: a chunk's squares into the grid) */
 extern unsigned char* fl_src;
 extern unsigned char* fl_dst;
@@ -58,7 +58,7 @@ void snd_need (void)
         sgen_ = sgen;
         gw = 0;                                 /* (Its giving way, as a look's) */
         pulse (sn, x, y);
-        sn = snd_mask (x, y, 0);                /* (Its own background: part 6's) */
+        sn = snd_mask (x, y, 0);                /* (Its own background: part den_senses's) */
         hub_map (0);
         HUB->pc_mask = sn;
         HUB->pc_bg = bk;
@@ -66,10 +66,10 @@ void snd_need (void)
     hub_map (0);
 }
 
-/* ==== Part 5: the pulse, and the layer read (swapped: a few times a minute at most; and the denizens' senses
+/* ==== Part pulse: the pulse, and the layer read (swapped: a few times a minute at most; and the denizens' senses
 ** answered, sense.c's, once a denizen's turn) */
-#pragma code-name (push, "SW6CODE")             /* (Part 6's, the layer read: with the denizens' senses, sense.c's) */
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW_den_senses_CODE")  /* (The layer read: with the denizens' senses, sense.c's) */
+#pragma rodata-name (push, "SW_den_senses_RODATA")
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -147,9 +147,9 @@ signed char __fastcall__ snd_wind (int dx, int dy)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 5: the pulse (swapped: a few times a minute at most) */
-#pragma code-name (push, "SW5CODE")
-#pragma rodata-name (push, "SW5RODATA")
+/* ==== Part pulse: the pulse (swapped: a few times a minute at most) */
+#pragma code-name (push, "SW_pulse_CODE")
+#pragma rodata-name (push, "SW_pulse_RODATA")
 
 static unsigned char asn_ = 0xFF;               /* (The stratum the draught was last worked out for) */
 

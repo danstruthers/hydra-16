@@ -1,16 +1,16 @@
 ; ****************************************************************************
 ; letter.s - (dq0w) the letters of what the character carries (hub.h's designators, the user's, 2026-11-06), in
-; assembly (the parts' room): each thing its letter as what it carries is made for the UI (part 102's, things.c's
-; ix_make), and a thing's put in the inventory's words (part 11's, things.c's contents).
+; assembly (the parts' room): each thing its letter as what it carries is made for the UI (part tell_apart's, things.c's
+; ix_make), and a thing's put in the inventory's words (part things_listed's, things.c's contents).
 ;
-;   void __fastcall__ ix_letters (unsigned* low);   (Part 102's) each of the ixl_n things in ixd (their keys: an id,
+;   void __fastcall__ ix_letters (unsigned* low);   (Part tell_apart's) each of the ixl_n things in ixd (their keys: an id,
 ;                                               or a record's number | LT_REC) its letter, into ixc's let (its place
 ;                                               in low plus 1, 0 none): its own, or by its record's number till it has
 ;                                               an id (that letter its id's now); one with none, of a ... z the first
 ;                                               free, else the one whose thing was let go of the longest ago (by low's
 ;                                               stamps after it, lowt, ixl_t now), then of aa ... az the same; each
 ;                                               carried stamped ixl_t.  The UI bank in the window (low its table)
-;   void __fastcall__ lput (unsigned key, unsigned* low);   (Part 11's) the letter of the thing whose key is key,
+;   void __fastcall__ lput (unsigned key, unsigned* low);   (Part things_listed's) the letter of the thing whose key is key,
 ;                                               "(c) ", put (tlist.s's put: the hub's header in the window after);
 ;                                               none, nothing.  The UI bank in the window
 ; ****************************************************************************
@@ -24,7 +24,7 @@
                                     ;   the build's, ../dq0/hubgen.js)
 HALF        = NLET / 2
 
-            .segment    "SW102RODATA"
+            .segment    "SW_tell_apart_RODATA"
 _ixl_n:     .res        1           ; The things
 _ixl_t:     .res        2           ; The clock's stamp
 _ixl_old:   .res        2           ; ix as it was last made (the UI bank's, its let a hint)
@@ -37,7 +37,7 @@ e:          .res        1           ; (The first of the half looked through)
 o:          .res        2           ; (The longest ago so far)
 d:          .res        2
 
-            .segment    "SW102CODE"
+            .segment    "SW_tell_apart_CODE"
 
 ; .A = the letter whose word in low (ptr1) is key, or NLET
 find:       ldy         #0
@@ -260,11 +260,11 @@ pass2:      stz         m                   ; The second pass: those with none
 @next:      inc         m
             jmp         @one
 
-            .segment    "SW11RODATA"
+            .segment    "SW_things_listed_RODATA"
 lbuf:       .res        6               ; ("(aa) ")
 lkey:       .res        2
 
-            .segment    "SW11CODE"
+            .segment    "SW_things_listed_CODE"
 
 _lput:      sta         ptr1
             stx         ptr1 + 1

@@ -1,5 +1,5 @@
 /*
-** limbs.c - (overlay 5, the referee's: called through bank.s's stubs; beside part 2's image) a body's health, limbs,
+** limbs.c - (overlay 5, the referee's: called through bank.s's stubs; beside part names's image) a body's health, limbs,
 ** conditions and getting up, any ruleset's words for them (the character's, or a creature's: its sheet's, slice
 ** 4.1b's): gear.c's once, moved here 2026-10-27 (overlay 3's room for the denizens' gear: the outfits').
 */

@@ -3,7 +3,7 @@
 ** down here, or on Y when named, a liquid poured away, a take's moment a handful; H11, 2026-11-19: "pour the water into
 ** the flask", "empty the waterskin into the flask", the liquid into the other, as far as there's room), every actor's by
 ** the same code (DECISIONS.md's one path): the things' IO_EMPTY, a denizen's I_ROB FE_EMPTY (wempty.c's s_handout's:
-** no mind posts it yet).  Swapped part 112's (dq0w.cfg's SW112: part 111's room), through its stub, pour.  Its
+** no mind posts it yet).  Swapped part pour's (dq0w.cfg's SW_pour: part empty's room), through its stub, pour.  Its
 ** locals the part's own (static, in its image): what lasts across a call to another part (pick's, bulk_of's,
 ** bulk_in's) is in the request's copy, iq, the main RAM's, as the drag's is (wdrag.c)
 */
@@ -24,12 +24,12 @@ void __fastcall__ put (const char* s);          /* (tlist.s's: its words after t
 extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
-unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's) */
-unsigned char pour_said (void);                 /* (Part 113's: wpour2.c, the act and its words) */
+unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part ui_requests's) */
+unsigned char pour_said (void);                 /* (Part pour_words's: wpour2.c, the act and its words) */
 
-#pragma code-name ("SW112CODE")
-#pragma rodata-name ("SW112RODATA")
-#pragma bss-name ("SW112RODATA")
+#pragma code-name ("SW_pour_CODE")
+#pragma rodata-name ("SW_pour_RODATA")
+#pragma bss-name ("SW_pour_RODATA")
 #pragma static-locals (on)
 
 /* A kind's name (the catalogue's) */
@@ -51,11 +51,11 @@ static const char* __fastcall__ name (unsigned char k)
 #define E_B             iq.dur_max              /*   the room they want, */
 #define E_L             iq.y                    /*   its liquid, */
 #define E_C             iq.x                    /*   what's in the other now) */
-unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: a thing let fall on a shaft's head) */
-unsigned __fastcall__ bulk_of (unsigned i);     /* (Part 10's) */
+unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part shaft's: a thing let fall on a shaft's head) */
+unsigned __fastcall__ bulk_of (unsigned i);     /* (Part things's) */
 unsigned __fastcall__ bulk_in (unsigned x);
-unsigned __fastcall__ shut_in (unsigned n);     /* (Part 106's: the closed thing it's in) */
-void __fastcall__ reach_from (unsigned n);      /* (Part 56's: its reach owed, got out first) */
+unsigned __fastcall__ shut_in (unsigned n);     /* (Part grapple's: the closed thing it's in) */
+void __fastcall__ reach_from (unsigned n);      /* (Part reach's: its reach owed, got out first) */
 extern unsigned rtime;
 extern unsigned char rsteps;
 
@@ -339,7 +339,7 @@ static unsigned char empty (void)
             }
         }
     }
-    iq.craft = k;                               /* (Done and told by part 113's: pour_said, wpour2.c) */
+    iq.craft = k;                               /* (Done and told by part pour_words's: pour_said, wpour2.c) */
     iq.quality = ky;
     iq.plural = lk;
     iq.count = lq;

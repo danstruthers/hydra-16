@@ -2,8 +2,8 @@
 ** hself.c - the body's commands and the meta commands (COMMANDS-CRITIQUE.md's §5.2, step L, stage 3: the command
 ** handlers by meaning, cmds.h): the hands and the limbs (swap hands, sit, stand, lie down, crouch), a feel about in
 ** the dark, a look about, a wait or a sleep, a long task stopped, first aid, a dig; and what's carried, the sheet and
-** the map, the time, pause and save, help, quit.  Part 2's, the commands' own: each verb's work as it was in main.c's
-** s_command (part 2's), rarer (part 24's: the dig) and words.c's more (overlay 16's: the time, first aid).
+** the map, the time, pause and save, help, quit.  Part commands's, the commands' own: each verb's work as it was in main.c's
+** s_command (part commands's), rarer (part rare_commands's: the dig) and words.c's more (overlay 16's: the time, first aid).
 */
 
 #include <string.h>
@@ -13,17 +13,17 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* H_POWERS: a spell, a talent, an invocation: refused, true to the character (2026-11-09, the user's: the refusal the
 ** row's request, A_NO_MAGIC, A_NO_PSI, A_NO_GODS: actions.c's); an invocation's names the character's deity (the
 ** referee's, RS_DESCRIBE's RD_DEITY: "" none, its form without a name).  "Heal" without the talent first aid, tend's
-** (the user's, 2026-11-17).  Part 24's, the commands seen to less often, through its stub powers (2026-11-11: part 2's
+** (the user's, 2026-11-17).  Part rare_commands's, the commands seen to less often, through its stub powers (2026-11-11: part commands's
 ** room) */
 void powers (void);
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void s_powers (void)
 {
     struct req* r;
@@ -50,21 +50,21 @@ void s_powers (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* H_PRETEND (the plan's batch B3, the minds'): dead or asleep feigned, an Acting contest (P_ACT); minds.c's, part 27 */
+/* H_PRETEND (the plan's batch B3, the minds'): dead or asleep feigned, an Acting contest (P_ACT); minds.c's, part self_verbs */
 static void do_pretend (void)
 {
     minds (H_PRETEND);
 }
 
 /* H_PRAY (the plan's batch B5, 2026-11-10): an hour's prayer to the character's deity, a Ritual test (P_RITUAL):
-** part 27's, below */
+** part self_verbs's, below */
 void pray_go (void);
 static void do_pray (void)
 {
     pray_go ();
 }
 
-/* H_FAST (B5's): a vow of fasting, eating refused for a day or till "stop" (part 27's, below) */
+/* H_FAST (B5's): a vow of fasting, eating refused for a day or till "stop" (part self_verbs's, below) */
 void fast_go (void);
 unsigned char fast_stop (void);
 static void do_fast (void)
@@ -82,10 +82,10 @@ static void do_again (void)
 }
 
 /* The last line typed that didn't say "again" (term.c's t_last) queued in its parts (parts.c's, as typed: lb keeps the
-** line being typed meanwhile), then put first, before any typed ahead; none, or no room, said so.  Part 24's (part 2's
+** line being typed meanwhile), then put first, before any typed ahead; none, or no room, said so.  Part rare_commands's (part commands's
 ** room), through its stub again_go */
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void s_again_go (void)
 {
     unsigned d = qlen, e;
@@ -113,7 +113,7 @@ void __fastcall__ s_self_do (unsigned h)
 
     switch ((unsigned char) h) {
     case H_STATUS:                              /* (The character's state: pace.c's "status", described (0); the line in
-                                                **   the main RAM, this part's own gone as part 4 comes in; "double time",
+                                                **   the main RAM, this part's own gone as part pace comes in; "double time",
                                                 **   the parser's pace alone, a jog there: the state told till 2026-11-21) */
         strcpy (lb, cmd.action == VB_SET_PACE && !cmd.obj.word[0] ? "jog" : "status");
         pace_cmd (lb);
@@ -133,7 +133,7 @@ void __fastcall__ s_self_do (unsigned h)
     case H_AGAIN:
         do_again ();
         break;
-    case H_LIMBS:                               /* (The hands' and limbs': part 11's, slice 4.1b's; the body's position,
+    case H_LIMBS:                               /* (The hands' and limbs': part news's, slice 4.1b's; the body's position,
                                                 **   slice 4.6's) */
         limbs_cmd ();
         break;
@@ -157,12 +157,12 @@ void __fastcall__ s_self_do (unsigned h)
         wait_go (cmd.action);
         break;
     case H_STOP:                                /* (The long task: "stop", "stop digging"; a fast, "stop fasting", or
-                                                **   "stop" with no long task: part 27's fast_stop) */
+                                                **   "stop" with no long task: part self_verbs's fast_stop) */
         if (!fast_stop ()) {
             intend (I_STOP, stop_kind (cmd.obj.word));
         }
         break;
-    case H_TEND:                                /* (First aid: part 12's, slice 4.3's) */
+    case H_TEND:                                /* (First aid: part tend's, slice 4.3's) */
         tend ();
         break;
     case H_DIG:                                 /* (A wall, the rock, a shaft: the world's, a heading 8 on, a diagonal
@@ -183,7 +183,7 @@ void __fastcall__ s_self_do (unsigned h)
             tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
         }
         break;
-    case H_SHEET:                               /* (The map, or the sheet: part 3's) */
+    case H_SHEET:                               /* (The map, or the sheet: part map's) */
         sheet_map (cmd.action == VB_META_MAP);
         break;
     case H_TIME:                                /* (The time it believes: time.c's, 2026-10-31) */
@@ -204,9 +204,9 @@ void __fastcall__ s_self_do (unsigned h)
 #pragma rodata-name (pop)
 
 /* ---- Prayer and fasting (the plan's batch B5, 2026-11-10: the user's; DECISIONS.md's "Prayer, fasting, swimming and
-** following"): part 27's, its own (part 2's room; the banks full: overlay 25 its image's), its stubs the build's */
-#pragma code-name (push, "SW27CODE")
-#pragma rodata-name (push, "SW27RODATA")
+** following"): part self_verbs's, its own (part commands's room; the banks full: overlay 25 its image's), its stubs the build's */
+#pragma code-name (push, "SW_self_verbs_CODE")
+#pragma rodata-name (push, "SW_self_verbs_RODATA")
 
 unsigned long fasting;                          /* (The vow's end, the clock's tenths: 0 none; feed.c's refusal.  The main
                                                 **   RAM's, not kept in a saved game) */

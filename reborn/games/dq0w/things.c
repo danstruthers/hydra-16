@@ -15,13 +15,13 @@
 ** there too (at the end, its words with it).
 **
 ** Its main RAM's code is what everything calls on (a record copied out and back, a kind's, its words put in the
-** hub's text); the rest is swapped parts' (../dq0/swap.inc, bank.s's stubs): part 10, the requests answered and a
+** hub's text); the rest is swapped parts' (../dq0/swap.inc, bank.s's stubs): part things, the requests answered and a
 ** thing handled (a thing's name matched, where it lies, whose it is: what the catalogue's bank's code calls on there,
-** through its stubs); part 11, what's carried listed, a tool's wear (those two called from the main RAM at once,
-** not through part 10's serve: an inventory's, a dig's every spell's), a search, a thing described; part 13 the
+** through its stubs); part things_listed, what's carried listed, a tool's wear (those two called from the main RAM at once,
+** not through part things's serve: an inventory's, a dig's every spell's), a search, a thing described; part item_store the
 ** rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains put down, a thing
-** hidden), and a thing made its own (the kit's ten, the things a look saw); part 17 the store's paging (ipage.c:
-** its chunks' things read in, put out; begun, kept); part 27 (dq0w.c's, the lights burning: its room) a light renewed.
+** hidden), and a thing made its own (the kit's ten, the things a look saw); part item_pages the store's paging (ipage.c:
+** its chunks' things read in, put out; begun, kept); part burning (dq0w.c's, the lights burning: its room) a light renewed.
 */
 
 #include <fcntl.h>
@@ -45,8 +45,8 @@
 /* ---- The swapped parts' stubs (bank.s's: ../dq0/swap.inc, their code run in the main RAM's top, a part at a time,
 ** copied there as it's called from their bank) */
 
-void light_now (void);                          /* Part 10 */
-void chart_now (void);                          /* Part 26 */
+void light_now (void);                          /* Part serve */
+void chart_now (void);                          /* Part item_store */
 unsigned char __fastcall__ named (const char* k, const char* w);
 unsigned char __fastcall__ on_pc (unsigned i);
 unsigned char __fastcall__ in_reach (unsigned n);
@@ -56,44 +56,44 @@ unsigned __fastcall__ bulk_in (unsigned x);
 unsigned __fastcall__ bulk_of (unsigned i);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
 void about (void);
-void list (void);                               /* Part 11 */
-void inventory (void);                          /* Part 105 */
+void list (void);                               /* Part things_listed */
+void inventory (void);                          /* Part inventory */
 void __fastcall__ wear (const char* key, unsigned char by);
-unsigned char search (void);                    /* Part 46 */
+unsigned char search (void);                    /* Part seek */
 unsigned char seek (void);
-void __fastcall__ thing_words (const struct item* q);   /* (Part 11's) */
+void __fastcall__ thing_words (const struct item* q);   /* (Part things_listed's) */
 unsigned char __fastcall__ hide (const char* name);
-void __fastcall__ make_own (unsigned i);         /* Part 13 */
-void kit (void);                                /* Part 63 (part 13's till 2026-10-28) */
+void __fastcall__ make_own (unsigned i);         /* Part item_store */
+void kit (void);                                /* Part kit (part item_store's till 2026-10-28) */
 void theme_kinds (void);
-unsigned __fastcall__ pick (const char* name, unsigned char how);    /* Part 4 (its room): a thing of several */
+unsigned __fastcall__ pick (const char* name, unsigned char how);    /* Part ui_requests (its room): a thing of several */
 unsigned __fastcall__ at_hand (const char* name);
 unsigned __fastcall__ carried_named (const char* name);
 unsigned __fastcall__ seen_named (const char* name);
 unsigned char __fastcall__ moved (unsigned char op);
 unsigned char shut_work (void);
-unsigned char inside (void);                    /* Part 36 */
-void tools (void);                              /* Part 10 */
-unsigned __fastcall__ look_pick (void);         /* Part 4 */
-void __fastcall__ look_on (unsigned n);         /* Part 39 */
-unsigned char __fastcall__ describe (const char* name);    /* Part 40 */
-unsigned __fastcall__ shut_in (unsigned n);     /* Part 35 */
+unsigned char inside (void);                    /* Part inside */
+void tools (void);                              /* Part things */
+unsigned __fastcall__ look_pick (void);         /* Part ui_requests */
+void __fastcall__ look_on (unsigned n);         /* Part look_on */
+unsigned char __fastcall__ describe (const char* name);    /* Part look_more */
+unsigned __fastcall__ shut_in (unsigned n);     /* Part grapple */
 unsigned __fastcall__ s_shut_in (unsigned n);
-void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 105 */
+void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part inventory */
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k);  /*   (its own, there) */
-unsigned char bar_hand (void);                  /* Part 35 */
-unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part 48 */
+unsigned char bar_hand (void);                  /* Part inventory */
+unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part work_done */
 unsigned char swap (void);
-unsigned char gear_words (void);                /* Part 62 */
-void __fastcall__ kit_lock (unsigned b, unsigned k);   /* Part 61 */
-void __fastcall__ mix_need (unsigned i);        /* Part 64: a pile of coins's mints (2026-10-28) */
+unsigned char gear_words (void);                /* Part gear_words */
+void __fastcall__ kit_lock (unsigned b, unsigned k);   /* Part item_store */
+void __fastcall__ mix_need (unsigned i);        /* Part mints: a pile of coins's mints (2026-10-28) */
 void __fastcall__ mix_join (unsigned i, unsigned n);
-unsigned __fastcall__ join (unsigned n);    /* Part 35: a lot joined to one alike where it is (the hands' purse, part 75's) */
+unsigned __fastcall__ join (unsigned n);    /* Part by_count: a lot joined to one alike where it is (the hands' purse, part water_depth's) */
 void __fastcall__ mix_words (unsigned i);
 unsigned char __fastcall__ mix_worth (unsigned i);
-void __fastcall__ listed (unsigned n);          /* Part 11 */
-unsigned __fastcall__ purse (unsigned n);       /* Part 10: coins' purse */
-unsigned char textile (void);                   /* Part 107: a cloth torn up, washed (wcloth.c, 2026-11-10) */
+void __fastcall__ listed (unsigned n);          /* Part things_listed */
+unsigned __fastcall__ purse (unsigned n);       /* Part things: coins' purse */
+unsigned char textile (void);                   /* Part textiles: a cloth torn up, washed (wcloth.c, 2026-11-10) */
 #define HW_CARRIED      1                      /* (pick's how: carried; seen, lying about; either, as far as it sees,
                                                 **   or to hand, within reach (afar else); in win) */
 #define HW_SEEN         2
@@ -107,7 +107,7 @@ unsigned char textile (void);                   /* Part 107: a cloth torn up, wa
 
 extern const struct kind kinds[];               /* (kinds.c's: in the catalogue's bank) */
 extern const unsigned char throws[];            /* (kinds.c's: a kind's reach, thrown) */
-unsigned char __fastcall__ throw_at (const char* name);    /* Part 88 */
+unsigned char __fastcall__ throw_at (const char* name);    /* Part hub_attach */
 
 /* A buffer in the main RAM (the words said, the kit's names, the store kept a piece at a time) */
 static char tbuf[80];
@@ -191,7 +191,7 @@ unsigned char lv_c;                             /* (level_of's: the compartment 
                                                 **   reach_to's, handy's; the next's as it goes out) */
 unsigned char rs_cc;                            /* (The compartment a thing's put in, the reach's: stow's, rs_walk's) */
 unsigned char cont_c;                           /* (cont's compartment: stow's, serve's reach_to) */
-unsigned char slid;                             /* (What was on a lid slid off as it was opened: part 36's, serve's) */
+unsigned char slid;                             /* (What was on a lid slid off as it was opened: part shut_work's, serve's) */
 unsigned char lst_c = 0xFF;                     /* (listed's: the one compartment's things told, 0xFF all) */
 void cat_map (void);
 unsigned char __fastcall__ o_comp_of (unsigned k, unsigned char c);   /* (The catalogue's bank's, below) */
@@ -264,8 +264,8 @@ unsigned char __fastcall__ in_shut (unsigned i)
 ** RAM's room) */
 #define TWO(k)          ((k)->flags & K_TWO || (k)->bulk >= 20 ? 2 : 1)
 
-struct ost ost;                                 /* (The outfits' draw's state: parts 57 and 59's, outfit.h's) */
-unsigned char held_k[2], held_h[2];             /* (What the character holds: part 48's held_kinds) */
+struct ost ost;                                 /* (The outfits' draw's state: parts outfit and outdraw's, outfit.h's) */
+unsigned char held_k[2], held_h[2];             /* (What the character holds: part work_done's held_kinds) */
 
 /* The catalogue's bank in the window (bank.s's m0 ... put it back with it) */
 void cat_map (void)
@@ -280,7 +280,7 @@ static unsigned char __fastcall__ kind_flags (unsigned char k)
     return CATALOGUE[k < NK ? k : 0].flags;
 }
 
-/* The UI's request answered (serve's, part 10's; but what's carried listed, and a tool's wear, by their own part,
+/* The UI's request answered (serve's, part things's; but what's carried listed, and a tool's wear, by their own part,
 ** 11, alone: an inventory's, a dig's every spell's) */
 unsigned char things_req (void)
 {
@@ -293,11 +293,11 @@ unsigned char things_req (void)
     } else if (k == IO_LIST) {
         inventory ();
     } else if (k == IO_TOOLS) {
-        tools ();                               /* (Part 10's alone, as every thing handled tells the referee what's to
+        tools ();                               /* (Part things's alone, as every thing handled tells the referee what's to
                                                 **   hand) */
     } else if (k == IO_LOOK) {
-        look_on (look_pick ());                 /* (A thing looked at: part 4's chooser, then part 39's words, with no
-                                                **   part 10 to come back to, four swaps less before its first letter:
+        look_on (look_pick ());                 /* (A thing looked at: part ui_requests's chooser, then part look_on's words, with no
+                                                **   part things to come back to, four swaps less before its first letter:
                                                 **   the user's D17, 2026-11-03) */
         return 0;
     } else {
@@ -308,7 +308,7 @@ unsigned char things_req (void)
     return 0;
 }
 
-/* The things a look saw (the senses' record's) made their own, as the senses did as they saw them (part 11's, if
+/* The things a look saw (the senses' record's) made their own, as the senses did as they saw them (part things_listed's, if
 ** there are any) */
 void owned (void)
 {
@@ -320,7 +320,7 @@ void owned (void)
         i = SIGHT->item[k].n;
         p = item_at (i);
         if (!p->id && p->kind) {
-            make_own (i);                       /* (Part 13's copied only for one not yet its own) */
+            make_own (i);                       /* (Part item_store's copied only for one not yet its own) */
         }
     }
     hub_map (0);
@@ -333,7 +333,7 @@ extern char* tp;                                /* (tlist.s's: the text's end so
 extern char* tpe;
 extern unsigned char put_bank;
 extern char* tq;                                /* (Or into the main RAM, on to tqe: things' words compared, alike:
-                                                **   part 11's) */
+                                                **   part things_listed's) */
 extern char* tqe;
 
 static void text_new (void)
@@ -364,7 +364,7 @@ static unsigned __fastcall__ item_kind (unsigned i)
 
 
 /* ---- A thing of several (the user's, 2026-10-21: "if I have 3 sacks, and I say put the sack in the sack ..."): what
-** the chooser (part 4's pick) chooses by: the selector (the request's sel, or its osel for the other: SL_*, its n times
+** the chooser (part ui_requests's pick) chooses by: the selector (the request's sel, or its osel for the other: SL_*, its n times
 ** 16), the thing it mustn't be nor be in (the first, as the other's chosen), the thing it must be in (HW_IN's; else
 ** one it mustn't be in already: a count's put in it), the one it's to be (a count's next, a part of a lot split off) */
 unsigned char wsel;
@@ -374,9 +374,9 @@ unsigned hand_n;                                /* (The thing serve's at_hand fo
 unsigned char hand_sel;                         /*   (and the selector it was asked with) */
 unsigned csum;                                  /* (pick's: how many of those it chose from, all told) */
 unsigned char chart_late;
-unsigned chart_w[5];                            /* (The map making's things, part 26's, handy, by their keys) */
-unsigned rtime, roff;                           /* (The reach owed, part 10's: its time, the pack taken off for it, */
-unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, part 35's too) */
+unsigned chart_w[5];                            /* (The map making's things, part disengage's, handy, by their keys) */
+unsigned rtime, roff;                           /* (The reach owed, part things's: its time, the pack taken off for it, */
+unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, part by_count's too) */
 
 /* The request, copied (serve's), and what its handling shares (the hands, the pack, the belt: about's; the last put
 ** down; how far the thing named is, seen_named's; out of reach, at_hand's; the things in a container, bulk_in's; the
@@ -396,9 +396,9 @@ static void __fastcall__ say (unsigned char n);   /* (The catalogue's bank's: it
 /* A name said: a word of the kind's ("key" an iron key; "sword" a broken one too), or its start; or that word made
 ** plural ("sacks", "torches": "drop two sacks"); or the end of the name, a word longer than 3 ("pack" a backpack, "skin"
 ** a waterskin, 2026-10-26).  The one rule (COMMANDS-CRITIQUE.md's 5.1 step F, 2026-11-07): the chooser's (its copy,
-** part 4's named4, gone into this), the light's, the market's, the search's; the UI's main.c's name_is, the same.  ""
+** part ui_requests's named4, gone into this), the light's, the market's, the search's; the UI's main.c's name_is, the same.  ""
 ** names any (the chooser asks none with it).  (The catalogue's bank's code's; the main RAM's since 2026-11-04, the swap
-** study's: part 10 copied thousands of times for it and on_pc) */
+** study's: part things copied thousands of times for it and on_pc) */
 static unsigned char __fastcall__ word_of (const char* k, const char* w, unsigned char n)
 {
     for (;;) {
@@ -429,19 +429,19 @@ unsigned char __fastcall__ on_pc (unsigned i)
     for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {         /* (Up to whoever has it) */
     }
     return j == rs_pack || (item_at (j)->where == IW_ACTOR && !item_at (j)->x);     /* (A pack off for a handling, at
-                                                **   its feet, its as ever: part 85's) */
+                                                **   its feet, its as ever: part reach_steps's) */
 }
 
-/* ==== Part 10: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
+/* ==== Part things: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
+#pragma code-name (push, "SW_things_CODE")
+#pragma rodata-name (push, "SW_things_RODATA")
 
 /* Where a thing lies about: on a square, or on a surface that is (a table's): the record on the square (its own, or
 ** the surface's, copied), or 0 */
 static const struct item* __fastcall__ lying (const struct item* q)
 {
-#pragma bss-name (push, "SW10RODATA")
-    static struct item s;                       /* (Part 10's own: its one caller, s_in_reach, swaps no part in while
+#pragma bss-name (push, "SW_things_RODATA")
+    static struct item s;                       /* (Part things's own: its one caller, s_in_reach, swaps no part in while
                                                 **   it's used; the main RAM's room, 2026-11-18) */
 #pragma bss-name (pop)
 
@@ -582,7 +582,7 @@ void s_about (void)
         }
     }
     if (!pack) {
-        pack = rs_pack;                         /* (Off for this handling, part 85's: its pack still) */
+        pack = rs_pack;                         /* (Off for this handling, part reach_steps's: its pack still) */
     }
 }
 
@@ -627,7 +627,7 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
 }
 
 /* Thing n carried: coins into the purse (s_purse's, the user's, 2026-11-17); else into the pack if it fits, else in a
-** hand, the one that suits it (part 48's: hand first, the other
+** hand, the one that suits it (part work_done's: hand first, the other
 ** way about, and 2 said so as it goes in the pack, the hands full: a thing taken up, the user's, 2026-11-06; and a thing taken from a fixture, a sconce's torch, the user's, 2026-11-03: the hand, the pack only with both
 ** full): 1 in the pack or the purse (cont), 2 in a hand, 0 neither (full; or a step of the reach begun first, rs_st) */
 #define HF_FIXT         0x80                    /* (hand_free's: thing n's in a fixture) */
@@ -640,7 +640,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 
     h = hand_free (n);
     if (h & HF_FIXT) {
-        hand_first = 1;                         /* (From a fixture: the hand, part 48's) */
+        hand_first = 1;                         /* (From a fixture: the hand, part work_done's) */
         h &= ~HF_FIXT;
     }
     if (!(c = s_purse (n)) && (!hand_first || !h) && pack && !fits (n, pack)) {
@@ -648,11 +648,11 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
     }
     if (c) {
         if (reach_step (n, c)) {
-            return 0;                           /* (A step of the reach first: part 85's) */
+            return 0;                           /* (A step of the reach first: part reach_steps's) */
         }
         place (n, IW_ITEM, cont = c, 0);        /* (cont: where it went, carried's words) */
         lv_c = 0;
-        reach_to (c);                           /* (Put away: its reach, HOUSE.md's: part 56's) */
+        reach_to (c);                           /* (Put away: its reach, HOUSE.md's: part reach's) */
         if (hand_first == 2 && c == pack) {     /* (Taken up, its hands full: said so, the user's, 2026-11-06; a plural
                                                 **   "them", its name's last letter an s, not two: refuse.c's tt_words') */
             put ("You've no hand free for the ");
@@ -677,7 +677,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 
 /* ---- The reach (HOUSE.md's: the user's, 2026-10-23, "Handy would be readily available, so in a backpack that is being
 ** worn is not as readily available as one in a belt pouch"): how readily a thing comes to hand, by where it is, for
-** every taking out, putting away, look inside, search and tool's use, every actor's (part 56's, its own: part 10's
+** every taking out, putting away, look inside, search and tool's use, every actor's (part reach's, its own: part things's
 ** room, an inventory's swap the smaller).  In hand, at once; on the body
 ** (worn, hung from a belt, in what's open to the hand: level_of's) or lying within reach, a quick draw, no time more
 ** than the handling's own; in a container (held, set down, in another), R_IN a level; in a pack worn on the back,
@@ -687,11 +687,11 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 ** next spell of time as the handling's done (reach_done: dq0w.c's busy, its pextra) */
 #define R_IN            20                      /* (Tenths: a container's level, reached into) */
 #define R_OFFON         100                     /* (A pack on the back taken off, and put on again) */
-unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);  /* (dq0w.c's part 24) */
+unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);  /* (dq0w.c's part engage) */
 
 #pragma static-locals (push, on)
-#pragma code-name (push, "SW56CODE")
-#pragma rodata-name (push, "SW56RODATA")
+#pragma code-name (push, "SW_reach_CODE")
+#pragma rodata-name (push, "SW_reach_RODATA")
 
 /* What reaching into container c is (rec its record, copied: what holds it, lw and lx): 0 open to the hand, a quick
 ** draw (not a container: a belt, a surface; one that hangs from a belt, a pouch, a quiver, a sheath; one worn, but a
@@ -722,7 +722,7 @@ static unsigned char __fastcall__ level_of (unsigned c)
 }
 
 /* Whether thing i is handy (HOUSE.md's handy tools: in hand, or on the body, in nothing that isn't open to the hand):
-** 0 if it is, else the outermost thing it's in that isn't (a pack worn, a sack: part 26's map making's words) */
+** 0 if it is, else the outermost thing it's in that isn't (a pack worn, a sack: part disengage's map making's words) */
 unsigned __fastcall__ s_handy (unsigned i)
 {
     static unsigned c;
@@ -746,7 +746,7 @@ void __fastcall__ s_reach_to (unsigned c)
         if (!(l = level_of (c))) {
             rbody = 1;
         } else if (rs_ok == 1 || rs_ok == 2) {
-            return;                             /* (Its levels the steps', part 85's) */
+            return;                             /* (Its levels the steps', part reach_steps's) */
         } else if (l == 2) {
             if (roff != c) {                    /* (A pack on the back: off, reached into, on again, once) */
                 roff = c;
@@ -811,7 +811,7 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Parts 85, 86, 87 (2026-11-02, the user's: "when you have to take off your backpack to get something from it, it
+/* ==== Parts reach_steps, reach_do, reach_more (2026-11-02, the user's: "when you have to take off your backpack to get something from it, it
 ** should read "Taking off backpack", pause, "retrieving <item>", pause, then "putting your backpack back on".  Taking
 ** just as long as it might take when really doing it"; HOUSE.md's reach): a reach as a sequence of steps, each told as
 ** it begins, each its own time, each a grope engaged (a round; failed, the round wasted, the sequence over, the world
@@ -823,14 +823,14 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 ** the pack goes back on as the character's free (rs_after_on, act.work's: the world's own step).  An intent's
 ** tool the same by the world alone (reach_do with its keys: lw_m asked again).  The requests that don't ask for the
 ** steps (IO_STEPS: a blow's weapon, a denizen's) keep the lump, reach_done's */
-#pragma code-name (push, "SW85CODE")
-#pragma rodata-name (push, "SW85RODATA")
+#pragma code-name (push, "SW_reach_steps_CODE")
+#pragma rodata-name (push, "SW_reach_steps_RODATA")
 #pragma register-vars (push, on)
 
 unsigned rs_pack;                               /* (The pack off for this handling) */
-unsigned char rs_owed;                          /* (A step's words owed, told as it's done: SV_AT_START's not, part 86's) */
-unsigned char rs_spill (void);                  /* (Part 85's) */
-void __fastcall__ rs_queue (unsigned char e);  /* (Part 85's) */
+unsigned char rs_owed;                          /* (A step's words owed, told as it's done: SV_AT_START's not, part reach_do's) */
+unsigned char rs_spill (void);                  /* (Part reach_steps's) */
+void __fastcall__ rs_queue (unsigned char e);  /* (Part reach_steps's) */
 static unsigned char __fastcall__ no (unsigned char n);
 struct step rstep;                              /* (The step under way, things.h's: rstep.thing too the pack on the back
                                                 **   the reach comes to, rs_walk's; rstep.what the referee's grade, rs_roll's) */
@@ -852,7 +852,7 @@ unsigned char rs_st;                            /* (A step begun: 1; 2 a grope f
 unsigned char rs_paid;                          /* (The levels reached into so far) */
 unsigned char rs_after_on;                            /* (The pack to go back on as it's free: 1; 2 past a timed work's end) */
 unsigned char rs_live;                          /* (A step done, its handling asked again next) */
-unsigned char rs_free;                           /* (Things put away this sequence to free a hand: part 90's) */
+unsigned char rs_free;                           /* (Things put away this sequence to free a hand: part hands_free's) */
 unsigned char rs_using;                          /* (A tool's: 1 out; 2 caught, a fire-maker's; | 4 in hand before it, nothing to put away) */
 #define rs_keys         iq.name                 /* (An intent's tool's keys, 20 bytes at most: the request's, none in hand as an intent's carried out) */
 #define rs_hand         last_sa                 /* (The pack's hand, 0 its feet: a handling's own byte, none as it's waited on) */
@@ -938,7 +938,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
         if (d == (unsigned char) RS_GO) {
             return rs_begin ();
         }
-        if (d != (unsigned char) RS_BACK) {     /* (Its hands made free for it first: part 87's) */
+        if (d != (unsigned char) RS_BACK) {     /* (Its hands made free for it first: part reach_more's) */
             rs_tool = n;
             if (rs_more (0)) {
                 return 1;
@@ -994,7 +994,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
         if (!d) {
             return 0;
         }
-        rs_tool = n;                            /* (A tool: got out, its tries if it's a fire-maker: part 87's) */
+        rs_tool = n;                            /* (A tool: got out, its tries if it's a fire-maker: part reach_more's) */
         if ((d = rs_for (d == (unsigned char) RS_FIRE ? RF_FIRE : RF_DRAW)) != 1) {
             return d;
         }
@@ -1003,7 +1003,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
 }
 
 /* A filling's or a dipping's end in the dark, by touch (the dark's test: "a fumble can spill oil"; handled the fuel):
-** spilt, half the flask's less, told: 1 (part 85's since 2026-11-20: part 86's room) */
+** spilt, half the flask's less, told: 1 (part reach_steps's since 2026-11-20: part reach_do's room) */
 unsigned char s_rs_spill (void)
 {
     hub_map (SIGHT_BANK);
@@ -1020,7 +1020,7 @@ unsigned char s_rs_spill (void)
 }
 
 /* An after-work step planned (AQ_*: AQ_STOW, AQ_RELIGHT once): queued in its place, above those of a lower kind
-** (part 85's since 2026-11-20: part 86's room) */
+** (part reach_steps's since 2026-11-20: part reach_do's room) */
 void __fastcall__ s_rs_queue (unsigned char e)
 {
     register unsigned char i;
@@ -1039,8 +1039,8 @@ void __fastcall__ s_rs_queue (unsigned char e)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW87CODE")
-#pragma rodata-name (push, "SW87RODATA")
+#pragma code-name (push, "SW_reach_more_CODE")
+#pragma rodata-name (push, "SW_reach_more_RODATA")
 #pragma static-locals (push, off)
 
 /* A flame to hand (IO_LIGHT's, the catalogue's bank's light): a thing lit, carried or within reach, 1; or a fire-maker
@@ -1252,8 +1252,8 @@ static void __fastcall__ name_of (unsigned n, unsigned char first);     /* (The 
 static unsigned char __fastcall__ no (unsigned char n);
 static unsigned char __fastcall__ yes (unsigned char n, unsigned char t);
 static unsigned char __fastcall__ hold (unsigned n);
-#pragma code-name (push, "SW90CODE")
-#pragma rodata-name (push, "SW90RODATA")
+#pragma code-name (push, "SW_hands_free_CODE")
+#pragma rodata-name (push, "SW_hands_free_RODATA")
 #pragma static-locals (push, off)
 /* ---- Hands made free (the user's, 2026-11-03: "If your hands are busy and your want to ready tools or other things, it should
 ** probably put the other things away first (in their appropriate place) then take the tools in hand.  A torch would be placed in a
@@ -1475,9 +1475,9 @@ out:
 }
 
 /* A step's end of these (rstep.edge, rstep.thing): the tool in hand, kept to go back; the tool back where it came from, or the pack; put in its
-** place; slung.  (Part 75's: part 90's overlay's room, 2026-11-04) */
-#pragma code-name (push, "SW75CODE")
-#pragma rodata-name (push, "SW75RODATA")
+** place; slung.  (Part water_depth's: part hands_free's overlay's room, 2026-11-04) */
+#pragma code-name (push, "SW_water_depth_CODE")
+#pragma rodata-name (push, "SW_water_depth_RODATA")
 void s_rs_did2 (void)
 {
     unsigned n = rstep.thing, c;
@@ -1541,7 +1541,7 @@ void s_rs_did2 (void)
     if (d == SE_PLACE) {
         sconce_lights (1);
         if (kind_at (n)->form & KF_COUNT) {
-            join (n);                           /* (Coins in the purse: with those there, part 35's) */
+            join (n);                           /* (Coins in the purse: with those there, part by_count's) */
         }
     }
 }
@@ -1549,7 +1549,7 @@ void s_rs_did2 (void)
 #pragma rodata-name (pop)
 
 /* A thing sharpened with a whetstone (the user's, 2026-11-02, "like sharpening your sword (if you have a whetstone)"; the
-** book has none: the house's; a tool's use, part 84's; handled the thing): a metal weapon, the whetstone carried, wear on
+** book has none: the house's; a tool's use, part pc_dig's; handled the thing): a metal weapon, the whetstone carried, wear on
 ** it: its steps (IR_NO); begun, 0xFE (a minute's timed work); done (IO_DONE), half its wear gone, told */
 static unsigned char __fastcall__ rs_no2 (unsigned n, unsigned char sa)
 {
@@ -1604,15 +1604,15 @@ unsigned char __fastcall__ s_rs_more (unsigned char w)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW86CODE")
-#pragma rodata-name (push, "SW86RODATA")
+#pragma code-name (push, "SW_reach_do_CODE")
+#pragma rodata-name (push, "SW_reach_do_RODATA")
 
 /* ---- A torch dipped (HOUSE.md's a torch redipped: the user's, 2026-11-02, "Fumbling about in the dark should be
-** difficult ..."; part 27's fill, past its refusals, each ask; RO_REDIP, handled the torch): the next step of what comes
+** difficult ..."; part burning's fill, past its refusals, each ask; RO_REDIP, handled the torch): the next step of what comes
 ** before the dipping, begun: IR_NO; or IR_OK, on with it (its fuel got out, the timed work).  The torch never dipped
 ** burning: another light by it, put out and dipped by that; none, a spare lit from it, then put out; no spare, put out,
 ** asked first, dipped in the dark and lit again after.  Dipping asks both hands, the torch and the flask: what's in the
-** other set down at its feet.  Part 85's: its own words the catalogue's bank's no, name_of */
+** other set down at its feet.  Part reach_steps's: its own words the catalogue's bank's no, name_of */
 #pragma static-locals (push, off)
 static unsigned char __fastcall__ rs_no (unsigned n, unsigned char sa)
 {
@@ -1965,7 +1965,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         hub_map (0);
         if (!rs_st && (rs_pack || rs_using) && iq.result != IR_OK) {
             reach_step (0, RS_BACK);            /* (Refused with the pack off, its way changed since: its words first, the
-                                                **   pack back on, the UI's the same step: part 18's) */
+                                                **   pack back on, the UI's the same step: part change_files's) */
             hub_map (0);
             rs_ok = HUB->ireq.kind = IO_STEP;
         } else if (rs_st) {
@@ -2121,12 +2121,12 @@ back:
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 92 (part 10's till 2026-11-03: every call a handling makes out to another part comes back here, and part 10
+/* ==== Part serve (part things's till 2026-11-03: every call a handling makes out to another part comes back here, and part things
 ** all its 3,600 bytes each time: the user's D17): a request of the things served */
-#pragma code-name (push, "SW92CODE")
-#pragma rodata-name (push, "SW92RODATA")
+#pragma code-name (push, "SW_serve_CODE")
+#pragma rodata-name (push, "SW_serve_RODATA")
 
-/* (Part 92's own: none owed, serve's) */
+/* (Part serve's own: none owed, serve's) */
 static void rclear10 (void)
 {
     rtime = roff = 0;
@@ -2197,14 +2197,14 @@ void s_tools (void)
     HUB->ireq.y = hh;
 }
 
-#pragma code-name (push, "SW92CODE")
-#pragma rodata-name (push, "SW92RODATA")
+#pragma code-name (push, "SW_serve_CODE")
+#pragma rodata-name (push, "SW_serve_RODATA")
 
 /* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
 ** main hand's (or a thing's in both), and y, its other's (0 none: held_kinds') */
 
-#pragma code-name (push, "SW102CODE")         /* (Part 102's, 2026-11-06: overlay 5's room, part 92's image's) */
-#pragma rodata-name (push, "SW102RODATA")
+#pragma code-name (push, "SW_tell_apart_CODE")  /* (2026-11-06: overlay 5's room, part serve's image's) */
+#pragma rodata-name (push, "SW_tell_apart_RODATA")
 /* ---- A thing told apart (the user's playtest, 2026-11-06: "You put the torch in your backpack." of the spent one as a
 ** new one's lit): its state's word (AW_*), the thing in rec: a light lit, burnt out, or neither; a fuel empty */
 static unsigned char aw_of (void)
@@ -2280,7 +2280,7 @@ void __fastcall__ s_name_apart (unsigned i, char* d)
 
 /* What the character carries, for the UI's first words (the UI bank's ix, struct cix's: the store's order), made as what
 ** it carries changes (light_now's, serve's) */
-#pragma bss-name (push, "SW102RODATA")        /* (Part 102's image's, wanted only as it's made: the main RAM's room) */
+#pragma bss-name (push, "SW_tell_apart_RODATA") /* (Part tell_apart's image's, wanted only as it's made: the main RAM's room) */
 unsigned ixi[NIX];                              /* (Each one's record, */
 unsigned ixd[NIX];                              /*   its key in the letters, its id or its record's | LT_REC, */
 struct cix ixc[NIX];                            /*   its words for the UI: letter.s's too) */
@@ -2292,7 +2292,7 @@ static unsigned char ixqq[NIX];                 /* (And how many each is: a lot'
 ** and given back as it's taken up again; one that's had none, of a ... z the first free, else the one whose thing it
 ** let go of longest ago (that one's given up), and only then of aa ... az the same way; by its id, by its record's
 ** number till it has one.  In the store's order: those that come together, the kit, in its order (letter.s's, in
-** assembly: part 102's room) */
+** assembly: part tell_apart's room) */
 extern unsigned char ixl_n;
 extern unsigned ixl_t;
 extern struct cix* ixl_old;
@@ -2378,7 +2378,7 @@ void s_ix_make (void)
 #pragma code-name (pop)
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
-** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it; what
+** put out), into the hub, named (its minutes left the lights' burning's: part burning's); and its map making with it; what
 ** it carries, for the UI's first words (ix_make) */
 void s_light_now (void)
 {
@@ -2391,7 +2391,7 @@ void s_light_now (void)
     lamp[0] = 0;
     while ((i = items (i, IN_FLAGS | IN_ACTOR | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
         fetch (&rec, i);
-        for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {    /* (Up to whoever has it: part 10's on_pc, no swap) */
+        for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {    /* (Up to whoever has it: part things's on_pc, no swap) */
         }
         if (j == rs_pack || (p->where == IW_ACTOR && !p->x)) {
             k = kind_of (rec.kind);
@@ -2478,9 +2478,9 @@ static unsigned __fastcall__ held_lit (void)
 }
 
 static unsigned char o_handle (void);
-unsigned char drag (void);                      /* (Part 109's: wdrag.c, IO_DRAG) */
-unsigned char build (void);                     /* (Part 124's: wbuild.c, IO_BUILD) */
-unsigned char __fastcall__ handout (const struct msg* m);  /* (Part 111's: wempty.c, IO_EMPTY, IO_PLACE) */
+unsigned char drag (void);                      /* (Part drag's: wdrag.c, IO_DRAG) */
+unsigned char build (void);                     /* (Part build's: wbuild.c, IO_BUILD) */
+unsigned char __fastcall__ handout (const struct msg* m);  /* (Part empty's: wempty.c, IO_EMPTY, IO_PLACE) */
 unsigned char s_serve (void)
 {
     unsigned char changed = 0, k;
@@ -2488,7 +2488,7 @@ unsigned char s_serve (void)
 
     rclear10 ();                                /* (No reach owed yet) */
     hub_map (0);
-    if (HUB->ireq.kind & IO_STEPS) {            /* (By the reach's steps, the UI's: part 86's RO_ASK, here, its copies
+    if (HUB->ireq.kind & IO_STEPS) {            /* (By the reach's steps, the UI's: part reach_do's RO_ASK, here, its copies
                                                 **   a tenth of a thing's answer, 2026-11-03) */
         rs_ok = HUB->pc_lump & (PL_NOSTEPS | PL_TOLD) ? 8 : 1;   /* (8: asked by the steps, the lump's) */
         HUB->ireq.kind &= ~IO_STEPS;
@@ -2504,10 +2504,10 @@ unsigned char s_serve (void)
                                                 **   the hands' rule, a falchion drawn before a bandage got out, the play
                                                 **   test's, 2026-11-17) */
     if (HUB->pc_hid) {
-        hid_op (HO_THING);                      /* (A thing handled: out of hiding, part 94's) */
+        hid_op (HO_THING);                      /* (A thing handled: out of hiding, part hide_self's) */
     }
     iq.result = IR_OK;
-    wsel = iq.sel;                              /* (Which of several: the chooser's, part 4's pick) */
+    wsel = iq.sel;                              /* (Which of several: the chooser's, part ui_requests's pick) */
     wnot = win = wforce = 0;
     if (iq.kind == IO_GET && wsel == SL_NEW) {
         iq.kind = IO_HOLD;                      /* ("Take a new torch": in hand, from wherever it is) */
@@ -2516,7 +2516,7 @@ unsigned char s_serve (void)
     case IO_KIT:
         kit ();
         break;
-    case IO_GET:                                /* (Taken up, put down: one, or as many as it says, part 4's) */
+    case IO_GET:                                /* (Taken up, put down: one, or as many as it says, part ui_requests's) */
     case IO_DROP:
         if ((iq.result = moved (iq.kind)) == IR_NO && iq.kind == IO_GET && !rs_st) {
             cat_map ();                         /* (Fixed where it stands: the words why) */
@@ -2534,12 +2534,12 @@ unsigned char s_serve (void)
             hub_map (0);
         }
         break;
-    case IO_SHUT:                               /* (A lid, a tie, a stopper, a lock worked: part 4's) */
+    case IO_SHUT:                               /* (A lid, a tie, a stopper, a lock worked: part ui_requests's) */
         slid = 0;
         iq.result = shut_work ();
         changed = slid;                         /* (What was on its lid slid off: the look's) */
         break;
-    case IO_INSIDE:                             /* (What's in it, or on it: part 11's) */
+    case IO_INSIDE:                             /* (What's in it, or on it: part things_listed's) */
         iq.result = inside ();
         break;
     case IO_THROW:
@@ -2549,29 +2549,29 @@ unsigned char s_serve (void)
         inventory ();
         break;
     case IO_HANDS:
-        bar_hand ();                            /* (Part 4's: part 10's room) */
+        bar_hand ();                            /* (Part ui_requests's: part things's room) */
         break;
-    case IO_GEAR:                               /* (A denizen's things made out: part 61's) */
+    case IO_GEAR:                               /* (A denizen's things made out: part inside's) */
         iq.result = gear_words ();
         break;
-    case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
+    case IO_SWAP:                               /* (What's in its hands changed over: part work_done's) */
         iq.result = swap ();
         break;
     case IO_FETCH:                              /* (A thing for an ally to fetch, or a gift: slice 4.8's) */
         iq.result = fetch_find (iq.name);
         break;
-    case IO_DRAG:                               /* (A heavy thing shoved, dragged; a thing tasted: part 109's, wdrag.c) */
+    case IO_DRAG:                               /* (A heavy thing shoved, dragged; a thing tasted: part drag's, wdrag.c) */
         changed = (iq.result = drag ()) == IR_OK && iq.to != DG_TASTE;
         break;
-    case IO_BUILD:                              /* (A door hung, a way walled up, every actor's: part 124's, wbuild.c) */
+    case IO_BUILD:                              /* (A door hung, a way walled up, every actor's: part build's, wbuild.c) */
         changed = (iq.result = build ()) == IR_OK;
         break;
-    case IO_EMPTY:                              /* (A thing's things put out, a thing put down on a square: part 111's, */
+    case IO_EMPTY:                              /* (A thing's things put out, a thing put down on a square: part empty's, */
     case IO_PLACE:                              /*   wempty.c, every actor's: P4, P5, 2026-11-18) */
         changed = (iq.result = handout (0)) == IR_OK;
         break;
-    case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's; by the
-                                                **   steps, got out for its use, a tool's, part 85's: IR_NO a step first) */
+    case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part tend's; by the
+                                                **   steps, got out for its use, a tool's, part reach_steps's: IR_NO a step first) */
         iq.result = rs_ok == 1 ? (tool_reach (iq.name) ? IR_NO : IR_OK) : rs_ok ? IR_OK : use_key (iq.name);
         break;
     case IO_WEAR:
@@ -2580,7 +2580,7 @@ unsigned char s_serve (void)
     case IO_SEARCH:
         changed = iq.result = search ();
         break;
-    case IO_SEEK:                               /* (A search's thing, for or on: part 46's) */
+    case IO_SEEK:                               /* (A search's thing, for or on: part seek's) */
         iq.result = seek ();
         break;
     case IO_DESCRIBE:
@@ -2590,7 +2590,7 @@ unsigned char s_serve (void)
         iq.result = hide (iq.name);
         break;
     case IO_FILL:
-        iq.result = fill ();                    /* (A light renewed: its time in the request's x, part 27's) */
+        iq.result = fill ();                    /* (A light renewed: its time in the request's x, part burning's) */
         break;
     case IO_THEME:
         theme_kinds ();
@@ -2601,7 +2601,7 @@ unsigned char s_serve (void)
         act.cut = 1;
         rs_for (RF_CUT);
         break;
-    case IO_RIP:                                /* (A cloth torn up for bandages, washed: part 107's, wcloth.c) */
+    case IO_RIP:                                /* (A cloth torn up for bandages, washed: part worn's, wcloth.c) */
     case IO_WASH:
         iq.result = textile ();
         break;
@@ -2698,7 +2698,7 @@ unsigned char s_serve (void)
     hand_n = 0;
     hub_map (0);
     HUB->ireq.result = iq.result;
-    if (rs_ok && reach_do (RO_REPLY)) {         /* (The reach's steps: part 83's, a step begun the reply's) */
+    if (rs_ok && reach_do (RO_REPLY)) {         /* (The reach's steps: part room_tests's, a step begun the reply's) */
         return 0;
     }
     return changed && iq.kind != IO_KIT;
@@ -2709,10 +2709,10 @@ unsigned char s_serve (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 13 (part 26's till 2026-10-28: overlay 9's room, the lights' burning's): the map making, as the light
+/* ==== Part item_store (part disengage's till 2026-10-28: overlay 9's room, the lights' burning's): the map making, as the light
 ** (slice 4.2's; the world's parts are 51 at most, swap.inc's table) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_item_store_CODE")
+#pragma rodata-name (push, "SW_item_store_RODATA")
 
 /* The character's map making (the hub's pc_chart and pc_map: DUNGEON.md, the map kept; HOUSE.md's), by what it
 ** carries: the things to draw a map with handy (in hand, or on the body, in nothing that isn't open to the hand:
@@ -2720,7 +2720,7 @@ unsigned char s_serve (void)
 ** map, "map"; a point that draws, "draw", or a quill, "quill", and ink, "ink"), and a hand to draw with (free, or
 ** holding one of them; its arm not useless); and the first map it carries (anywhere on it: shown).  Mapping as it goes
 ** with them, and no map, its first sheet is made the map (the kind keyed "map").  Not handy, what they're in (its kind
-** in pc_chart: CH_PACKED's, the UI's to tell).  Part 13's (its room), called as the light is (s_light_now's) */
+** in pc_chart: CH_PACKED's, the UI's to tell).  Part item_store's (its room), called as the light is (s_light_now's) */
 unsigned char ui_long (void);                   /* (dq0w.c's) */
 void s_chart_now (void)
 {
@@ -2789,9 +2789,9 @@ void s_chart_now (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 4 (store.c's, its room): a thing thrown */
-#pragma code-name (push, "SW88CODE")           /* (Part 4 full, 2026-11-03) */
-#pragma rodata-name (push, "SW88RODATA")
+/* ==== Part ui_requests (store.c's, its room): a thing thrown */
+#pragma code-name (push, "SW_hub_attach_CODE")  /* (Part ui_requests full, 2026-11-03) */
+#pragma rodata-name (push, "SW_hub_attach_RODATA")
 
 /* A thing thrown (the UI's IO_THROW, the character's: the same for every actor, as their minds come to throw), the
 ** one named that it carries ("": the first in its hands), at a mark (the request's x, y: a square it sees, a denizen's
@@ -2922,11 +2922,11 @@ unsigned char __fastcall__ s_throw_at (const char* name)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 4 (its room): a thing of several chosen (the user's, 2026-10-21: "There is also no way to disambiguate
+/* ==== Part ui_requests (its room): a thing of several chosen (the user's, 2026-10-21: "There is also no way to disambiguate
 ** between which item of multiple that you want to use"); things moved by the count ("drop two sacks", "take 4
 ** rations"), a lot split and joined again; what closes worked (a lid, a tie, a stopper, a lock: "open the chest") */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_ui_requests_CODE")
+#pragma rodata-name (push, "SW_ui_requests_RODATA")
 #pragma static-locals (push, on)              /* (None called again before it's done: their code the less) */
 
 /* How thing i lies, for the chooser: how deep it is in others (0: in none), its outermost (on the character, on a
@@ -2992,7 +2992,7 @@ static unsigned char __fastcall__ unlike (unsigned i, const struct kind* k)
 
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no);
 
-/* Compartment c of thing h (its row in crow) hidden and not found yet (CS_UNSEEN's: the chooser's, twice, part 4's
+/* Compartment c of thing h (its row in crow) hidden and not found yet (CS_UNSEEN's: the chooser's, twice, part ui_requests's
 ** room) */
 static unsigned char __fastcall__ unseen (unsigned h, unsigned char c)
 {
@@ -3010,7 +3010,7 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
 }
 #pragma static-locals (pop)
 
-/* The compartment of kind k name names, if it doesn't name the kind (the chooser's thing's: pick's wcomp; part 4's, its
+/* The compartment of kind k name names, if it doesn't name the kind (the chooser's thing's: pick's wcomp; part ui_requests's, its
 ** one caller's: the world's main RAM's room, speed9, 2026-11-22) */
 static unsigned char __fastcall__ name_comp (unsigned char k, const char* name)
 {
@@ -3018,7 +3018,7 @@ static unsigned char __fastcall__ name_comp (unsigned char k, const char* name)
     return named (kinds[k].name, name) ? 0 : comp_named (k, name);
 }
 
-#pragma bss-name (push, "SW4RODATA")            /* (pick_'s locals, static: part 4's own, none of its calls swapping a
+#pragma bss-name (push, "SW_ui_requests_RODATA") /* (pick_'s locals, static: part ui_requests's own, none of its calls swapping a
                                                 **   part in; the main RAM's room, 2026-11-18) */
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no)
 {
@@ -3030,7 +3030,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk, all = wsel == SL_WHICH;
 
     if (all) {
-        s = 0;                                  /* (Every one: which's, part 35's) */
+        s = 0;                                  /* (Every one: which's, part by_count's) */
     }
     afar = 0;
     csum = 0;
@@ -3090,7 +3090,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         py = p->y;
         p = 0;
         if (ctop == rs_pack) {
-            pw = IW_ACTOR;                      /* (Off for a handling, at its feet: part 85's) */
+            pw = IW_ACTOR;                      /* (Off for a handling, at its feet: part reach_steps's) */
             px = 0;
         }
         if (how == HW_IN) {
@@ -3122,7 +3122,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
                                                 **   the user's reach, 2026-10-23, "a backpack on the ground ... is more
                                                 **   readily available"; DECISIONS.md's "in a container set down":
                                                 **   dq0disarm's gambeson in the pack it dropped, hear2's; at any depth,
-                                                **   each level open, its reach a level's time more each (part 56's):
+                                                **   each level open, its reach a level's time more each (part reach's):
                                                 **   the user's H17, 2026-11-21) */
                 !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
                 (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
@@ -3220,7 +3220,7 @@ unsigned __fastcall__ s_at_hand (const char* name)
 
 /* The thing a look's asked of (IO_LOOK: the request's to, LM_*): carried, or seen: the one most to hand, of several; all
 ** but a plain look, remembered too, walked to; gone to: lying about; or the holder of a compartment named by its own name
-** ("look at the drawer": wcomp, the user's, 2026-11-17).  The request read for part 39's s_look_on */
+** ("look at the drawer": wcomp, the user's, 2026-11-17).  The request read for part look_on's s_look_on */
 unsigned __fastcall__ s_look_pick (void)
 {
     unsigned n;
@@ -3235,17 +3235,17 @@ unsigned __fastcall__ s_look_pick (void)
     return n;
 }
 
-/* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
+/* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part things's; part ui_requests's, its room): the first the
 ** character carries whose key (the catalogue's: the referee's to choose by) is one of keys ("pick\0shovel\0": each
 ** 0-ended, an empty one last: a dig begun, a lock's picking) */
-#pragma code-name (push, "SW72CODE")            /* (Part 72's since 2026-11-02: part 4's room, overlay 2's) */
-#pragma rodata-name (push, "SW72RODATA")
+#pragma code-name (push, "SW_errands_CODE")     /* (Part errands's since 2026-11-02: part ui_requests's room, overlay 2's) */
+#pragma rodata-name (push, "SW_errands_RODATA")
 unsigned char __fastcall__ s_tool_reach (const char* keys)
 {
     const char* k;
     unsigned i = 0;
 
-    if (!*keys) {                               /* (The door's key: the one that fits, part 80's) */
+    if (!*keys) {                               /* (The door's key: the one that fits, part den_doors's) */
         if ((i = tool_of (0, KI_KEY, 0)) != 0) {   /* (The work's door's key: wport.c's) */
             reach_from (i);
             return reach_step (i, RS_TOOL);
@@ -3272,10 +3272,10 @@ unsigned char __fastcall__ s_tool_reach (const char* keys)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 35 (its own, slice 4.1's: the user's, 2026-10-21): things moved by the count ("drop two sacks", "take 4
+/* ==== Part by_count (its own, slice 4.1's: the user's, 2026-10-21): things moved by the count ("drop two sacks", "take 4
 ** rations"), a lot split and joined again */
-#pragma code-name (push, "SW35CODE")
-#pragma rodata-name (push, "SW35RODATA")
+#pragma code-name (push, "SW_by_count_CODE")
+#pragma rodata-name (push, "SW_by_count_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- Taken up (n: seen, the chooser's): into the backpack if it fits (its room, its weight, what it keeps), else in
@@ -3319,11 +3319,11 @@ static unsigned char __fastcall__ get (unsigned n)
 }
 
 /* The closed thing that thing n is in (or in what that's in: a sack tied shut in an open pack), or 0 (none: it's to
-** hand: part 35's, the catalogue's bank's code's through its stub) */
-/* (Part 106's, where the packer put it to make part 35 fit: there by its pragma now, part 35 its headroom kept,
+** hand: part by_count's, the catalogue's bank's code's through its stub) */
+/* (Part grapple's, where the packer put it to make part by_count fit: there by its pragma now, part by_count its headroom kept,
 ** 2026-11-18) */
-#pragma code-name (push, "SW106CODE")
-#pragma rodata-name (push, "SW106RODATA")
+#pragma code-name (push, "SW_grapple_CODE")
+#pragma rodata-name (push, "SW_grapple_RODATA")
 unsigned __fastcall__ s_shut_in (unsigned n)
 {
     unsigned c;
@@ -3342,11 +3342,11 @@ unsigned __fastcall__ s_shut_in (unsigned n)
 
 /* A door's bar to hand (carried, or within reach: not one in another's brackets), the widest: its width (took's,
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
-** again on iq's square, the bar's side (the world's barred the door): part 35's, the catalogue's bank's room (its
+** again on iq's square, the bar's side (the world's barred the door): part by_count's, the catalogue's bank's room (its
 ** o_handle's through its stub) */
-#pragma code-name (push, "SW105CODE")           /* (Part 105's since 2026-11-06: part 4's room, the letters'; part 4's since
-                                                **   2026-11-03, part 35's room) */
-#pragma rodata-name (push, "SW105RODATA")
+#pragma code-name (push, "SW_inventory_CODE")   /* (Part inventory's since 2026-11-06: part ui_requests's room, the letters'; part ui_requests's since
+                                                **   2026-11-03, part by_count's room) */
+#pragma rodata-name (push, "SW_inventory_RODATA")
 unsigned char s_bar_hand (void)
 {
     unsigned n, best;
@@ -3420,11 +3420,11 @@ static unsigned char __fastcall__ put_down_here (unsigned n)
     p->y = y;
     p->flags &= ~(I_HELD | I_WORN);
     dropped = n;
-    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
+    sky_ask (n);                                /* (On a shaft's head: it falls, part item_pages's) */
     return IR_OK;
 }
 
-/* Put down (hide's: part 13's, through its stub), by name */
+/* Put down (hide's: part item_store's, through its stub), by name */
 unsigned char __fastcall__ s_drop (const char* name)
 {
     unsigned n = pick (name, HW_CARRIED);
@@ -3481,7 +3481,7 @@ unsigned __fastcall__ s_join (unsigned n)
             (rec.wear == q.wear && rec.mat == q.mat))) {     /* (Bandages of a cloth and a cleanliness alone: theirs
                                                 **   each band's own wear, wcloth.c's; HOUSE.md's bandages) */
             if (rec.fuel != q.fuel || rec.size != q.size || rec.thick != q.thick) {
-                mix_join (i, n);                /* (Two piles of coins: their mints' groups merged, part 63's) */
+                mix_join (i, n);                /* (Two piles of coins: their mints' groups merged, part kit's) */
             }
             item_at (i)->qty += q.qty;
             item_at (n)->kind = 0;              /* (The lot moved, gone into the other) */
@@ -3514,7 +3514,7 @@ static void take_keep (void)
 ** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
 ** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
 #define NWHICH          4
-#pragma bss-name (push, "SW35RODATA")           /* (Its locals the part's own: the main RAM's room) */
+#pragma bss-name (push, "SW_by_count_RODATA")   /* (Its locals the part's own: the main RAM's room) */
 static unsigned char which (void)
 {
     static unsigned id[NWHICH], q[NWHICH];
@@ -3573,9 +3573,9 @@ static unsigned char which (void)
 ** thing's id and each place's id in the text for the UI to ask where ("W12|30|30p|31|": p, the side pocket of that one);
 ** one, that one (the request made a put into it, "#" and its id, or "side pocket", the compartment by its own name; the
 ** pack's, a stow as ever); none, as ever */
-#pragma code-name (push, "SW74CODE")            /* (Part 74's: part 35's room, overlay 19's; not dq0w.rop's, part 104's,
+#pragma code-name (push, "SW_waterskin_CODE")   /* (Part by_count's room, overlay 19's; not dq0w.rop's, part well_drop's,
                                                 **   read in only as a rope's first wanted) */
-#pragma rodata-name (push, "SW74RODATA")
+#pragma rodata-name (push, "SW_waterskin_RODATA")
 #pragma static-locals (push, off)               /* (Its locals the C stack's: the catalogue's o_fits calls parts, this one
                                                 **   copied in again after, its own data as it was) */
 unsigned char s_stow_where (void)
@@ -3662,10 +3662,10 @@ one:
 #pragma static-locals (pop)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
-unsigned char stow_where (void);                /* (Part 104's: its stub) */
+unsigned char stow_where (void);                /* (Part waterskin's: its stub) */
 
 #define TK_N            5                       /* (The kinds "take all from" names, at most: more, "everything") */
-extern unsigned char tk_n;                      /* (Part 105's: the kinds taken, kept as they're taken; its stubs) */
+extern unsigned char tk_n;                      /* (Part inventory's: the kinds taken, kept as they're taken; its stubs) */
 void __fastcall__ took_kind (unsigned n);
 void __fastcall__ took_list (char* b);
 unsigned char __fastcall__ s_moved (unsigned char op)
@@ -3743,7 +3743,7 @@ unsigned char __fastcall__ s_moved (unsigned char op)
             took_kind (n);                      /* (Each kind taken and its count: "take all from the case" names them,
                                                 **   the user's, 2026-11-17) */
         }
-        rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part 85's) */
+        rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part reach_steps's) */
         sa = last_sa;
         t += took;
         if (win && op == IO_TAKE && (item_at (win)->kind == KI_BODY || item_at (win)->kind == KI_BONES) &&
@@ -3812,10 +3812,10 @@ unsigned char __fastcall__ s_moved (unsigned char op)
 }
 
 /* How many of kind k, in words, into b: "a sack", "two sacks", "12 sacks"; a lot counted (KF_COUNT), its count in
-** digits, "4 rations"; one of a lot, "a ration", "a penny" (part 105's since 2026-11-06, part 35's room: through its
-** stub; an inventory's alike the quicker, part 105 the smaller to swap in) */
-#pragma code-name (push, "SW105CODE")
-#pragma rodata-name (push, "SW105RODATA")
+** digits, "4 rations"; one of a lot, "a ration", "a penny" (part inventory's since 2026-11-06, part by_count's room: through its
+** stub; an inventory's alike the quicker, part inventory the smaller to swap in) */
+#pragma code-name (push, "SW_inventory_CODE")
+#pragma rodata-name (push, "SW_inventory_RODATA")
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k)
 {
     static const char* const few[11] = { "no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
@@ -3903,11 +3903,11 @@ void __fastcall__ s_took_list (char* b)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
-/* (Part 16's: I_TAKE's walk over to a thing, a count taken up as it gets there: the request as it was, its count;
-** wgame.c's take_up, its one caller, in its part since 2026-11-18: part 35's room, its call of s_moved the swap
+/* (Part game_rules's: I_TAKE's walk over to a thing, a count taken up as it gets there: the request as it was, its count;
+** wgame.c's take_up, its one caller, in its part since 2026-11-18: part by_count's room, its call of s_moved the swap
 ** take_up's call of it was) */
-#pragma code-name (push, "SW16CODE")
-#pragma rodata-name (push, "SW16RODATA")
+#pragma code-name (push, "SW_game_rules_CODE")
+#pragma rodata-name (push, "SW_game_rules_RODATA")
 unsigned char s_take_rest (void)
 {
     if (!take_cnt) {
@@ -3927,9 +3927,9 @@ unsigned char s_take_rest (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 36 (its own, slice 4.1's): what closes worked; a tool's wear, a thing described (part 11's, its room) */
-#pragma code-name (push, "SW36CODE")
-#pragma rodata-name (push, "SW36RODATA")
+/* ==== Part shut_work (its own, slice 4.1's): what closes worked; a tool's wear, a thing described (part things_listed's, its room) */
+#pragma code-name (push, "SW_shut_work_CODE")
+#pragma rodata-name (push, "SW_shut_work_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- What closes worked (IO_SHUT, the user's: "open the chest", "open the sack"; the catalogue's KF_CLOSES: a lid, a
@@ -3942,7 +3942,7 @@ unsigned char s_take_rest (void)
 ** time in the request's x (tenths); IR_NONE if there's no such thing.  Picking and forcing timed work (HOUSE.md's long
 ** tasks): begun (its long task's kind in qty, its thing's in item: its first words the UI's), its test made and its
 ** outcome told as it's done (IO_DONE, the UI's as its time's up) */
-/* (The list's last ", " made " and ": part 61's and_last, its own copy) */
+/* (The list's last ", " made " and ": part inside's and_last, its own copy) */
 static void __fastcall__ and_last36 (char* from)
 {
     char* p;
@@ -4003,7 +4003,7 @@ static void __fastcall__ reveal (unsigned n)
 
 #define tested(p, s)    act_test (0, (p), (s))  /* (The referee's test of the character's, in SLOT_UI (the UI waits on it
                                                 **   meanwhile): its grade, -100 no tools for it (lockpicks); every
-                                                **   actor's sender, part 69's, acts.h's, 2026-11-19) */
+                                                **   actor's sender, part robbery's, acts.h's, 2026-11-19) */
 
 /* A key the character carries (in hand, on it, in what it carries; in the pack it set down for this handling, rs_pack:
 ** the full reach's own step, 2026-11-17) that fits the lock of thing number id (its number in the key's size and thick:
@@ -4033,8 +4033,8 @@ static unsigned char __fastcall__ key_fits (unsigned id)
     return r;
 }
 
-void __fastcall__ slide (unsigned n);          /* (Part 61's: what's on a lid slid off) */
-void __fastcall__ own_comps (struct item* q);  /* (Part 61's: a thing's compartments made its own) */
+void __fastcall__ slide (unsigned n);          /* (Part inside's: what's on a lid slid off) */
+void __fastcall__ own_comps (struct item* q);  /* (Part inside's: a thing's compartments made its own) */
 
 SAY_PUT (say36)
 
@@ -4084,7 +4084,7 @@ unsigned char s_shut_work (void)
         reach_from (n);                         /* (Its reach, as it's begun: HOUSE.md's) */
     }
     fetch (&rec, n);
-    st = rec.where == IW_ITEM ? rec.x : 0;      /* (What it's in: reached into first, past the refusals: part 85's) */
+    st = rec.where == IW_ITEM ? rec.x : 0;      /* (What it's in: reached into first, past the refusals: part reach_steps's) */
     k = kind_of (rec.kind);
     strcpy (nm, k->name);
     c = (k->keeps & KF_CLOSES) >> 5;
@@ -4196,7 +4196,7 @@ unsigned char s_shut_work (void)
     }
 done:
     if (!d && !lt && reach_step (0, st)) {
-        return IR_NO;                           /* (What it's in reached into first: part 85's) */
+        return IR_NO;                           /* (What it's in reached into first: part reach_steps's) */
     }
     if (cc) {
         ip = item_at (n);                       /* (A compartment's state back: its closed bit, its lock's) */
@@ -4224,9 +4224,9 @@ done:
 
 #pragma static-locals (pop)
 
-/* ==== Part 61: what's in a thing (part 36's, its room: the keys that fit, 2026-10-27) */
-#pragma code-name (push, "SW61CODE")
-#pragma rodata-name (push, "SW61RODATA")
+/* ==== Part inside: what's in a thing (part shut_work's, its room: the keys that fit, 2026-10-27) */
+#pragma code-name (push, "SW_inside_CODE")
+#pragma rodata-name (push, "SW_inside_RODATA")
 
 /* ---- What's in a thing, or on it (IO_INSIDE, the user's, 2026-10-21: "look in the sack", "look on the table", "look
 ** into the well"): the thing named (to hand: carried, or within reach; seen but out of reach, IR_NOT_HERE: the UI
@@ -4234,7 +4234,7 @@ done:
 ** candle and two chisels."; "The sack is empty."; "The chest is closed." (nothing in it seen); a well's shaft; a
 ** thing that holds nothing, "You can't see into the sword."  The request's to 1: as it's examined (it's named
 ** already: "In it lie ..."; a thing that holds nothing, no words); | 2, after the words there already (a look at it:
-** part 39's); 8, a compartment looked at by its own name ("look at the drawer", part 39's): its state, then what's in
+** part look_on's); 8, a compartment looked at by its own name ("look at the drawer", part look_on's): its state, then what's in
 ** it */
 static void __fastcall__ and_last (char* from)
 {
@@ -4431,7 +4431,7 @@ next:
 }
 
 /* The theme's kinds (the theme bank's, the UI's: theme.h) into the catalogue, after its own
-** (part 61's, part 13's room: 2026-10-27) */
+** (part inside's, part item_store's room: 2026-10-27) */
 void s_theme_kinds (void)
 {
     struct kind k;
@@ -4446,7 +4446,7 @@ void s_theme_kinds (void)
     hub_map (0);
 }
 
-/* Thing q's compartments past its first made its own as it is (part 13's s_make_own's, part 61's its room, the user's, 2026-11-16): one that closes
+/* Thing q's compartments past its first made its own as it is (part item_store's s_make_own's, part inside's its room, the user's, 2026-11-16): one that closes
 ** found closed, as its first is; one with a lock, locked one time in three; a hidden one there one time in two, by its
 ** number, no dice: items.h's CS_* */
 void __fastcall__ s_own_comps (struct item* q)
@@ -4534,10 +4534,10 @@ void __fastcall__ s_slide (unsigned n)
 #pragma rodata-name (pop)
 
 /* Box b locked, key k made to fit it alone (the kit's, dq0 -k's "chest,iron key": outmake.c's rule, every making's;
-** HOUSE.md's keys that fit).  Part 13's, the stock's (part 61's till 2026-11-17: its room, the headroom rule's, a
+** HOUSE.md's keys that fit).  Part item_store's, the stock's (part inside's till 2026-11-17: its room, the headroom rule's, a
 ** denizen's opening's slide) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_item_store_CODE")
+#pragma rodata-name (push, "SW_item_store_RODATA")
 void __fastcall__ s_kit_lock (unsigned b, unsigned k)
 {
     struct item* p;
@@ -4566,11 +4566,11 @@ void __fastcall__ s_kit_lock (unsigned b, unsigned k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 62: a denizen's things made out (2026-10-27) */
-#pragma code-name (push, "SW62CODE")
-#pragma rodata-name (push, "SW62RODATA")
+/* ==== Part gear_words: a denizen's things made out (2026-10-27) */
+#pragma code-name (push, "SW_gear_words_CODE")
+#pragma rodata-name (push, "SW_gear_words_RODATA")
 
-/* (The list's last ", " made " and ": part 61's and_last, its own copy) */
+/* (The list's last ", " made " and ": part inside's and_last, its own copy) */
 static void __fastcall__ and_last62 (char* from)
 {
     char* p;
@@ -4645,7 +4645,7 @@ static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned 
         put (nm);
     }
     if ((gr.flags & (I_WORN | I_HELD)) == I_WORN) {
-        worn_put (i, gfo ? WH_THEY : WH_DEN);   /* (" on its left hand": part 107's, 2026-11-10; a person's "their") */
+        worn_put (i, gfo ? WH_THEY : WH_DEN);   /* (" on its left hand": part worn's, 2026-11-10; a person's "their") */
     }
     if (c) {
         strcpy (cn, kind_at (c)->name);
@@ -4793,11 +4793,11 @@ unsigned char s_gear_words (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* (Part 40's, its room: part 36's once, part 11's before it) */
-#pragma code-name (push, "SW40CODE")
-#pragma rodata-name (push, "SW40RODATA")
+/* (Part look_more's, its room: part shut_work's once, part things_listed's before it) */
+#pragma code-name (push, "SW_look_more_CODE")
+#pragma rodata-name (push, "SW_look_more_RODATA")
 
-/* The character's (on it, or in what it carries): part 10's on_pc, here too (wear's: a dig's every spell's, the
+/* The character's (on it, or in what it carries): part things's on_pc, here too (wear's: a dig's every spell's, the
 ** parts not swapped for it); or, wear_did not 0, an actor's own (its thing, or in one of its: the one-path plan's
 ** digging, 2026-11-23) */
 static unsigned char __fastcall__ on_me (unsigned i)
@@ -4841,11 +4841,11 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 39 (its own, 2026-10-22, the user's: "look at the chest", "examine the sword", "check its condition"): a
-** thing looked at as anyone sees it, no test (IO_LOOK); its weight, its lock, it gone over for traps, part 40's, and a
-** thing described for the appraiser there too (IO_DESCRIBE: part 36's once, its room) */
-#pragma code-name (push, "SW39CODE")
-#pragma rodata-name (push, "SW39RODATA")
+/* ==== Part look_on (its own, 2026-10-22, the user's: "look at the chest", "examine the sword", "check its condition"): a
+** thing looked at as anyone sees it, no test (IO_LOOK); its weight, its lock, it gone over for traps, part look_more's, and a
+** thing described for the appraiser there too (IO_DESCRIBE: part shut_work's once, its room) */
+#pragma code-name (push, "SW_look_on_CODE")
+#pragma rodata-name (push, "SW_look_on_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- A thing looked at (IO_LOOK: the request's to, LM_*), its words in the hub's text, as anyone sees it, no test:
@@ -4857,15 +4857,15 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
 **             a simple one.")
 **   LM_COND   its wear and its damage alone ("Your sword is battered, its edge dulled.")
 **   LM_WEIGHT how heavy it is, felt in the hand or lifted where it lies ("The chest weighs about 30 pounds, with what's
-**             in it."), part 40's: out of reach, IR_NOT_HERE (walked over to first)
-**   LM_LOCK   its lock, its make, how hard it looks to pick (the picking is the test), part 40's
-**   LM_TRAPS  gone over for traps (a thing has none yet: "The chest shows no sign of a trap ..."), part 40's: out of
+**             in it."), part look_more's: out of reach, IR_NOT_HERE (walked over to first)
+**   LM_LOCK   its lock, its make, how hard it looks to pick (the picking is the test), part look_more's
+**   LM_TRAPS  gone over for traps (a thing has none yet: "The chest shows no sign of a trap ..."), part look_more's: out of
 **             reach, IR_NOT_HERE
 ** Too far off to make out (1 + sight / 2 + its kind's seen squares: HOUSE.md's noticing), its size alone; further
 ** off than NEAR_SQ, a look at it only (no closer look), and nothing in it */
-struct kind lk;                                 /* (The thing's kind, copied: its fields reached quickly, part 40's too) */
+struct kind lk;                                 /* (The thing's kind, copied: its fields reached quickly, part look_more's too) */
 unsigned char lpl, ld;                          /* (Its name a plural; how far off it is, in squares) */
-unsigned char lnw;                              /* (The words of a list said: part 42's too) */
+unsigned char lnw;                              /* (The words of a list said: part closer's too) */
 
 /* A word of a list ("lit, burning low": ", " before all but the first) */
 static void __fastcall__ word (const char* s)
@@ -4876,8 +4876,8 @@ static void __fastcall__ word (const char* s)
     put (s);
 }
 
-unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's) */
-void __fastcall__ closer (unsigned char mode);  /* (Part 42's) */
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part look_more's) */
+void __fastcall__ closer (unsigned char mode);  /* (Part closer's) */
 
 static unsigned char __fastcall__ look_at (unsigned n);
 
@@ -4890,7 +4890,7 @@ void __fastcall__ s_look_on (unsigned n)
     r = look_at (n);
     hub_map (0);
     if (HUB->ropes) {
-        rope2 (RA_LOOK | n);                    /* (A rope in place: what it's tied to, how far it goes: part 98's) */
+        rope2 (RA_LOOK | n);                    /* (A rope in place: what it's tied to, how far it goes: part rope_untie's) */
     }
     if (rsteps | rbody) {
         n = reach_done (RD_SAID);               /* (Nothing owed after it) */
@@ -4915,7 +4915,7 @@ static unsigned char __fastcall__ look_at (unsigned n)
     text_new ();
     if (!n) {
         if (mode == LM_GO) {
-            closer (LM_GO);                     /* (A trap it knows of: part 42's room, its reply in ld) */
+            closer (LM_GO);                     /* (A trap it knows of: part closer's room, its reply in ld) */
             return ld;
         }
         return IR_NONE;
@@ -4960,7 +4960,7 @@ static unsigned char __fastcall__ look_at (unsigned n)
     }
     if (wcomp && ld <= 1 && mode <= LM_CLOSE) {
         iq.to = 8 | 2;                          /* (A compartment named, within reach: itself, open or closed, locked,
-                                                **   what's in it, not its holder: part 61's, the user's, 2026-11-17) */
+                                                **   what's in it, not its holder: part inside's, the user's, 2026-11-17) */
         return inside ();
     }
     lpl = (lk.flags & K_PLURAL) || rec.qty > 1;
@@ -4971,18 +4971,18 @@ static unsigned char __fastcall__ look_at (unsigned n)
     }
     put (lk.name);
     if (mode >= LM_WEIGHT) {
-        return look_more (n, mode);             /* (Its weight, its lock, it gone over for traps: part 40's) */
+        return look_more (n, mode);             /* (Its weight, its lock, it gone over for traps: part look_more's) */
     }
     put (lpl ? " are " : " is ");
     if (mode == LM_COND) {
-        closer (LM_COND);                       /* (Its condition alone: part 42's) */
+        closer (LM_COND);                       /* (Its condition alone: part closer's) */
         return IR_OK;
     }
     if (rec.where == IW_ACTOR) {
         put (where[rec.flags & I_HELD ? 2 + (rec.sn & IH_BOTH) : !(rec.flags & I_WORN)]);   /* (The hand it's in, its sn:
                                                 **   slice 4.1b's) */
         if (rec.flags & I_WORN) {
-            worn_put (n, WH_LOOK);              /* (" on your left hand": part 107's, 2026-11-10) */
+            worn_put (n, WH_LOOK);              /* (" on your left hand": part worn's, 2026-11-10) */
         }
     } else if (rec.where == IW_ITEM) {
         sh = item_at (rec.x)->kind;             /* (What it's in, or on: its compartment's) */
@@ -5057,10 +5057,10 @@ feet:
     if (mode) {
         if ((cl = (lk.form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) != 0) {
             rec.size = rec.thick = 0;           /* (A pile of coins: no measure, its size and thick its mints' shares;
-                                                **   its stamps told after, part 64's, 2026-10-28) */
+                                                **   its stamps told after, part mints's, 2026-10-28) */
         }
         handled = n;
-        closer (LM_CLOSE);                      /* (What a closer look shows besides: part 42's) */
+        closer (LM_CLOSE);                      /* (What a closer look shows besides: part closer's) */
         if (cl && ld <= NEAR_SQ) {
             mix_words (n);
         }
@@ -5077,10 +5077,10 @@ feet:
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 40 (its own, 2026-10-22): a thing's weight, its lock, it gone over for traps (part 39's look_at's: its
+/* ==== Part look_more (its own, 2026-10-22): a thing's weight, its lock, it gone over for traps (part look_on's look_at's: its
 ** name said already), and a thing described for the appraiser */
-#pragma code-name (push, "SW40CODE")
-#pragma rodata-name (push, "SW40RODATA")
+#pragma code-name (push, "SW_look_more_CODE")
+#pragma rodata-name (push, "SW_look_more_RODATA")
 #pragma static-locals (push, on)
 
 /* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
@@ -5112,7 +5112,7 @@ unsigned char __fastcall__ s_describe (const char* name)
     k = kind_of (rec.kind);
     if ((k->form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
         c = mix_worth (n);                      /* (A pile of coins: its worth as a local would take it, by its mints,
-                                                **   part 63's; no measure, its size and thick its mints' shares) */
+                                                **   part kit's; no measure, its size and thick its mints' shares) */
         fetch (&rec, n);
         rec.size = rec.thick = 0;
         rec.quality = 4;                        /* (A coin's worth its face, not its make's: the appraisal's middling
@@ -5146,11 +5146,11 @@ unsigned char __fastcall__ s_describe (const char* name)
     return IR_OK;
 }
 
-#pragma bss-name (push, "SW40RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma bss-name (push, "SW_look_more_RODATA")  /* (Its own data, wanted only while it runs: not the main RAM's) */
 #pragma static-locals (push, on)
 /* The character's things as an outfit's list (outfit.h's struct ofit), its kit to carry on into a new dungeon (D8's,
-** slice 4.4's): kit.dat in the save folder, written with the game (wgame.c's, LM_KIT: part 40's, none of
-** the commands' path), read as a carried-on game's outfit (part 57's).  Each thing on it: what it wears and holds first
+** slice 4.4's): kit.dat in the save folder, written with the game (wgame.c's, LM_KIT: part look_more's, none of
+** the commands' path), read as a carried-on game's outfit (part outfit's).  Each thing on it: what it wears and holds first
 ** (worn, in its main hand, its other, both), then what's in each in turn, its container's entry before it (PL_IN;
 ** KQ things that hold others at most); how many, its make, its material, lit; NOFIT at most; not a key (its lock the old dungeon's), nor the old
 ** theme's own things (its kind's number another thing's in the next theme's: its puzzle's pieces) */
@@ -5252,7 +5252,7 @@ static void kit_keep (void)
 #pragma bss-name (pop)
 
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
-/* The last three overlays read in (dq0w.rop, ld65's, as they are: climbing, part 97; rope and grapples, parts 95, 96, 98; a denizen's weapon let fall, part 91; a tunneller's dig, part 79), as a climb, a
+/* The last three overlays read in (dq0w.rop, ld65's, as they are: climbing, part climb_on; rope and grapples, parts rope_set, rope_tie, rope_untie; a denizen's weapon let fall, part den_drop; a tunneller's dig, part den_dig), as a climb, a
 ** dig, a rope, a dropped weapon or a tunneller first wants them: none of a game's start's time, the card's, for what most games come to late or never (dq0starttime,
 ** 2026-11-04); carried on with a rope in place, at once.  Once (the hub's rope_in), its time then, some 3M cycles */
 #pragma static-locals (push, off)
@@ -5330,17 +5330,17 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 42 (its own, 2026-10-22): what a closer look at a thing shows (part 39's look_at's: its name said, its
+/* ==== Part closer (its own, 2026-10-22): what a closer look at a thing shows (part look_on's look_at's: its name said, its
 ** state told): what it's made of, its thickness, its wear, what's left of a light, a fuel, a lock's make; and its
 ** condition alone */
-#pragma code-name (push, "SW42CODE")
-#pragma rodata-name (push, "SW42RODATA")
+#pragma code-name (push, "SW_closer_CODE")
+#pragma rodata-name (push, "SW_closer_RODATA")
 #pragma static-locals (push, on)
 
 static const char matname[NMATS][8] = { "", "wood", "iron", "steel", "bronze", "leather", "hemp", "bone", "clay",
     "stone", "glass", "silver", "", "beeswax", "tallow", "gold", "linen", "wool", "silk" };
 
-/* A word of a list (part 39's word, its own copy) */
+/* A word of a list (part look_on's word, its own copy) */
 #define word            word42
 static void __fastcall__ word (const char* s)
 {
@@ -5376,7 +5376,7 @@ static void worn_words (void)
         w = b->life * 10;                       /* (A whole one's minutes: the quarters left) */
         if ((lk.flags & K_LIGHT) && !b->fuels) {
             w = w / 6 * rec.thick * (rec.mat == MT_WAX ? 3 : 2) / 2 * (15 + rec.quality) / 19;   /* (A candle: its own, as
-                                                **   it was made, part 28's) */
+                                                **   it was made, part trace_store's) */
         }
         word (left[lk.flags & K_LIGHT ? rec.kind == KI_LANTERN : (b->fuels & FU_DRAW) && rec.kind != KI_INK ? 3 : 2]
             [!rec.fuel ? 0 : rec.fuel >= w ? 5 : 1 + rec.fuel * 4 / w]);
@@ -5388,7 +5388,7 @@ static void worn_words (void)
 ** (LM_COND: after its name, "... is battered, its edge dulled.") */
 /* Gone to a trap it knows of, the nearest in the chunk it's in ("go to the pit": the UI's resolve.c): where it is, as a
 ** thing's out of reach (the walk beside it, as near as it gets): ld the reply, IR_NOT_HERE; beside it, IR_OK; IR_NONE none */
-#pragma bss-name (push, "SW42RODATA")
+#pragma bss-name (push, "SW_closer_RODATA")
 static void spot_at (void)
 {
     static unsigned ox, oy;
@@ -5492,9 +5492,9 @@ void __fastcall__ s_closer (unsigned char mode)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 11: what's carried listed, a search, a thing described, a thing hidden */
-#pragma code-name (push, "SW11CODE")
-#pragma rodata-name (push, "SW11RODATA")
+/* ==== Part things_listed: what's carried listed, a search, a thing described, a thing hidden */
+#pragma code-name (push, "SW_things_listed_CODE")
+#pragma rodata-name (push, "SW_things_listed_RODATA")
 
 /* ---- What the character carries, worded into the hub's text (things_text): each thing, and what's in it */
 
@@ -5510,14 +5510,14 @@ static unsigned char lmode;                     /* (The words a list in a senten
                                                 **   chisels", not "(in it: ...)"; the inventory's, 2: one a line) */
 
 /* Thing i's letter (tw its record: hub.h's designators, the UI bank's low), "(c) ", put (letter.s's lput, in assembly:
-** part 11's room) */
+** part things_listed's room) */
 void __fastcall__ lput (unsigned key, unsigned* low);
 #define let_put(i)      (hub_map (UI_BANK), lput (tw.id ? tw.id : (i) | LT_REC, UIREC->low))
 
 /* A thing in words (tw, twk its kind's): its kind, how many, and what anyone can see of its state (its make and worth
 ** are an appraiser's to judge).  Coded, the UI's to word (items.h's SAY_LI: how its count is said, its noun's form, its
 ** state, its count, its kind's name, SAY_SEP), by said.txt's LI.item: the list renderer's (the look's lists, the user's,
-** 2026-11-16; its words put here before, many's for a count, part 105's) */
+** 2026-11-16; its words put here before, many's for a count, part inventory's) */
 static void words (void)
 {
     static char b[6];                           /* (Its id's digits: the world's BSS as it was, the step's cost with it,
@@ -5573,7 +5573,7 @@ static void words (void)
     put ("\2");
 }
 
-/* A thing in words, any (part 11's to the others: its record copied, its words put as the text is going) */
+/* A thing in words, any (part things_listed's to the others: its record copied, its words put as the text is going) */
 void __fastcall__ s_thing_words (const struct item* q)
 {
     memcpy (&tw, q, sizeof tw);
@@ -5755,7 +5755,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         }
         if (!depth) {
             if (tw.flags & I_WORN) {
-                worn_put (i, WH_LIST);          /* (Where: ", on your left hand", part 107's, 2026-11-10) */
+                worn_put (i, WH_LIST);          /* (Where: ", on your left hand", part worn's, 2026-11-10) */
             } else {
                 put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : "");  /* (The hand it's in, its sn: slice 4.1b's) */
             }
@@ -5790,9 +5790,9 @@ void s_list (void)
     put (" lb.");
 }
 
-#pragma code-name (push, "SW105CODE")
-#pragma rodata-name (push, "SW105RODATA")
-/* What the character carries listed (IO_LIST): gathered first, then worded by part 11's s_list (part 105's, part 11's
+#pragma code-name (push, "SW_inventory_CODE")
+#pragma rodata-name (push, "SW_inventory_RODATA")
+/* What the character carries listed (IO_LIST): gathered first, then worded by part things_listed's s_list (part inventory's, part things_listed's
 ** room: the letters, 2026-11-06; a part of its own, its swaps the shorter) */
 void s_inventory (void)
 {
@@ -5836,7 +5836,7 @@ void s_inventory (void)
 #pragma code-name (pop)
 
 /* What's in thing n (or on it, hanging from it) worded as a list, alike told together ("a candle, two chisels":
-** part 36's inside, its words in a sentence) */
+** part shut_work's inside, its words in a sentence) */
 void __fastcall__ s_listed (unsigned n)
 {
     lmode = 1;
@@ -5848,10 +5848,10 @@ void __fastcall__ s_listed (unsigned n)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 27 (dq0w.c's, the lights burning; its room): a light renewed */
-#pragma code-name (push, "SW100CODE")            /* (Part 100's since 2026-11-04, the swap study's: part 27's half, seldom run,
+/* ==== Part burning (dq0w.c's, the lights burning; its room): a light renewed */
+#pragma code-name (push, "SW_refill_CODE")      /* (Part refill's since 2026-11-04, the swap study's: part burning's half, seldom run,
                                                 **   that every minute's look copied) */
-#pragma rodata-name (push, "SW100RODATA")
+#pragma rodata-name (push, "SW_refill_RODATA")
 
 SAY_PUT (say100)
 
@@ -5871,7 +5871,7 @@ unsigned char s_fill (void)
     char ln[14], fn[14];
 
     if ((k = water (W_FILL)) != IR_NONE) {
-        return k;                               /* (A waterskin filled: part 74's, slice 4.9's) */
+        return k;                               /* (A waterskin filled: part waterskin's, slice 4.9's) */
     }
     text_new ();
     if (rs_redo & RR_DIP) {
@@ -5957,9 +5957,9 @@ unsigned char s_fill (void)
     }
     if (!(iq.to & IO_DONE)) {
         handled = n;                            /* (The light filled never put away to free a hand for its fuel: the
-                                                **   hands' rule's, part 90's, the user's, 2026-11-17) */
+                                                **   hands' rule's, part hands_free's, the user's, 2026-11-17) */
         if ((takes & FU_PITCH) && reach_do (RO_REDIP) != IR_OK) {
-            return IR_NO;                       /* (A torch dipped: what comes first, part 86's) */
+            return IR_NO;                       /* (A torch dipped: what comes first, part reach_do's) */
         }
         if (reach_step (h ? h : c, RS_TOOL)) {
             return IR_NO;                       /* (Its fuel got out: a tool's steps; put away after the filling) */
@@ -5971,7 +5971,7 @@ unsigned char s_fill (void)
     HUB->ireq.x = takes == FU_OIL ? 200 : 100;
     if (!(iq.to & IO_DONE)) {
         HUB->ireq.qty = takes & FU_PITCH ? LT_DIP : LT_FILL;   /* (Begun: its first words the UI's, a torch dipped, a lantern
-                                                **   filled; two torches, part 86's the old) */
+                                                **   filled; two torches, part reach_do's the old) */
         HUB->ireq.item = l.kind;
         return IR_OK;
     }
@@ -5994,12 +5994,12 @@ unsigned char s_fill (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 13: the store's rarer work: begun, kept, the kit, the theme's kinds, a chunk's things and the remains
+/* ==== Part item_store: the store's rarer work: begun, kept, the kit, the theme's kinds, a chunk's things and the remains
 ** put down */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW_item_store_CODE")
+#pragma rodata-name (push, "SW_item_store_RODATA")
 
-/* (Part 13's, with the kit that makes its things its own, ten at a time: once part 11's, the kit put out and in
+/* (Part item_store's, with the kit that makes its things its own, ten at a time: once part things_listed's, the kit put out and in
 ** again for each) The materials' toughness (items.h's MT_*) */
 static const unsigned char tough[NMATS] = MAT_TOUGH;
 
@@ -6098,7 +6098,7 @@ void __fastcall__ s_make_own (unsigned i)
         }
     }
     if ((k = kind_of (q.kind))->flags & K_CONTAINER || k->keeps & KF_ON) {
-        own_comps (&q);                         /* (Its compartments past the first: part 61's) */
+        own_comps (&q);                         /* (Its compartments past the first: part inside's) */
     }
     memcpy (item_at (i), &q, sizeof q);
     if (q.kind == KI_OIL) {                     /* (A flask of oil a vessel, its pint of lamp oil a liquid in it, as a
@@ -6197,7 +6197,7 @@ void __fastcall__ s_stock_down (unsigned char k)
             } else if (box) {
                 kit_lock (box, i);
             }
-        } else if (e.make && e.make < 16) {     /* (Coins of an era of old, the maker's: their mint, whole, part 63's
+        } else if (e.make && e.make < 16) {     /* (Coins of an era of old, the maker's: their mint, whole, part kit's
                                                 **   piles, 2026-10-28; a portal's part's make its material's above) */
             p->size = e.make << 4 | 15;
         } else if (e.make) {                    /* (A portal's part's make: the portal's) */
@@ -6223,14 +6223,14 @@ unsigned __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned
     return i;
 }
 
-/* (Part 13's: a rare command's) Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
+/* (Part item_store's: a rare command's) Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
 ** method's quality and the concealer's skill): its difficulty, in steps, the referee's test's (rs.h's P_CONCEAL: 12
 ** at a critical success, 6 a marginal one, 2 a marginal failure; at a critical failure 0, a floor's dust and corners
 ** only); known to the character, who hid it.  The act table's conceal row (the one-path plan's stage 2, 2026-11-21):
 ** its minute, its test by the one sender (act_test: a robber's stash its own sheet's, wfight.c's), HIDE_OF's steps */
 unsigned char __fastcall__ drop (const char* name);
-#pragma code-name (push, "SW101CODE")
-#pragma rodata-name (push, "SW101RODATA")
+#pragma code-name (push, "SW_hide_thing_CODE")
+#pragma rodata-name (push, "SW_hide_thing_RODATA")
 unsigned char __fastcall__ s_hide (const char* name)
 {
     struct actq q;
@@ -6238,7 +6238,7 @@ unsigned char __fastcall__ s_hide (const char* name)
     unsigned char d;
     unsigned n;
 
-    if (iq.to & IO_ROPE) {                      /* (A rope's work, its shape this one's: part 96's) */
+    if (iq.to & IO_ROPE) {                      /* (A rope's work, its shape this one's: part rope_tie's) */
         look_more (0, LM_ROPES);
         return rope ();
     }
@@ -6280,7 +6280,7 @@ unsigned char __fastcall__ s_hide (const char* name)
 /* ==== In the catalogue's bank (dq0w.cfg's CAT: linked at $8000 after the kinds and their words, and run with that
 ** bank in the window, serve's o_handle and fits' o_fits): the things handled.  Its code never touches the window: a
 ** main-RAM function that does is called through m0, m1 or m2 (bank.s: the catalogue's bank put back after it; its
-** arguments 16 bits, its result a char's in the low byte), part 10's through its stub (part 10 in the area as it's
+** arguments 16 bits, its result a char's in the low byte), part things's through its stub (part things in the area as it's
 ** called: serve's), an item's record copied out (fetch) and back (store); the kinds read where they are (kinds.c's
 ** kinds) */
 #pragma code-name (push, "CATCODE")
@@ -6549,7 +6549,7 @@ static unsigned other (void)
 }
 
 /* Into a hand (from anywhere on the character, or within reach): IO_HOLD's the one its to says, else the one that suits
-** it (part 48's, and its words) */
+** it (part work_done's, and its words) */
 static unsigned char __fastcall__ hold (unsigned n)
 {
     return B (m2 (hold_in, n, iq.kind == IO_HOLD ? iq.to : 0));
@@ -6583,11 +6583,11 @@ static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
     if (r) {
         return no (r);
     }
-    rs_cc = cc;                                 /* (The reach's way in: that compartment's, part 56's) */
+    rs_cc = cc;                                 /* (The reach's way in: that compartment's, part reach's) */
     r = B (m2 (reach_step, n, c));
     rs_cc = 0;
     if (r) {
-        return IR_NO;                           /* (A step of the reach first: part 85's) */
+        return IR_NO;                           /* (A step of the reach first: part reach_steps's) */
     }
     m2 (comp_of, B (m1 (item_kind, c)), cc);    /* (Its row, crow: its prep, o_place's and the words') */
     ccomp = cc;
@@ -6641,7 +6641,7 @@ static unsigned char cr;
 static unsigned char __fastcall__ carried (unsigned char s, unsigned char t)
 {
     if (!cr) {
-        return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 85's) */
+        return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part reach_steps's) */
     }
     say (s);
     name_of (cont, 0);                          /* (Where carry put it: the pack, the purse) */
@@ -6675,7 +6675,7 @@ static unsigned char __fastcall__ don (unsigned n)
         return kf & K_HAND && !(iq.to & DN_WORN) ? hold (n) : no (SA_NO_WEAR);
     }
     if ((k = B (m2 (worn_at, n, k))) != 0) {   /* (Worn already; one of a kind worn, a second cloak; where it's worn, its
-                                                **   room there: part 107's, 2026-11-10, worn places) */
+                                                **   room there: part worn's, 2026-11-10, worn places) */
         return k == 0xFF ? IR_NO : no (k);
     }
     if (B (m2 (reach_step, n, 0))) {
@@ -6698,7 +6698,7 @@ static unsigned char __fastcall__ doff (unsigned n)
     return carried (SA_DOFF, act_t (AC_DOFF));
 }
 
-/* ---- Light: a flame to hand (part 10's flame, its room) */
+/* ---- Light: a flame to hand (part things's flame, its room) */
 unsigned char flame (void);
 
 /* A light spent (its fuel all burnt: a lantern dry, a torch burnt out; slice 4.1's): its words why it won't light, or
@@ -6713,7 +6713,7 @@ static unsigned char spent (void)
 
 /* Lit, or put out (on 0): the thing named, else the first carried that would be (one that would be first, of those
 ** named: a spare torch, not the one burnt out; or one within reach, named) */
-#define n               handled                 /* (The thing to light what's handled: not put away for its fire-maker, part 90's) */
+#define n               handled                 /* (The thing to light what's handled: not put away for its fire-maker, part hands_free's) */
 static unsigned char __fastcall__ light (unsigned char on)
 {
     static unsigned c, nf;
@@ -6721,7 +6721,7 @@ static unsigned char __fastcall__ light (unsigned char on)
 
     c = 0;
     fr = on && wsel == SL_NEW;                 /* ("Light a new torch", the user's, 2026-11-02: HOUSE.md's */
-    if (fr && (rs_redo & RR_NEW)) {             /*   a new light lit from the old one, its next step, part 86's) */
+    if (fr && (rs_redo & RR_NEW)) {             /*   a new light lit from the old one, its next step, part reach_do's) */
         m0 (text_new);
         return B (m1 (reach_do, RO_NEWL));
     }
@@ -6800,7 +6800,7 @@ spare:
                 if ((o.flags & I_LIT) && o.fuel >= nf) {
                     return no (SA_NO_SPARE);
                 }
-                if ((o.flags & I_LIT) && rs_ok == 1) {  /* (Burning, by the steps: lit from it, part 86's) */
+                if ((o.flags & I_LIT) && rs_ok == 1) {  /* (Burning, by the steps: lit from it, part reach_do's) */
                     rs_old = c;
                     rs_tool = n;
                     rs_redo |= RR_NEW;
@@ -6832,7 +6832,7 @@ spare:
             name_of (rs_tool, 0);               /* (Found empty as it's used: told, known from now on) */
             return no (SA_EMPTY);
         }
-        return IR_NO;                           /* (The fire-maker's steps first: part 85's) */
+        return IR_NO;                           /* (The fire-maker's steps first: part reach_steps's) */
     }
     if (x && (m1 (reach_from, n), (r = hold (n)) != IR_OK)) {
         return r;                               /* (Out of the pack first, into a hand: its reach) */
@@ -6856,7 +6856,7 @@ static unsigned char o_handle (void)
     strcpy (xn, iq.name);
     strcpy (yn, iq.into);
     if (op == IO_BAR) {
-        return B (m0 (bar_hand));      /* (Part 35's) */
+        return B (m0 (bar_hand));      /* (Part by_count's) */
     }
     if (op == IO_LIGHT || op == IO_DOUSE) {
         return light (op == IO_LIGHT);
@@ -6899,7 +6899,7 @@ static unsigned char o_handle (void)
         m2 (store, (unsigned) &o, n);
         return IR_OK;
     }
-    m1 (reach_from, n);                         /* (Its reach: part 10's, HOUSE.md's) */
+    m1 (reach_from, n);                         /* (Its reach: part things's, HOUSE.md's) */
     if ((c2 = m1 (shut_in, n)) != 0) {
         name_of (c2, 0);                        /* (In a thing closed: "The backpack is closed.") */
         return no (SA_SHUT);
@@ -6922,12 +6922,12 @@ static unsigned char o_handle (void)
 #pragma rodata-name (pop)
 #pragma code-name (pop)
 
-/* ==== Part 46 (its own, 2026-10-22, the user's: "search around for a dagger", "search the table", a search in the
-** dark by touch): the thing a search is for or on (IO_SEEK), and what a search turns up (IO_SEARCH, part 11's once), by
+/* ==== Part seek (its own, 2026-10-22, the user's: "search around for a dagger", "search the table", a search in the
+** dark by touch): the thing a search is for or on (IO_SEEK), and what a search turns up (IO_SEARCH, part things_listed's once), by
 ** its form (the world's srch_form: SF_*, | SF_TOUCH in the dark: HOUSE.md's searching); what's on a thing or in it,
-** part 47's */
-#pragma code-name (push, "SW46CODE")
-#pragma rodata-name (push, "SW46RODATA")
+** part on_it's */
+#pragma code-name (push, "SW_seek_CODE")
+#pragma rodata-name (push, "SW_seek_RODATA")
 #pragma static-locals (push, on)
 
 extern unsigned char srch_form;                 /* (dq0w.c's: the search under way's form) */
@@ -6936,7 +6936,7 @@ static unsigned sitem;                          /* (The thing searched on, or th
 static unsigned char sd2;                       /*   (how far off, squared) */
 static const unsigned char d2_[7] = { 9, 4, 1, 0, 1, 4, 9 };   /* (A square's distance off, squared, by its offset) */
 #define SEARCH_R        3
-unsigned char __fastcall__ on_it (unsigned n, unsigned char touch);   /* (Part 47's) */
+unsigned char __fastcall__ on_it (unsigned n, unsigned char touch);   /* (Part on_it's) */
 
 /* The referee's search test of the thing in rec, its hiding the steps worse (2 more by touch; ease the better, 2 for a
 ** heap poked through, all the search on it): 1 if it's found.  The one sender's (act_test, actor 0: an actor's search
@@ -7056,7 +7056,7 @@ unsigned char s_seek (void)
 /* A search's end (IO_SEARCH: the request's to its reach, the world's, wtrap.c's: a square searched if its distance off,
 ** squared, is less): what it turns up, in the hub's text, by its form; the number found (or 1: words, found or not).
 ** About the character, nearby, on the floor: scan's.  For a thing: the one IO_SEEK found, if the search's reach came to
-** it ("You find a dagger.", "You find no dagger here."); on or in one, part 47's on_it, a heap's poked; a wall's, none
+** it ("You find a dagger.", "You find no dagger here."); on or in one, part on_it's on_it, a heap's poked; a wall's, none
 ** (the walls' alone).  And a room searched whole's, by the request's to (IOS_*: the world's at a stop, wroom.inc's) */
 static unsigned char __fastcall__ poked (unsigned n, unsigned char touch);
 extern unsigned char rs_said;
@@ -7143,17 +7143,17 @@ static unsigned char __fastcall__ poked (unsigned n, unsigned char touch)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 47 (its own, 2026-10-22): what's on a thing, or in it, searched (part 46's search's SF_ON: thing n): its
+/* ==== Part on_it (its own, 2026-10-22): what's on a thing, or in it, searched (part seek's search's SF_ON: thing n): its
 ** things listed; closed, not looked into; a thing that holds nothing, nothing hidden about it.  No words of traps but
-** for a search said to be for them (by touch, SF_TRAPS: examine's, part 40's look_more: "The chest shows no sign of a
+** for a search said to be for them (by touch, SF_TRAPS: examine's, part look_more's look_more: "The chest shows no sign of a
 ** trap ..."; the user's playtest, 2026-11-02: "it says 'no sign of a trap', but I am not looking for traps").  A room
-** searched whole's look over a thing (IOS_THING), what a closer look shows besides (part 42's).  1 (its words) */
-#pragma code-name (push, "SW47CODE")
-#pragma rodata-name (push, "SW47RODATA")
+** searched whole's look over a thing (IOS_THING), what a closer look shows besides (part closer's).  1 (its words) */
+#pragma code-name (push, "SW_on_it_CODE")
+#pragma rodata-name (push, "SW_on_it_RODATA")
 #pragma static-locals (push, on)
 
 /* The referee's search test of a hidden compartment of the thing in rec (a false bottom, a secret drawer: the user's,
-** 2026-11-16), the steps worse the better it's made, 2 more by touch, as hidden things' (part 46's turned_up): 1 found */
+** 2026-11-16), the steps worse the better it's made, 2 more by touch, as hidden things' (part seek's turned_up): 1 found */
 static unsigned char __fastcall__ found_c (unsigned char touch)
 {
     return act_test (0, P_SEARCH, -(signed char) (rec.quality / 3) - (touch ? 2 : 0)) >= G_PASS;
@@ -7250,7 +7250,7 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
     } else if (srch_form & SF_TRAPS) {
         put (" The ");
         put (lk.name);
-        look_more (n, LM_TRAPS);                /* (Its trap, asked: examine's check, part 40's) */
+        look_more (n, LM_TRAPS);                /* (Its trap, asked: examine's check, part look_more's) */
     }
     return 1;
 }
@@ -7259,7 +7259,7 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 48 (dq0w.c's work and what came of it, and here, its room): the hands (slice 4.1b; the user's, 2026-10-21:
+/* ==== Part work_done (dq0w.c's work and what came of it, and here, its room): the hands (slice 4.1b; the user's, 2026-10-21:
 ** "is there handedness (right handed versus left versus ambidextrous) in the character profile?"): each thing held in
 ** the left hand, the right, or both (its sn, items.h's IH_*); the hand a thing taken up goes to, the one that suits it
 ** (a weapon or a tool the main hand, a shield or a light the other, a two-handed thing both, the one free if only one
@@ -7267,8 +7267,8 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
 ** hands"); a useless arm's hand holds nothing (the user's, 2026-10-22: "For an arm or hand, that means no picking things
 ** up with that hand"), nor a two-handed thing; what's in them changed over ("swap hands").  The main hand is the
 ** referee's (its summary's limbs: the medical traits', left-handed, ambidextrous) */
-#pragma code-name (push, "SW48CODE")
-#pragma rodata-name (push, "SW48RODATA")
+#pragma code-name (push, "SW_work_done_CODE")
+#pragma rodata-name (push, "SW_work_done_RODATA")
 
 static const char* const hword[4] = { "", "left", "right", "both" };
 static unsigned char hmain, hdead, hused, hcur;  /* (The main hand, the useless ones, those holding something else, its
@@ -7405,7 +7405,7 @@ unsigned char __fastcall__ s_doff_feet (unsigned n)
     p->y = y;
     p->flags &= ~(I_HELD | I_WORN);
     dropped = n;
-    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
+    sky_ask (n);                                /* (On a shaft's head: it falls, part item_pages's) */
     text_new ();
     say48 (SA_DOFF_FEET, kind_of (item_kind (n))->name, "");
     took = row_t (AC_DOFF);
@@ -7490,14 +7490,14 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
             h = rs_more (0);
             rs_tool = hrs;
             if (h) {
-                return IR_NO;                   /* (Its hands made free first, a step at a time: A25's, part 90's) */
+                return IR_NO;                   /* (Its hands made free first, a step at a time: A25's, part hands_free's) */
             }
         }
         why_not ();
         return IR_NO;
     }
     if (reach_step (n, 0)) {
-        return IR_NO;                           /* (A step of the reach first: part 85's) */
+        return IR_NO;                           /* (A step of the reach first: part reach_steps's) */
     }
     p = item_at (n);
     p->where = IW_ACTOR;
@@ -7513,9 +7513,9 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
 /* What's in the character's hands changed over, left to right and right to left (IO_SWAP's: "swap hands"), its words
 ** into the hub's text, its time in the request's x: IR_OK, or IR_NO (nothing held, a thing in both hands, a hand to go
 ** into useless) */
-void __fastcall__ hands_now (unsigned n);       /* (Its stub: part 48's) */
-#pragma code-name (push, "SW101CODE")
-#pragma rodata-name (push, "SW101RODATA")
+void __fastcall__ hands_now (unsigned n);       /* (Its stub: part work_done's) */
+#pragma code-name (push, "SW_hide_thing_CODE")
+#pragma rodata-name (push, "SW_hide_thing_RODATA")
 SAY_PUT (say101)
 
 unsigned char s_swap (void)
@@ -7569,12 +7569,12 @@ unsigned char s_swap (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 63 (2026-10-28: part 13's room, the coins'): the character's kit */
-#pragma code-name (push, "SW63CODE")
-#pragma rodata-name (push, "SW63RODATA")
+/* ==== Part kit (2026-10-28: part item_store's room, the coins'): the character's kit */
+#pragma code-name (push, "SW_kit_CODE")
+#pragma rodata-name (push, "SW_kit_RODATA")
 #pragma static-locals (push, on)
 
-/* A free record taken, its thing put down (part 13's put_down, a copy of its own) */
+/* A free record taken, its thing put down (part item_store's put_down, a copy of its own) */
 static unsigned __fastcall__ put_down63 (unsigned char kind, unsigned char where, unsigned char sn, unsigned x,
     unsigned y, unsigned char qty)
 {
@@ -7601,7 +7601,7 @@ static unsigned __fastcall__ put_down63 (unsigned char kind, unsigned char where
     return 0;
 }
 
-/* A name said (named's, part 10's: a copy of its own) */
+/* A name said (named's, part things's: a copy of its own) */
 static unsigned char __fastcall__ a_word (const char* k, const char* w)
 {
     unsigned char n = strlen (w);
@@ -7644,11 +7644,11 @@ static unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, 
     if (!i) {
         return 0xFFFF;
     }
-    make_own (i);                               /* (Part 13's) */
+    make_own (i);                               /* (Part item_store's) */
     return i;
 }
 
-/* ---- The character's kit: its outfit (part 57's, outfit.c: the universal kit and its occupation's, as the referee
+/* ---- The character's kit: its outfit (part outfit's, outfit.c: the universal kit and its occupation's, as the referee
 ** says, the outfits' file's); or, dq0 -K's (the tests') or without the outfits, the kit as it was: a torch lit in hand,
 ** a backpack worn (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it), and
 ** a spare torch and a flask of oil in the pack after (D5: slice 4.1's); and things more (dq0 -k, commas between: in the
@@ -7664,7 +7664,7 @@ static const unsigned char kit_list[NKIT][4] = {
     { KI_DAGGER, 4, 1, 0 }, { KI_WATERSKIN, 4, 1, 0 }
 };
 
-unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's: LM_KIT's kit_keep) */
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part look_more's: LM_KIT's kit_keep) */
 void s_kit (void)
 {
     unsigned made[NKIT];
@@ -7682,7 +7682,7 @@ void s_kit (void)
         hub_map (KIND_BANK);                    /* (The money: in the pouch, silver pennies in lots of 250 at most (a
                                                 **   lot's count a byte, joined to 250), all of it, told together; its
                                                 **   odd farthings farthings, cut pennies: the user's, 2026-10-28,
-                                                **   "Please keep farthings": part 57's till slice 4.4, its room) */
+                                                **   "Please keep farthings": part outfit's till slice 4.4, its room) */
         for (i = ost.budget >> 2; i && (off = OF_N) < NOFIT; i -= box) {
             box = i > 250 ? 250 : i;
             memset (OF_LIST + off, 0, sizeof *OF_LIST);
@@ -7773,7 +7773,7 @@ void s_kit (void)
         }
         if (i != 0xFFFF && ((k = item_at (i)->kind) == KI_CHEST || k == KI_CASE || k == KI_DESK)) {
             box = i;                            /* (A case's, a desk's drawer's too: furniture's, 2026-11-16) */                            /* (A key after a chest locks it, and fits it alone: the outfits'
-                                                **   rule, every making's, HOUSE.md's keys that fit; part 61's) */
+                                                **   rule, every making's, HOUSE.md's keys that fit; part inside's) */
         } else if (i != 0xFFFF && k == KI_KEY && box) {
             kit_lock (box, i);
             box = 0;
@@ -7794,7 +7794,7 @@ void s_kit (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 64 (2026-10-28): the coins' mints (the user's: "each coin should include its provenance (where it was
+/* ==== Part mints (2026-10-28): the coins' mints (the user's: "each coin should include its provenance (where it was
 ** minted), with the local region mintage most common (80%) unless belonging to an historic/anchient hoard, which
 ** should, of course, be appropriately stocked", and "a single group of coins should have a mint, yes, but one "pile"
 ** may contain many different mintings"; HOUSE.md's money).  A pile of coins (a lot of pennies, of crowns: its kind's
@@ -7805,14 +7805,14 @@ void s_kit (void)
 ** no mix yet (its fuel 0) is given today's as it's first wanted (a purse, a hoard of now: four coins in five the
 ** region's own, the rest its neighbours' and the dwarves', the house's); an old era's coins are the maker's (its mint,
 ** whole: s_stock_down) */
-#pragma code-name (push, "SW64CODE")
-#pragma rodata-name (push, "SW64RODATA")
+#pragma code-name (push, "SW_mints_CODE")
+#pragma rodata-name (push, "SW_mints_RODATA")
 #pragma static-locals (push, on)
 
 static unsigned char cm_n, cm_era[TMINTS];      /* (The theme's mints: how many, each one's era) */
-/* (Each one's ways, and a pile's coins by mint, counts: part 64's own, each used with no part swapped in between, as
+/* (Each one's ways, and a pile's coins by mint, counts: part mints's own, each used with no part swapped in between, as
 ** s_mix_words' puts do; the main RAM's room, 2026-11-18) */
-#pragma bss-name (push, "SW64RODATA")
+#pragma bss-name (push, "SW_mints_RODATA")
 static unsigned char cm_ways[TMINTS];
 static unsigned cm_c[TMINTS + 1];
 #pragma bss-name (pop)
@@ -7847,7 +7847,7 @@ static void __fastcall__ cm_at (unsigned i)
 
 /* The groups made from the counts (cm_c, by mint), the four greatest, in fifteenths of their sum (each at least one,
 ** the greatest the rest), put in the pile's bytes (cm_b) */
-#pragma bss-name (push, "SW64RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+#pragma bss-name (push, "SW_mints_RODATA")      /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-18) */
 static void cm_groups (void)
 {
@@ -7879,7 +7879,7 @@ static void cm_groups (void)
 /* Thing i's mix, if it's a pile of coins with none yet: today's (its numbers', no die: four coins in five, a fifth more
 ** or less, the region's own, the rest another's of today, a neighbour's or the dwarves'; a crown the gold one's, the
 ** dwarves') */
-#pragma bss-name (push, "SW64RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+#pragma bss-name (push, "SW_mints_RODATA")      /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-18) */
 void __fastcall__ s_mix_need (unsigned i)
 {

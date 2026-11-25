@@ -1,5 +1,5 @@
 /*
-** tend.c - (dq0, swapped part 12: swap.inc) wounds over time, the UI's part (slice 4.3: HOUSE.md's wounds over time):
+** tend.c - (dq0, swapped part tend: swap.inc) wounds over time, the UI's part (slice 4.3: HOUSE.md's wounds over time):
 ** first aid ("tend my wounds", "bandage my arm", "first aid", "treat the bandit": VB_TEND), the referee's plan for it
 ** (RS_TREAT: the wound, the treatment, its time) carried out as a timed work (LT_TEND: its first words at once, its
 ** outcome as its time's up, the referee's; a bleeder's tourniquet a minute at a time till it holds), a bandage it
@@ -19,8 +19,8 @@
 #include "rs.h"
 #include "actions.h"
 
-#pragma code-name ("SW12CODE")
-#pragma rodata-name ("SW12RODATA")
+#pragma code-name ("SW_tend_CODE")
+#pragma rodata-name ("SW_tend_RODATA")
 #pragma local-strings (on)
 
 /* ---- In shock (the book's, Combat 14: it may rest, be led away, or make a half move): what it may still do, every
@@ -144,7 +144,7 @@ void s_tend (void)
         strcpy (lb, r->text);
         r->state = REQ_FREE;
         if (!res && tool_out (0)) {
-            goto out;                           /* (A bandage got out first: a tool's steps, part 19's) */
+            goto out;                           /* (A bandage got out first: a tool's steps, part reach_steps's) */
         }
         msg (lb);
         if (!res) {

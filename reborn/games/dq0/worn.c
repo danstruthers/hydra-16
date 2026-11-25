@@ -6,7 +6,7 @@
 ** whose words say a part of the body after "my" (the parser's worn phrase, CF_WORN: its other the place's words, "left
 ** hand"; "put X on my <part>": a don there, not a put in a thing) is a don, its other the place, in the world's words
 ** for it ("@" and the place: items.h's place on the body as a letter, A PB_HEAD ... P PB_FOOT; the side said, l or r,
-** else -), the world's things.c's don and part 107's (wworn.c) to judge it
+** else -), the world's things.c's don and part worn's (wworn.c) to judge it
 */
 
 #include <string.h>

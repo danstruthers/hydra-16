@@ -2,8 +2,8 @@
 ** hdens.c - the denizens' commands (COMMANDS-CRITIQUE.md's §5.2, step L, stage 3: the command handlers by meaning,
 ** cmds.h): a blow (at a denizen, or a thing broken by it), the stance; the missiles (a shot, a throw, a launcher
 ** loaded, the missiles gathered); away from the foes; a denizen swayed (talk, tell, persuade, threaten, an ally's
-** requests, a name given), a gift and the market.  Part 2's, the commands' own: each verb's work as it was in main.c's
-** s_command (part 2's) and rarer (part 24's: the sway, the gift).
+** requests, a name given), a gift and the market.  Part commands's, the commands' own: each verb's work as it was in main.c's
+** s_command (part commands's) and rarer (part rare_commands's: the sway, the gift).
 */
 
 #include <string.h>
@@ -13,8 +13,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* A grapple's move g (rs.h's GM_*, | GT_TRY: blows.c's grapple, overlay 19's: HOUSE.md's grappling, 2026-11-09) sent
 ** (I_ATTACK, its b AIM_GRAPPLE | the move), or why not said; GT_TRY's none beside, 0, nothing said */
@@ -28,7 +28,7 @@ unsigned char __fastcall__ grip_go (unsigned char g)
     return g;
 }
 
-/* H_MISSILE: the missiles (part 13's, slice 4.7's; a throw at a denizen too): shot, loaded, gathered, thrown at the
+/* H_MISSILE: the missiles (part missiles's, slice 4.7's; a throw at a denizen too): shot, loaded, gathered, thrown at the
 ** thing said or the target (the world's throw, its words overlay 11's); thrown into a well, let fall in it */
 static void do_missile (void)
 {
@@ -42,7 +42,7 @@ static void do_missile (void)
         return;                                 /* ("Throw the goblin": a denizen beside, thrown, a grapple's) */
     }
     d = HUB->pc_light;
-    if (missiles () == 2) {                     /* (Thrown at a thing: part 13's) */
+    if (missiles () == 2) {                     /* (Thrown at a thing: part missiles's) */
         after (d, 20, IO_DROP);                 /* (Its time; a light thrown, the world's look in the new light) */
     }
 }
@@ -81,13 +81,13 @@ static void do_fight (void)
 }
 
 /* ---- The fights' verbs not done till the plan's batch B1 (2026-11-10, DECISIONS.md's "Charge, a throw a way, engage,
-** a split attack, and again"): part 24's, the commands seen to less often (part 2's room), through its stub fights.  Its
+** a split attack, and again"): part rare_commands's, the commands seen to less often (part commands's room), through its stub fights.  Its
 ** words its own, said from it (the main RAM's sayf, msg); its state the part's own (none kept from one command to the
 ** next, and no other part called while it's needed) */
 void __fastcall__ fights (unsigned char h);
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
-#pragma bss-name (push, "SW24RODATA")
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
+#pragma bss-name (push, "SW_rare_commands_RODATA")
 
 static unsigned char k, d, e, n;
 static int dx, dy;
@@ -258,25 +258,25 @@ void __fastcall__ s_fights (unsigned char h)
 #pragma rodata-name (pop)
 #pragma bss-name (pop)
 
-/* H_CHARGE (the plan's batch B1, the fights'): a run at the nearest hostile ahead, a war cry, a blow (part 24's) */
+/* H_CHARGE (the plan's batch B1, the fights'): a run at the nearest hostile ahead, a war cry, a blow (part rare_commands's) */
 static void do_charge (void)
 {
     fights (H_CHARGE);
 }
 
-/* H_THROW_WAY (B1's): a thing thrown a way, its mark squares along the line (part 24's) */
+/* H_THROW_WAY (B1's): a thing thrown a way, its mark squares along the line (part rare_commands's) */
 static void do_throw_way (void)
 {
     fights (H_THROW_WAY);
 }
 
-/* H_ENGAGE (B1's): closed with a denizen, into its zone, no blow (part 24's) */
+/* H_ENGAGE (B1's): closed with a denizen, into its zone, no blow (part rare_commands's) */
 static void do_engage (void)
 {
     fights (H_ENGAGE);
 }
 
-/* H_SPLIT (B1's): two foes attacked in turn (part 24's) */
+/* H_SPLIT (B1's): two foes attacked in turn (part rare_commands's) */
 static void do_split (void)
 {
     fights (H_SPLIT);
@@ -284,7 +284,7 @@ static void do_split (void)
 
 /* H_SAY (the plan's batch B2, the noise's): words said aloud, heard by their loudness (I_NOISE); H_WAKE (B3's, the
 ** minds'): oneself woken, a sleeper woken (SW_WAKE); H_TAUNT: a denizen goaded from its post (SW_TAUNT); H_ORATE: a
-** speech to all in earshot (P_ORATE).  minds.c's, part 27 */
+** speech to all in earshot (P_ORATE).  minds.c's, part self_verbs */
 static void do_say (void)
 {
     minds (H_SAY);
@@ -353,8 +353,8 @@ void __fastcall__ s_dens_do (unsigned h)
         break;
     default:                                    /* (H_SWAY: a denizen swayed, an ally asked, a name given: the denizens'
                                                 **   sway the verb's, SW_*; H_GIVE: a gift, the market, entertaining:
-                                                **   part 15's whole, 2026-11-02) */
-        if (errand ()) {                        /* (A thing to fetch found first, a gift's: part 15's, slice 4.8's) */
+                                                **   part trade's whole, 2026-11-02) */
+        if (errand ()) {                        /* (A thing to fetch found first, a gift's: part trade's, slice 4.8's) */
             deal ((unsigned char) h == H_GIVE ? SW_GIVE : cmd.aux);
         }
     }

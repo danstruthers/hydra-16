@@ -6,14 +6,14 @@
 ** and traps within its reach by wtrap.c's search (the character's, wk.who its actor: the referee's P_SEARCH of its
 ** sheet, a trap the worse its hiding), the hidden things lying there by the character's test (things.c's scan: P_SEARCH,
 ** its hiding the steps worse, 2 more by touch), and one hiding there it sees (the character, or one not of its
-** faction) by the character's own test of a hidden denizen (part 94's HO_SEARCH: one easier, its cover's steps worse,
+** faction) by the character's own test of a hidden denizen (part hide_self's HO_SEARCH: one easier, its cover's steps worse,
 ** acts.h's FIND_STEPS).  Its reach the character's: three squares it sees (by its eyes, the line from them; by light
 ** where it stands, or its darkvision, as the character's search by sight is), or by touch in the dark its own square
 ** and the eight round it.  What it finds is found for every one, as the character's finds are: a hidden door a door, a
 ** door's trap known; a trap underfoot known to its faction alone (the user's, 2026-11-23), a thing uncovered (no longer hidden: its take
 ** to take it, wtake.c's), one hiding out of hiding (the character's hiding ended, told: HD_FOUND's).
 **
-** Part 94's (dq0w.c's hiding oneself, its room), through its stub den_search (bank.s's): wtake.c's (a robber come to
+** Part hide_self's (dq0w.c's hiding oneself, its room), through its stub den_search (bank.s's): wtake.c's (a robber come to
 ** where it lost the character, its TW_SEARCH).  Its time all at once (an actor's work, as its door work's): the minute
 ** on its ready, its tests made then (the audit's F2: by the time it got, to come with the timed work for actors).
 */
@@ -31,8 +31,8 @@
 #include "line.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW94CODE")
-#pragma rodata-name ("SW94RODATA")
+#pragma code-name ("SW_hide_self_CODE")
+#pragma rodata-name ("SW_hide_self_RODATA")
 
 unsigned char __fastcall__ ln_seen94 (unsigned char sn, unsigned x, unsigned y, unsigned tx, unsigned ty,
     unsigned char mode);                        /* (line.s's: the line's, this part's own) */
@@ -100,7 +100,7 @@ void __fastcall__ s_den_search (unsigned char dark)
     }
     hub_map (0);
     if (!touch) {                               /* (One hiding it sees in its reach: the character's own search's test of
-                                                **   a hidden denizen, part 94's HO_SEARCH; by sight alone, as that) */
+                                                **   a hidden denizen, part hide_self's HO_SEARCH; by sight alone, as that) */
         if (HUB->pc_hid && bps == bd.sn && in_srch (bpx, bpy, r) &&
             act_test (bk + 1, P_SEARCH, FIND_STEPS (HUB->pc_hid)) >= G_PASS) {
             s_hid_op (HO_DEN | HD_FOUND);       /* (The character's hiding ended: "found", its long task stopped) */

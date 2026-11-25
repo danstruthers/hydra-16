@@ -460,9 +460,9 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
 #define PL_DUSK         16                      /* (dq0 -E, the tests': the game begins at dusk, not at the seed's hour: their games as they were) */
 #define PL_NOFIT        8                       /* (dq0 -F, the tests': the outfit as it's drawn, unfitted to its strength) */
 #define IO_STEPS        0x40                    /* (A request's kind |: the UI goes by the reach's steps, a step's reply
-                                                **   IO_STEP's; HOUSE.md's, part 82's) */
+                                                **   IO_STEP's; HOUSE.md's, part reach_steps's) */
 #define IO_CUT          0x3E                    /* (The reach's steps stopped, between two of them: the UI's, a stop told as
-                                                **   nothing to stop, its reach 5, part 19's) */
+                                                **   nothing to stop, its reach 5, part reach_steps's) */
 #define IO_STEP         0x3F                    /* (The reply's kind: a step of the reach begun, result IR_NO, no words;
                                                 **   its long task's kind in qty, its thing's kind in item, its time in
                                                 **   x: the UI's first words, its wait, the command kept and asked again
@@ -517,7 +517,7 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   one said; "" any carried), wool and quilting only with one, leather
                                                 **   never, nor one worn: its words in things_text, its time in x
                                                 **   (tenths); IR_NO refused, the words why; IR_NONE none (2026-11-10:
-                                                **   the textiles' part 107, wcloth.c) */
+                                                **   the textiles' part worn, wcloth.c) */
 #define IO_WASH         (IO_BAR + 18)           /* A textile carried washed (name) at running water or a well: soiled
                                                 **   or bloody made worn, never clean; as IO_RIP's (wcloth.c) */
 #define IO_DRAG         (IO_BAR + 19)           /* (IO_BAR + 17, 18 the textiles') A heavy thing lying

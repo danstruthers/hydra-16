@@ -1,13 +1,13 @@
 /*
-** outfit.c - (dq0w, swapped part 57: ../dq0/swap.inc, bank.s's stubs) the outfits drawn (games/dq0/outfits.txt,
+** outfit.c - (dq0w, swapped part outfit: ../dq0/swap.inc, bank.s's stubs) the outfits drawn (games/dq0/outfits.txt,
 ** compiled by games/dq0w/outfits.js into lib/dq0/dq0o.dat; the plan the user reviewed, and DECISIONS.md's "Outfits,
 ** reach and things used up"): the character's at a new game's start (s_kit's), the referee asked for its makings
 ** (RS_OUTFIT: its occupation, its open skills by their mastery, its family's wealth, its tags, a seed), its sections
-** found and drawn (part 59's draw_at) in the order an outfit's bought (HOUSE.md's outfits): the universal kit; the
+** found and drawn (part outdraw's draw_at) in the order an outfit's bought (HOUSE.md's outfits): the universal kit; the
 ** occupation's needs; its first weapon (its highest weapon skill's); a tenth of what's left kept (its keep's share);
 ** the other weapons, three in all, and a shield; its bent's armour; its skills' tools; its likely and rare things; the
 ** money (prices and the wealth in farthings; what's left all of it silver pennies, in lots of 250).  The things
-** drawn in the list (outfit.h's); part 58 makes them.  Its own data in its image (it calls part 59, which puts it out
+** drawn in the list (outfit.h's); part outmake makes them.  Its own data in its image (it calls part outdraw, which puts it out
 ** and in again: none that lasts across a call), the draw's state the main RAM's (ost).
 */
 
@@ -23,12 +23,12 @@
 #include "things.h"
 #include "trace.h"
 #include "outfit.h"
-void __fastcall__ time_kept (unsigned n);       /* (Part 99's: past any minute, wpool.c's, H16's flasks filled: wbody.h's
+void __fastcall__ time_kept (unsigned n);       /* (Part time_drift's: past any minute, wpool.c's, H16's flasks filled: wbody.h's
                                                 **   POOL_MARK, POOL_FILL) */
 
-#pragma code-name ("SW57CODE")
-#pragma rodata-name ("SW57RODATA")
-#pragma bss-name ("SW57RODATA")                 /* (Its own data: none of it wanted across a call of part 59's,
+#pragma code-name ("SW_outfit_CODE")
+#pragma rodata-name ("SW_outfit_RODATA")
+#pragma bss-name ("SW_outfit_RODATA")                 /* (Its own data: none of it wanted across a call of part outdraw's,
                                                 **   which puts this part out and in again) */
 #pragma local-strings (on)
 
@@ -93,7 +93,7 @@ static unsigned char __fastcall__ skills (unsigned char from, unsigned char want
     for (k = from; n && reply_line (k, "skill "); ++k) {
         ost.want = want;
         if ((o = find (b)) != 0 && (fflags & (SF_WEAPON | SF_SHIELD)) == want && draw_at (o, MD_ALL)) {
-            --n;                                /* (A section none, or not of those wanted: not read, part 59 not
+            --n;                                /* (A section none, or not of those wanted: not read, part outdraw not
                                                 **   called, its time) */
         }
     }
@@ -151,7 +151,7 @@ static unsigned char opened (void)
 ** as its lair's placed), its lair's own (KT_LAIR, with its first denizen's: its beds, its stores, its hoard), its
 ** personal things (KT_PURSE, as it's first met: its kind's [purse KEY], else its standing's, m's x[0], [standing N]),
 ** every line given, each on its own die (its stratum's seed, its number and the section's: the same things each
-** time), and made (part 58's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
+** time), and made (part outmake's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
 unsigned char ui_long (void);                   /* (dq0w.c's) */
 void __fastcall__ s_den_kit (const struct msg* m)
 {
@@ -164,7 +164,7 @@ void __fastcall__ s_den_kit (const struct msg* m)
         return;
     }
     if ((r = room_of (ost.hsn, ost.hx, ost.hy)) != 0xFF) {    /* (Its lair's home room's floor, the chunk in the
-                                                **   window: its belongings' squares, part 58's) */
+                                                **   window: its belongings' squares, part outmake's) */
         q = &C->room[r];
         ost.bx0 = ost.hx - cx_ + q->x;
         ost.by0 = ost.hy - cy_ + q->y;
@@ -178,7 +178,7 @@ void __fastcall__ s_den_kit (const struct msg* m)
     ost.kit = 1;
     ost.level = 1;
     ost.omint = 0xFF;                           /* (Its stratum's grave goods' coins' mint, not looked for yet; their
-                                                **   age, five a century: part 59's) */
+                                                **   age, five a century: part outdraw's) */
     k = STRATUM (ost.hsn).age;
     ost.age = k > 50 ? 250 : 5 * k;
     for (k = 0; k < 4; ++k) {
@@ -214,7 +214,7 @@ void __fastcall__ s_den_kit (const struct msg* m)
 
 /* A carried-on game's kit (kit.dat above the dungeon's folder, the world's save's: things.c's kit_keep, slice 4.4's, D8's), in the
 ** list in place of the one drawn, its coins the new region's at the money-changer's cut, and the file left open at its start
-** (ost's kept: part 63 lays each thing's state on it, once made): 1; or 0 (none there, or empty: a new game's, dq0life's emptied it) */
+** (ost's kept: part kit lays each thing's state on it, once made): 1; or 0 (none there, or empty: a new game's, dq0life's emptied it) */
 static struct kitrec kr;
 static unsigned char kit_read (void)
 {
@@ -249,7 +249,7 @@ static unsigned char kit_read (void)
     return 1;
 }
 
-void __fastcall__ den_fetch (const struct msg* m);   /* (Part 72's: 0, the outfit fitted to its strength, wtake.c's fit) */
+void __fastcall__ den_fetch (const struct msg* m);   /* (Part errands's: 0, the outfit fitted to its strength, wtake.c's fit) */
 
 /* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
 ** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
@@ -335,12 +335,12 @@ unsigned char s_outfit (void)
     }
     hub_map (0);
     HUB->slot[SLOT_UI].state = REQ_FREE;
-    ost.budget += ost.kept;                     /* (The money: s_kit's, part 63's, the room of this one's image) */
+    ost.budget += ost.kept;                     /* (The money: s_kit's, part kit's, the room of this one's image) */
     if (kit_read ()) {
         ost.budget = 0;                         /* (Its kit carried on: its own money in it, slice 4.4's) */
         return OF_CARRIED;
     }
-    ost.kept = cap;                             /* (What it bears: part 81's, no stub of its own, the main RAM's room) */
+    ost.kept = cap;                             /* (What it bears: part take_rule's, no stub of its own, the main RAM's room) */
     den_fetch (0);
     return 1 + (wv < 3 ? wv : 0);               /* (Drawn; its weapons' version too, the kit's to make: s_kit's) */
 }

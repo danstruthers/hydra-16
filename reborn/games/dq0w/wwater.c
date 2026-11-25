@@ -1,8 +1,8 @@
 /*
-** wwater.c - (dq0w, swapped part 74: ../dq0/swap.inc) the water (slice 4.9: DUNGEON.md's water, HOUSE.md's water,
+** wwater.c - (dq0w, swapped part waterskin: ../dq0/swap.inc) the water (slice 4.9: DUNGEON.md's water, HOUSE.md's water,
 ** hunger and thirst): how deep the water is where the character stands (the chunk's, the maker's: world.h's wet bits
-** and its rooms' levels), for its wading and swimming (dq0w.c's part 73, s_wade); a waterskin filled where there's water
-** (the water it stands in, or a well within reach: the things' IO_FILL, part 27's fill first asking here).  Eating and
+** and its rooms' levels), for its wading and swimming (dq0w.c's part water, s_wade); a waterskin filled where there's water
+** (the water it stands in, or a well within reach: the things' IO_FILL, part burning's fill first asking here).  Eating and
 ** drinking are the UI's (the things' IO_USE: a day's ration, a pint, by their keys) and the referee's (hunger and
 ** thirst, rf/want.c's).
 */
@@ -16,18 +16,18 @@
 #include "world.h"
 #include "things.h"
 
-unsigned __fastcall__ at_hand (const char* name);   /* (Part 4's stub: to hand, carried or within reach) */
+unsigned __fastcall__ at_hand (const char* name);   /* (Part ui_requests's stub: to hand, carried or within reach) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: the hub's text, the words put after what's there) */
 extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
 
-#pragma code-name ("SW74CODE")
-#pragma rodata-name ("SW74RODATA")
+#pragma code-name ("SW_waterskin_CODE")
+#pragma rodata-name ("SW_waterskin_RODATA")
 #pragma local-strings (on)
 
-#pragma code-name (push, "SW75CODE")           /* (Part 75's: the water's depth, wading's) */
-#pragma rodata-name (push, "SW75RODATA")
+#pragma code-name (push, "SW_water_depth_CODE") /* (The water's depth, wading's) */
+#pragma rodata-name (push, "SW_water_depth_RODATA")
 static const unsigned char bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 
 /* The water at the character's square (the chunk's: world.h's): its depth in feet (0 none), | WET_RUNS running water;

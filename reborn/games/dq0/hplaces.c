@@ -2,9 +2,9 @@
 ** hplaces.c - the features' and the doors' commands (COMMANDS-CRITIQUE.md's §5.2, step L, stage 3: the command
 ** handlers by meaning, cmds.h): a door's, a window's or a portcullis's work (open, close, unlock, lock, break, raise,
 ** lower, bend, force, disarm, bar), a climb (up or down, a well's shaft, through a window), a thing or a feature
-** examined, a search, a look, a listen or a sniff one way (and the way out left).  Part 2's, the commands' own: each
-** verb's work as it was in main.c's s_command (part 2's) and rarer (part 24's, the climb); every feature found,
-** walked up to and faced the one way (main.c's feature, part 13's: §5.2's step J).
+** examined, a search, a look, a listen or a sniff one way (and the way out left).  Part commands's, the commands' own: each
+** verb's work as it was in main.c's s_command (part commands's) and rarer (part rare_commands's, the climb); every feature found,
+** walked up to and faced the one way (main.c's feature, part missiles's: §5.2's step J).
 */
 
 #include <string.h>
@@ -14,11 +14,11 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* A portal worked (pa: PA_*; cmd.obj.kind a door, a window, or either): found, walked up to, its blow's thing in hand,
-** faced, its first words (part 13's feature; or which, asked; walked up to first, then again), then the world's work */
+** faced, its first words (part missiles's feature; or which, asked; walked up to first, then again), then the world's work */
 void __fastcall__ s_portal (unsigned char pa)
 {
     if (!feature (cmd.obj.kind, pa + 1)) {
@@ -30,10 +30,10 @@ void __fastcall__ s_portal (unsigned char pa)
 }
 
 /* Up or down (h: H_CLIMB's; H_JUMP's, down a ledge or a shaft, a fall; into a well): a well's shaft down or out of it
-** (2026-11-06); through a window, the portal's.  "Go down the well" too, a move's.  (rarer's, part 24's, till stage 3;
-** part 24's again, 2026-11-11: part 2's room) */
-#pragma code-name (push, "SW24CODE")
-#pragma rodata-name (push, "SW24RODATA")
+** (2026-11-06); through a window, the portal's.  "Go down the well" too, a move's.  (rarer's, part rare_commands's, till stage 3;
+** part rare_commands's again, 2026-11-11: part commands's room) */
+#pragma code-name (push, "SW_rare_commands_CODE")
+#pragma rodata-name (push, "SW_rare_commands_RODATA")
 void __fastcall__ s_climb (unsigned char h)
 {
     unsigned char d;
@@ -107,7 +107,7 @@ static void do_examine (void)
 
     if (!cmd.obj.kind && may_den () && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
         gear_look ();                           /* (A denizen it sees: how it seems, then its things as the eyes
-                                                **   make them out from here, part 11's) */
+                                                **   make them out from here, part news's) */
         return;
     }
     if (cmd.action == VB_OBSERVE_OBJECT) {
@@ -115,12 +115,12 @@ static void do_examine (void)
         return;
     }
     if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
-        portal (pa);                            /* (A thing, a portal, the room, its aspects: part 6's, way.c; a door
+        portal (pa);                            /* (A thing, a portal, the room, its aspects: part names_said's, way.c; a door
                                                 **   gone over for traps, the world's) */
     }
 }
 
-/* H_KNOCK (the plan's batch B2): a knock on a door, heard beyond it; on a wall, a hollow sought (minds.c's, part 27) */
+/* H_KNOCK (the plan's batch B2): a knock on a door, heard beyond it; on a wall, a hollow sought (minds.c's, part self_verbs) */
 static void do_knock (void)
 {
     minds (H_KNOCK);
@@ -145,14 +145,14 @@ void __fastcall__ s_places_do (unsigned h)
         do_examine ();
         break;
     case H_SEARCH:                              /* (A search, a long task, by its form: what it finds told as it ends,
-                                                **   the walls' and the things', E_PORTAL's; search.c's, part 9; a door
+                                                **   the walls' and the things', E_PORTAL's; search.c's, part aliases; a door
                                                 **   gone over for traps, the world's) */
         if ((pa = search_go ()) != 0) {
             portal (pa);
         }
         break;
     default:                                    /* (H_LOOK_WAY: looked, listened, sniffed one way, or through a thing:
-                                                **   way.c's, part 17; the way out of a room, 2026-11-02; the traces
+                                                **   way.c's, part look_way; the way out of a room, 2026-11-02; the traces
                                                 **   read, slice 4.1's: the floor looked at, a track) */
         look_way (cmd.action);
     }

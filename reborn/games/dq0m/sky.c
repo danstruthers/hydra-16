@@ -232,7 +232,7 @@ static void sky_chunk (void)
 }
 
 /* The squares under or beside what shows the sky marked T_HOLE (but a way up's: the map's mark's a skylight's), so the world
-** knows it's come by one at a glance (part 17's); after the chunk's stocked, nothing of the maker's reading its squares
+** knows it's come by one at a glance (part item_pages's); after the chunk's stocked, nothing of the maker's reading its squares
 ** bare */
 static void sky_mark (void)
 {

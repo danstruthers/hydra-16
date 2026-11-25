@@ -1,5 +1,5 @@
 /*
-** pace.c - (swapped part 4) the character's pace, its watchfulness, its state and its small moves, from the line typed
+** pace.c - (swapped part pace) the character's pace, its watchfulness, its state and its small moves, from the line typed
 ** (DUNGEON.md: moving; the user's, 2026-10-16), before the parser's command: a pace ("walk", "walk slowly", "creep",
 ** "sneak", "jog", "run", "sprint"; "set pace to jog"; "run north" sets it and goes, the move the command's; and the
 ** way its legs go, "crawl", "hop", "walk": slice 4.1b's), a
@@ -20,8 +20,8 @@
 #include "level.h"
 
 #pragma local-strings (on)
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW_pace_CODE")
+#pragma rodata-name (push, "SW_pace_RODATA")
 
 #define NW      12
 unsigned char paced;
@@ -350,7 +350,7 @@ unsigned char __fastcall__ s_travel_go (const char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "OV16CODE")           /* (Overlay 16's since 2026-11-02, 3's room for part 14; */
+#pragma code-name (push, "OV16CODE")           /* (Overlay 16's since 2026-11-02, 3's room for part positions; */
 #pragma rodata-name (push, "OV16RODATA")       /*   overlay 3's since 2026-10-29: overlay 9's room for the look) */
 
 /* ---- A line's first look (main.c's, in the overlay's bank: the part's copied in only for a line that may be its):

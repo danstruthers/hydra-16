@@ -1,9 +1,9 @@
 /*
 ** hmove.c - moving (COMMANDS-CRITIQUE.md's §5.2, step L, stage 3: the command handlers by meaning, cmds.h): a way
 ** gone, a thing gone up to or through (a door, a passage, a window climbed through), a place in the room, up or down
-** the stairs; a turn; a jump.  Part 2's, the commands' own: each verb's work as it was in main.c's s_command (part
-** 2's) and rarer (part 24's, the jump).  (A place it knows gone to, "go back to the Mausoleum", is s_command's, before
-** the table: part 4's travel_go)
+** the stairs; a turn; a jump.  Part commands's, the commands' own: each verb's work as it was in main.c's s_command (part
+** 2's) and rarer (part rare_commands's, the jump).  (A place it knows gone to, "go back to the Mausoleum", is s_command's, before
+** the table: part pace's travel_go)
 */
 
 #include <string.h>
@@ -14,8 +14,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* H_GO: a way, a thing gone up to or through, a place in the room */
 static void do_go (void)
@@ -28,7 +28,7 @@ static void do_go (void)
     }
     d = cmd.obj.kind;
     if ((d == OB_WALL || (d >= OB_ROOM && d != OB_PILLAR)) && place_go (&cmd)) {
-        return;                                 /* (A place in the room: the centre, a side, a corner: part 7's) */
+        return;                                 /* (A place in the room: the centre, a side, a corner: part game_args's) */
     }
     if (cmd.obj.kind && cmd.action != VB_MOVE_DIRECTION) {   /* (A thing: up to it, or through it) */
         d = cmd.how == HOW_THROUGH || cmd.action == VB_ENTER;
@@ -40,7 +40,7 @@ static void do_go (void)
         }
         go_after = 1 + (d && (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE));   /* (Through it: walked up
                                                 **   to first, its first words told as that began; else up to it, its own
-                                                **   walk: part 13's go_up_to, after the command, main.c's act) */
+                                                **   walk: part missiles's go_up_to, after the command, main.c's act) */
     } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
         intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
     } else if (cmd.dir != 0xFF) {
@@ -48,12 +48,12 @@ static void do_go (void)
         intend (I_GO, cmd.dir);
     } else {
         missiles ();                            /* (Anything else it has seen, or which way: way.c's go_thing,
-                                                **   part 13's, the action a move: no stub of its own, the main RAM's) */
+                                                **   part missiles's, the action a move: no stub of its own, the main RAM's) */
     }
 }
 
 /* H_SWIM (the plan's batch B6, 2026-11-10): swum a way, or to a thing, a move (H_GO's: the world's water, swimming
-** where it's deep); alone, treading water; a dive (part 27's swim_go, below) */
+** where it's deep); alone, treading water; a dive (part self_verbs's swim_go, below) */
 unsigned char swim_go (void);
 static void do_swim (void)
 {
@@ -62,7 +62,7 @@ static void do_swim (void)
     }
 }
 
-/* H_FOLLOW (B6's): a denizen seen trailed, a walk re-aimed each round; "follow me" an ally's (part 27's, below) */
+/* H_FOLLOW (B6's): a denizen seen trailed, a walk re-aimed each round; "follow me" an ally's (part self_verbs's, below) */
 void follow_go (void);
 static void do_follow (void)
 {
@@ -105,9 +105,9 @@ void __fastcall__ s_moving_do (unsigned h)
 #pragma rodata-name (pop)
 
 /* ---- Swimming and following (the plan's batch B6, 2026-11-10; DECISIONS.md's "Prayer, fasting, swimming and
-** following"): part 27's, its own (part 2's room; the banks full: overlay 25 its image's), its stubs the build's */
-#pragma code-name (push, "SW27CODE")
-#pragma rodata-name (push, "SW27RODATA")
+** following"): part self_verbs's, its own (part commands's room; the banks full: overlay 25 its image's), its stubs the build's */
+#pragma code-name (push, "SW_self_verbs_CODE")
+#pragma rodata-name (push, "SW_self_verbs_RODATA")
 
 /* A swim (VB_SWIM; "dive", "tread water" the parser's): 1 a way or a thing said, swum to (the caller's H_GO: the
 ** world's water, its swimming where it's deep, water.c's words); else seen to here: out of its depth (the hub's pc_wet,

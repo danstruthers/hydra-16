@@ -58,7 +58,7 @@ void __fastcall__ put_portc (unsigned char at);
 void __fastcall__ put_trap (unsigned char at);
 void __fastcall__ put_dtrap (unsigned char at);
 void __fastcall__ put_mark (unsigned char at);      /* (stock.c's, overlay 7's) */
-void __fastcall__ put_sconce (unsigned char at);    /* (sconce.c's s_put_sconce, part 3's: its stub) */
+void __fastcall__ put_sconce (unsigned char at);    /* (sconce.c's s_put_sconce, part sconces's: its stub) */
 
 /* uses.c (overlay 7's): a built stratum's plan of uses (DUNGEON.md: built to a plan) */
 unsigned char __fastcall__ uses (unsigned char step, unsigned char arg);
@@ -99,7 +99,7 @@ void __fastcall__ sky (struct chunk* c, unsigned char n);  /* What shows the sky
 struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry);  /* (plan.c's, the main RAM's) */
 void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portcullises, traps (overlay 5's) */
 void __fastcall__ sconces (struct chunk* c, unsigned x0, unsigned y0);  /* Its rooms' sconces, as it's first stocked
-                                                **   (part 3's, sconce.c: after stock's, in its list) */
+                                                **   (part sconces's, sconce.c: after stock's, in its list) */
 struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y,
     unsigned char qty, unsigned char hide);    /* (stock.c's: a thing listed in sk) */
 void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in stratum n given their places, as its plan
@@ -145,8 +145,8 @@ extern struct chunk cb;                         /* (make.c's: the chunk grown) *
 
 /* changes.c: the change records (world.h's: the world's) laid over a chunk made again; what's been seen, kept */
 void changes_init (void);
-int changes_save (void);                        /* The seen maps into the save's folder: 0, or -1 (part 2's) */
-int changes_restore (void);                     /* And back (part 2's) */
+int changes_save (void);                        /* The seen maps into the save's folder: 0, or -1 (part seen_save's) */
+int changes_restore (void);                     /* And back (part seen_save's) */
 unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);     /* 1: it's been stocked */
 void __fastcall__ stock (const struct chunk* c, unsigned x0, unsigned y0);              /* stock.c's: listed in sk */
 extern struct stock sk;
@@ -158,7 +158,7 @@ void __fastcall__ pl_new (unsigned char sn);
 void pl_flush (void);
 
 /* map.c */
-void draw_map (void);                           /* (Part 1's: ../dq0/swap.inc) */
+void draw_map (void);                           /* (Part map's: ../dq0/swap.inc) */
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

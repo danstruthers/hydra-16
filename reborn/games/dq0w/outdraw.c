@@ -1,5 +1,5 @@
 /*
-** outdraw.c - (dq0w, swapped part 59: ../dq0/swap.inc, bank.s's stubs) an outfit's section drawn (outfit.h's: part
+** outdraw.c - (dq0w, swapped part outdraw: ../dq0/swap.inc, bank.s's stubs) an outfit's section drawn (outfit.h's: part
 ** 57's, the order the outfit's bought in): the section read from the outfits' file (outfits.js's layout), each line by
 ** its chance and its tags (if, not), its choices drawn by their weights (a tag's weight for a character with it) among
 ** those it can pay for (their things at a middling make: a free line's all), the one drawn bought (each thing's price
@@ -19,9 +19,9 @@
 #include "things.h"
 #include "outfit.h"
 
-#pragma code-name ("SW59CODE")
-#pragma rodata-name ("SW59RODATA")
-#pragma bss-name ("SW59RODATA")                 /* (Its own data: zeros each time it's copied in) */
+#pragma code-name ("SW_outdraw_CODE")
+#pragma rodata-name ("SW_outdraw_RODATA")
+#pragma bss-name ("SW_outdraw_RODATA")                 /* (Its own data: zeros each time it's copied in) */
 #pragma local-strings (on)
 #pragma static-locals (on)
 
@@ -160,7 +160,7 @@ static void __fastcall__ things (const unsigned char* p, unsigned char n)
                 e.flags |= lost[r < 100 ? r / 5 : 19] << 4;
             } else if (sec[0] & SF_FREE) {      /* (A denizen's: its condition by Treasure 1's table, its Person
                                                 **   column, its life's tenths lost in its flags' high four bits,
-                                                **   part 58's: broken 1, poor 2-3, fair 4-6, good 7-9, as new 10; by
+                                                **   part outmake's: broken 1, poor 2-3, fair 4-6, good 7-9, as new 10; by
                                                 **   the draw's state and the list's place, no die spent: the draws
                                                 **   after it as they were) */
                 e.flags |= (r < 1 ? 9 : r < 3 ? 7 + (r & 1) : r < 10 ? 4 + r % 3 : r < 90 ? 1 + r % 3 : 0) << 4;
@@ -168,7 +168,7 @@ static void __fastcall__ things (const unsigned char* p, unsigned char n)
             if ((sec[0] & SF_OLD) && (kk.form & KF_SMALL) &&
                 (ost.omint == 0xFF ? (ost.omint = old_mint ()) : ost.omint) != 0) {
                 e.mat = 0x80 | ost.omint;       /* (Old coins, grave goods': the mint of the people of its stratum's
-                                                **   oldest era, whole: part 57's, part 58's) */
+                                                **   oldest era, whole: part outfit's, part outmake's) */
             }
             kind_get (e.kind);
             pay (e.quality, q, tf, 0);

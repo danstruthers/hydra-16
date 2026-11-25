@@ -4,8 +4,8 @@
 ** named, a liquid poured away, a take's moment a handful; a thing put on a ledge, in a corner, the centre, a side or a
 ** passage, walked there and put down on that square), every actor's by the same code (DECISIONS.md's one path): the
 ** things' IO_EMPTY and IO_PLACE (things.c's s_serve), a denizen's I_ROB FE_EMPTY and FE_PLACE (wbody.c's: no mind posts
-** them yet).  Swapped part 111's (../dq0/swap.inc: dq0w.cfg's SW111), through its stub, handout; the empty itself
-** part 112's (wpour.c: its liquid poured into another, H11, 2026-11-19).  Its locals
+** them yet).  Swapped part empty's (../dq0/swap.inc: dq0w.cfg's SW_empty), through its stub, handout; the empty itself
+** part pour's (wpour.c: its liquid poured into another, H11, 2026-11-19).  Its locals
 ** the part's own (static, in its image): what lasts across a call to another part (pick's, bulk_of's, sky_ask's) is in
 ** the request's copy, iq, the main RAM's, as the drag's is (wdrag.c)
 */
@@ -26,13 +26,13 @@ void __fastcall__ put (const char* s);          /* (tlist.s's: its words after t
 extern char* tp;
 extern char* tpe;
 extern unsigned char put_bank;
-unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part 4's) */
-unsigned char pour (void);                      /* (Part 112's: wpour.c, IO_EMPTY, every actor's) */
-unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part 114's: wthings.c, a denizen's things) */
+unsigned __fastcall__ pick (const char* name, unsigned char how);   /* (Part ui_requests's) */
+unsigned char pour (void);                      /* (Part pour's: wpour.c, IO_EMPTY, every actor's) */
+unsigned char __fastcall__ den_things (const struct msg* m);   /* (Part den_errands's: wthings.c, a denizen's things) */
 
-#pragma code-name ("SW111CODE")
-#pragma rodata-name ("SW111RODATA")
-#pragma bss-name ("SW111RODATA")
+#pragma code-name ("SW_empty_CODE")
+#pragma rodata-name ("SW_empty_RODATA")
+#pragma bss-name ("SW_empty_RODATA")
 #pragma static-locals (on)
 
 /* A kind's name (the catalogue's) */
@@ -54,11 +54,11 @@ static const char* __fastcall__ name (unsigned char k)
 #define E_B             iq.dur_max              /*   the room they want, */
 #define E_L             iq.y                    /*   its liquid, */
 #define E_C             iq.x                    /*   what's in the other now) */
-unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: a thing let fall on a shaft's head) */
-unsigned __fastcall__ bulk_of (unsigned i);     /* (Part 10's) */
+unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part shaft's: a thing let fall on a shaft's head) */
+unsigned __fastcall__ bulk_of (unsigned i);     /* (Part things's) */
 unsigned __fastcall__ bulk_in (unsigned x);
-unsigned __fastcall__ shut_in (unsigned n);     /* (Part 106's: the closed thing it's in) */
-void __fastcall__ reach_from (unsigned n);      /* (Part 56's: its reach owed, got out first) */
+unsigned __fastcall__ shut_in (unsigned n);     /* (Part grapple's: the closed thing it's in) */
+void __fastcall__ reach_from (unsigned n);      /* (Part reach's: its reach owed, got out first) */
 extern unsigned rtime;
 extern unsigned char rsteps;
 
@@ -160,7 +160,7 @@ static unsigned char place (void)
     q->y = iq.y;
     q->owner = q->hide = 0;
     q->flags = (q->flags & ~(I_HELD | I_WORN)) | I_KNOWN;
-    sky_ask (E_N);                              /* (On a shaft's head: it falls, part 89's) */
+    sky_ask (E_N);                              /* (On a shaft's head: it falls, part shaft's) */
     k = item_at (E_N)->kind;
     hub_map (0);
     if (iq.to & TO_DEN) {
@@ -193,7 +193,7 @@ unsigned char __fastcall__ s_handout (const struct msg* m)
     }
     if (I_ROB_ERRAND (*m) > FE_PLACE) {
         return den_things (m);                  /* (Its things handled by the character's rules, the act table's rows:
-                                                **   wthings.c's, part 114's, the one-path plan's stage 2, 2026-11-23) */
+                                                **   wthings.c's, part den_acts's, the one-path plan's stage 2, 2026-11-23) */
     }
     memcpy (&k, &iq, sizeof iq);
     iq.kind = I_ROB_ERRAND (*m) == FE_EMPTY ? IO_EMPTY : IO_PLACE;

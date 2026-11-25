@@ -13,8 +13,8 @@
 ** as its lair's placed: own_traps; another's found), the user's, 2026-11-23.  A winged body over a floor's traps, pits
 ** and spilt oil (hz.s); its harm's wound tests its courage as a blow's (den_harm); its cry a noise (DE_CRY).
 **
-** Swapped part 120's (../dq0/swap.inc: dq0w.cfg's SW120), through its stubs: den_trap (dq0w.c's den_hz, the step's
-** cheap test: a pit, a chunk with traps); part 121's den_harm (workpart.h's harm, an actor's); part 122's trap_beat
+** Swapped part step's (../dq0/swap.inc: dq0w.cfg's SW_step), through its stubs: den_trap (dq0w.c's den_hz, the step's
+** cheap test: a pit, a chunk with traps); part harm's den_harm (workpart.h's harm, an actor's); part trap_told's trap_beat
 ** (dq0w.c's work_told, an actor's).  Its locals on the C stack: a call to another part copies this one in again after it.
 */
 
@@ -30,9 +30,9 @@
 #include "work.h"
 #include "wbody.h"
 
-#pragma code-name ("SW120CODE")
-#pragma rodata-name ("SW120RODATA")
-#pragma bss-name ("SW120RODATA")
+#pragma code-name ("SW_step_CODE")
+#pragma rodata-name ("SW_step_RODATA")
+#pragma bss-name ("SW_step_RODATA")
 #pragma static-locals (off)
 
 extern unsigned char fring;                     /* (wfight.c's: the fights' ring's next) */
@@ -79,9 +79,9 @@ static signed char __fastcall__ den_test (unsigned char p, unsigned char b, sign
     return g;
 }
 
-#pragma code-name (push, "SW121CODE")          /* (Part 121's: part 120's room) */
-#pragma rodata-name (push, "SW121RODATA")
-#pragma bss-name (push, "SW121RODATA")
+#pragma code-name (push, "SW_harm_CODE")        /* (Part step's room) */
+#pragma rodata-name (push, "SW_harm_RODATA")
+#pragma bss-name (push, "SW_harm_RODATA")
 
 /* Body bd's harm (RS_HARM, its actor: the world's slot's request made, as workpart.h's harm, the character's): its wound
 ** told (E_FIGHT's FO_HURT: its words the referee's, the ring's third line; its fall senseless, its death), its legs as
@@ -116,7 +116,7 @@ void s_den_harm (void)
         } else if (e->kind == X_DEATH) {
             ff |= FF_A_DEAD;
         } else if (e->kind == X_DROP) {
-            cd = 1 + e->x[1];                   /* (Its weapon let fall: part 60's) */
+            cd = 1 + e->x[1];                   /* (Its weapon let fall: part den_things's) */
         } else if (e->kind == X_COND_ON && (e->cond & C_PRONE)) {
             prone = 1;
         }
@@ -174,7 +174,7 @@ void s_den_harm (void)
     }
     if (cd && !(ff & FF_A_DEAD)) {
         look_more (0, LM_ROPES);
-        den_drop (cd - 1);                      /* (Its weapon on the floor, told: part 60's) */
+        den_drop (cd - 1);                      /* (Its weapon on the floor, told: part den_things's) */
     }
     if (ff & FF_A_DEAD) {                       /* (Dead: its remains where it lies, its things on them) */
         bd.state = 0;
@@ -192,9 +192,9 @@ void s_den_harm (void)
 #pragma rodata-name (pop)
 #pragma bss-name (pop)
 
-#pragma code-name (push, "SW122CODE")          /* (Part 122's: part 120's room) */
-#pragma rodata-name (push, "SW122RODATA")
-#pragma bss-name (push, "SW122RODATA")
+#pragma code-name (push, "SW_trap_told_CODE")   /* (Part step's room) */
+#pragma rodata-name (push, "SW_trap_told_RODATA")
+#pragma bss-name (push, "SW_trap_told_RODATA")
 
 /* A trap's outcome for body bd (the world's work for an actor, wk.who: dq0w.c's work_told's, E_TRAP's w1, wtrap.c's
 ** trap_told): told if it's seen (E_BEAT's WB_TRAP: the limbs' news; a pit's fall heard near), but one noticed (the

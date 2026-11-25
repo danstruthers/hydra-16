@@ -10,7 +10,7 @@
 ** character noticed or lost), the world's to write.  Which the character sees is the senses' to decide (dq0p's
 ** dens.c, the world asking: dq0w.c's dens_seen).
 **
-** All of it swapped part 14's (../dq0/swap.inc: dq0w.cfg's SW14), called through its stubs (bank.s's).
+** All of it swapped part den_bodies's (../dq0/swap.inc: dq0w.cfg's SW_den_bodies), called through its stubs (bank.s's).
 */
 
 #include <stddef.h>
@@ -35,8 +35,8 @@ unsigned bled_at;
 unsigned char bclimb[NACTORS];                  /* (wbody.h's: each body's climb out of its pit so far, feet) */
 
 
-#pragma code-name ("SW14CODE")
-#pragma rodata-name ("SW14RODATA")
+#pragma code-name ("SW_den_bodies_CODE")
+#pragma rodata-name ("SW_den_bodies_RODATA")
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -70,7 +70,7 @@ static unsigned char __fastcall__ taken (unsigned x, unsigned y)
 
 static unsigned char __fastcall__ open_sq (unsigned char* p)
 {
-    unsigned char t;                            /* (Its tile once: part 14's room, room7, 2026-11-23) */
+    unsigned char t;                            /* (Its tile once: part den_bodies's room, room7, 2026-11-23) */
 
     return p && ((t = TILE (*p)) == T_FLOOR || t == T_CORR || t == T_STEPS);
 }
@@ -143,7 +143,7 @@ static void __fastcall__ told_den (unsigned char what, unsigned char loud)
     hub_devent (&bev);
 }
 
-/* Body k's tactical advantage (the engage initiative test's, dq0w.c's part 25): backing away from the character (away
+/* Body k's tactical advantage (the engage initiative test's, dq0w.c's part engage_test): backing away from the character (away
 ** 1: one not hostile), to the first square a step off out of its reach that it can walk (told as a step is), 2; else
 ** (or cornered) its blow first, an action more (its own round's time as it was), 1 */
 unsigned char __fastcall__ s_den_first (unsigned char k, unsigned char away)
@@ -201,7 +201,7 @@ void s_den_intents (void)
         any = 1;
         if ((unsigned char) (m.kind - I_TROD) <= I_KIT - I_TROD) {     /* (One out but not an actor: its passing;
                                                 **   a chunk kept swept, its keepers' lair placed: the traces'; a
-                                                **   denizen's things made: part 60's) */
+                                                **   denizen's things made: part den_things's) */
             if (m.kind == I_KIT) {
                 den_other (&m);
                 if (kit_off & 2) {
@@ -242,11 +242,11 @@ void s_den_intents (void)
             bd.face = I_DEN_FACE (m);
         }
         if (grip) {
-            grip_held (&m);                     /* (Held by the character: its try to break free, part 15's) */
+            grip_held (&m);                     /* (Held by the character: its try to break free, part fight_blows's) */
         }
         switch (m.kind) {
         case I_ENTER:                           /* (A denizen come near the character: its body's from its record,
-                                                **   its things: part 60's) */
+                                                **   its things: part den_things's) */
             den_enter (&m);
             was = bd.doing;
             break;
@@ -275,7 +275,7 @@ void s_den_intents (void)
             }
             if (den_hz (d)) {
                 break;                          /* (In a pit, a round's climb out; a trap ahead noticed: the step's
-                                                **   hazards, every actor's, part 120's) */
+                                                **   hazards, every actor's, part step's) */
             }
             o = (unsigned char) apart (bd.x - bpx, bd.y - bpy);
             if (!I_STEP_COARSE (m)) {           /* (Its time: its step, uphill and steeply down more, on steps more, a
@@ -333,11 +333,11 @@ void s_den_intents (void)
             told_den (I_GOTO_HEARD (m), I_GOTO_LOUD (m));
             break;
         case I_ROB:                             /* (A robbery, an errand; its things handled by the character's own
-                                                **   code, wempty.c's and wthings.c's: part 80's, 2026-11-23) */
-        case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
+                                                **   code, wempty.c's and wthings.c's: part den_doors's, 2026-11-23) */
+        case I_RISE:                            /* (Its position, its mind's: part den_doors's, part den_bodies's room, 2026-11-03) */
         case I_LIGHT:                           /* (The rarer: a light lit, put out; a flight crossed; a robbery; */
         case I_CLIMB:
-        case I_PORTAL:                          /*   a door worked, the character's code, a thing taken, Phase 3C's: part 80's) */
+        case I_PORTAL:                          /*   a door worked, the character's code, a thing taken, Phase 3C's: part den_doors's) */
         case I_TAKE:
             den_more (&m);
             break;
@@ -368,7 +368,7 @@ void s_den_intents (void)
             ++HUB->den_seq;                     /* (Changed: the world looks again at what the character sees) */
         }
         if (eng) {
-            d = eng;                            /* (dq0w.c's part 25: the character's blow first, if it's the
+            d = eng;                            /* (dq0w.c's part engage_test: the character's blow first, if it's the
                                                 **   quicker) */
             eng = 0;
             engaged (d, 0);

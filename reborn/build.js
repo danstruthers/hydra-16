@@ -207,7 +207,7 @@ function bankProgram(dir, objdir, defines) {
 // it's defined in, the C's and the assembly's together (a C function in the main RAM calling a part's assembly,
 // cast.s's, or the assembly a part's C).  The stubs (swap.inc's SWFN: the macro builds the part's name) and what's in
 // a macro's body aren't references.  Throws, with each:
-// - a part (its config's SWn segments: code in the main RAM's area only while it's called, through its stub;
+// - a part (its config's SW_name segments: code in the main RAM's area only while it's called, through its stub;
 //   games/dq0/swap.inc): no reference to a function or data of one from outside it (the main code's, an overlay's,
 //   another part's), which would find another part's there;
 // - an overlay (the config's OVn in the bank window, OVnT the rest of OVn's bank; not the world's KIN and CAT, the
@@ -217,7 +217,7 @@ function bankProgram(dir, objdir, defines) {
 //   them (bread, the stubs' ...).  The sanctioned way, a read through a call that maps the bank (said.c's RB, bank.s's
 //   said_b; hub_mem), is a source's "bankcheck: banked NAME ..." (the label's name, C's without its _)
 function partsChecked(sources, objdir, cfg) {
-  const part = seg => (/^SW\d+/.exec(seg) || [])[0] || '';
+  const part = seg => (/^SW_(\w+)_(CODE|RODATA)$/.exec(seg) || [])[1] || '';   // (A part's segment: its name)
   const areas = new Map(), runs = new Map(), block = k => (cfg.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
   for (const l of block('MEMORY').split(/\r?\n/)) {          // (Each area of the window: its bank's name)
     const m = /^\s*(\w+)\s*:[^;]*\bstart\s*=\s*\$([0-9A-Fa-f]+)/.exec(l.replace(/#.*/, ''));
@@ -291,7 +291,7 @@ function partsChecked(sources, objdir, cfg) {
 // called part 14's s_save_game, which left the hub's bank in the window, and the part's return went on into the hub's
 // header as code).  A part's stub returns into the overlay's code at the window: the part, and what it calls, must
 // leave the window as it found it.  From the C alone (its functions by their #pragma code-name: OVn's an overlay's,
-// SWn's a part's, s_NAME the part's function its stub NAME calls; a file's static functions its own): each call from
+// SW_name's a part's, s_NAME the part's function its stub NAME calls; a file's static functions its own): each call from
 // an overlay's function to a part's stub, its part followed through what it calls (C functions; another part's
 // through its stub) for a hub_map with no hub_back in the same function (hub_here ... hub_back puts the window back;
 // hub_mem and the assembly's own aren't followed).  A call known to be safe (a path that maps nothing) is a source's
@@ -319,7 +319,7 @@ function windowChecked(sources) {
     }
   }
   const find = (f, n) => local.get(f.file).get(n) || fns.get(n);
-  const part = n => { const p = fns.get('s_' + n); return p && /^SW\d+/.test(p.seg) ? p : null; };
+  const part = n => { const p = fns.get('s_' + n); return p && /^SW_/.test(p.seg) ? p : null; };
   const calls = t => [...new Set([...t.matchAll(/\b([A-Za-z_]\w*)\s*\(/g)].map(m => m[1]))];
   const memo = new Map();
   const leaves = (f, seen) => {                  // (Why f may return with another bank in the window; or null)
@@ -358,7 +358,8 @@ function windowChecked(sources) {
 // The games' room: each C program of games/ (its map, obj/games/NAME/NAME.map, and its link, its own NAME.cfg or
 // sdk/c/hydra.cfg): its main RAM free, from its BSS's end to its swapped parts' area (__SWAP_START__: games/dq0/
 // swap.inc), or, with none, to the C stack's least room (__RAMTOP__ - __STACKMIN__); each overlay's bytes free (OVn,
-// of its own size: 8K as a rule) and each swapped part's (SWn, of the area's: __SWAPSIZE__).  One table of them all;
+// of its own size: 8K as a rule) and each swapped part's (SW_name, of the area's: __SWAPSIZE__, by name in their order:
+// parts.txt's).  One table of them all;
 // a program with less main RAM free than its floor fails the build (floorOf, the user's floors: GAME-CRITIQUE.md's
 // 6.2 and 7.4; the UI's, dq0's, 3,000; every other task of Dingus Quest Zero's, dq0*, 2,048, as they run together and
 // grow; the theme compiler and the theme generator 512, tools run alone between dungeons and by the build, not in
@@ -394,15 +395,17 @@ function headroom(names) {
       faults.push(name + ' takes in the heap (malloc: from its BSS\'s end up, into the swap area, uncounted)');   //   to the stack's)
     const used = by => { const u = {}; for (const [n, s] of Object.entries(seg)) if (by[n]) u[by[n]] = (u[by[n]] || 0) + s.size; return u; };
     const ov = Object.entries(used(load)).filter(([a]) => /^OV\d+$/.test(a) && size[a]).sort(byNumber);
-    const sw = Object.entries(used(run)).filter(([a]) => /^SW\d+$/.test(a)).sort(byNumber);
+    const order = [...block('MEMORY').matchAll(/^\s*(\w+):/gm)].map(m => m[1]), sw =Object.entries(used(run)).filter(([a]) => /^SW_\w+$/.test(a))   // (The parts in their
+      .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));                                         //   order, the config's)
     const short = [];                                   // (Its main RAM near its floor, its overlays and parts under HEADROOM)
     if (floored(name) && free >= floor && free - floor < HEADROOM) short.push('main RAM ' + free + ' (' + (free - floor) + ' over its ' + floor + ')');
     const room = (what, list, of) => {
       const s = [];
       const text = list.map(([a, u]) => {
         const left = of(a) - u;
-        if (left < HEADROOM) s.push(a.slice(2) + ' (' + left + ')');
-        return a.slice(2) + ' ' + left + (of(a) !== 0x2000 && what === 'overlay' ? ' of ' + of(a) : '') + (left < HEADROOM ? '!' : '');
+        const n = what === 'part' ? a.slice(3) : a.slice(2);   // (A part by its name, SW_name's; an overlay by its number)
+        if (left < HEADROOM) s.push(n + ' (' + left + ')');
+        return n + ' ' + left + (of(a) !== 0x2000 && what === 'overlay' ? ' of ' + of(a) : '') + (left < HEADROOM ? '!' : '');
       }).join(', ');
       if (s.length) short.push(what + (s.length > 1 ? 's ' : ' ') + s.join(', '));
       return text;

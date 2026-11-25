@@ -1,12 +1,12 @@
 /*
 ** wthings.c - (dq0w) a denizen's things handled by the character's own rules and the act table's rows (the one-path
 ** plan's stage 2, things and robbery, 2026-11-23: ONE-PATH.md's 2.1 and 2.7, the act audit's C1, C6, C9, G-9, G-10,
-** G-11): its errands, I_ROB's a (FE_STOW ... FE_HAND, I_ROB:fetch's fields), through wempty.c's handout (part 111),
+** G-11): its errands, I_ROB's a (FE_STOW ... FE_HAND, I_ROB:fetch's fields), through wempty.c's handout (part empty),
 ** each the character's handling's rule and its row's time on its ready, told as it's seen (E_BEAT:things, the limbs'
 ** news's way: its square in the character's sight):
 **   FE_STOW   its thing put away: coins into its purse (a pouch hanging from its belt they fit in: things.c's s_purse),
 **             a thing of a carrier's family into that carrier, else its pack (things.c's stow: the room, the weight,
-**             the form, closed: the catalogue's o_fits, the character's); the put row, and its reach (part 56's: a
+**             the form, closed: the catalogue's o_fits, the character's); the put row, and its reach (part reach's: a
 **             pack on the back off and on again, a container's level);
 **   FE_PUT    its thing put in or on another (w1; w2 1 on it), lying within its reach (the take rule's square, not
 **             down in a pit) or its own: o_fits' rule, its compartment by the prep (things.c's cfor); refused closed,
@@ -23,7 +23,7 @@
 ** else a hand if one's free (or asked first), else its pack: wtake.c's take, the take rule's thing put where it goes.
 ** No mind posts these errands yet: the minds' to choose (the user's "what a mind chooses stays the mind's").
 **
-** All of it swapped part 114's (../dq0/swap.inc: dq0w.cfg's SW114), through its stubs.  Its locals the C stack's or
+** All of it swapped part den_acts's (../dq0/swap.inc: dq0w.cfg's SW_den_acts), through its stubs.  Its locals the C stack's or
 ** the part's own but re-read after a call into another part (the part's image is copied in again as it returns).
 */
 
@@ -39,20 +39,20 @@
 #include "wbody.h"
 #include "acts.h"
 
-#pragma code-name ("SW114CODE")
-#pragma rodata-name ("SW114RODATA")
-#pragma bss-name ("SW114RODATA")
+#pragma code-name ("SW_den_acts_CODE")
+#pragma rodata-name ("SW_den_acts_RODATA")
+#pragma bss-name ("SW_den_acts_RODATA")
 
 extern struct ireq iq;                          /* (things.c's: the request's copy) */
-unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
-unsigned char __fastcall__ fits_c (unsigned n, unsigned c);   /* (Part 10's: o_fits, ccomp's compartment) */
+unsigned __fastcall__ weight_of (unsigned i);   /* (Part things's) */
+unsigned char __fastcall__ fits_c (unsigned n, unsigned c);   /* (Part things's: o_fits, ccomp's compartment) */
 extern unsigned char ccomp;                     /* (things.c's: the compartment a thing's put in) */
 extern struct comp crow;                        /* (things.c's: a compartment's row, comp_of's) */
 unsigned char __fastcall__ comp_of (unsigned k, unsigned char c);
-unsigned char drag (void);                      /* (Part 109's: wdrag.c) */
-void den_equip (void);                          /* (Part 60's, wlimbs.c's: body bd's things told the referee) */
+unsigned char drag (void);                      /* (Part drag's: wdrag.c) */
+void den_equip (void);                          /* (Part den_things's, wlimbs.c's: body bd's things told the referee) */
 extern unsigned char den_eq_all;
-unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: a thing let fall on a shaft's head) */
+unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part shaft's: a thing let fall on a shaft's head) */
 
 #define FETCH_HANDS     200                     /* (Quarter pounds: what a folk denizen lifts in its hands, 50 lb; in a
                                                 **   mouth, 3 lb: wtake.c's take rule, HOUSE.md's fetching) */
@@ -146,7 +146,7 @@ static unsigned __fastcall__ row_t (unsigned char ac)
     return q.r.time;
 }
 
-/* The reach to container c (in it, put away: part 56's, every actor's), its time; the character's owed reach kept */
+/* The reach to container c (in it, put away: part reach's, every actor's), its time; the character's owed reach kept */
 unsigned __fastcall__ s_den_lvl (unsigned c, unsigned char from)
 {
     unsigned t, kt = rtime, ko = roff;
@@ -234,7 +234,7 @@ unsigned char __fastcall__ s_den_carry (unsigned n, unsigned char hand_first)
     h = s_den_hands (bd.did) < (bd.body == BD_TWO ? 2 : 1);
     if ((c = s_den_home (n, hand_first && h ? 2 : 1)) != 0) {
         s_den_putin (n, c, 0);
-        bd.ready += s_den_lvl (c, 0);            /* (Put away: its reach, part 56's) */
+        bd.ready += s_den_lvl (c, 0);            /* (Put away: its reach, part reach's) */
         return 1;
     }
     if (!h) {
@@ -252,7 +252,7 @@ unsigned __fastcall__ s_den_room (unsigned n)
 }
 
 /* Thing i taken by body bd (wtake.c's take, the take rule's: lying, or in a thing within its reach, H17's at any
-** depth): its time (s_den_tt's, a weapon's taken into its hand by wtake.c's got too) on its ready (the take row's, or the takeout row's out of a thing, and its reach, part 56's, a
+** depth): its time (s_den_tt's, a weapon's taken into its hand by wtake.c's got too) on its ready (the take row's, or the takeout row's out of a thing, and its reach, part reach's, a
 ** level each; a worn kind stripped from a body, the strip row's more: the character's own, things.c's s_moved), then
 ** carried (s_den_carry: coins to its purse, a hand first, else its pack), told as it's seen (snatched up; taken from
 ** the thing it was in; an ally's fetch, tell 0, by its own words, wfetch.c's) */
@@ -289,24 +289,24 @@ unsigned char __fastcall__ s_den_got (unsigned i, unsigned char tell)
     return r;
 }
 
-/* ==== Part 115's (part 114 full): the errands' rest, worn, taken off, handed over; through part 114's stubs */
-#pragma code-name ("SW115CODE")
-#pragma rodata-name ("SW115RODATA")
-#pragma bss-name ("SW115RODATA")
+/* ==== Part den_errands's (part den_acts full): the errands' rest, worn, taken off, handed over; through part den_acts's stubs */
+#pragma code-name ("SW_den_errands_CODE")
+#pragma rodata-name ("SW_den_errands_RODATA")
+#pragma bss-name ("SW_den_errands_RODATA")
 
-unsigned char __fastcall__ den_own (unsigned i, unsigned did);   /* (Part 114's, above: its stubs) */
+unsigned char __fastcall__ den_own (unsigned i, unsigned did);   /* (Part den_acts's, above: its stubs) */
 unsigned char __fastcall__ den_hands (unsigned did);
 void __fastcall__ den_hold (unsigned n, const struct actor* a, unsigned char f);
 void __fastcall__ den_seen (unsigned w, unsigned o);
 unsigned __fastcall__ den_lvl (unsigned c, unsigned char from);
 unsigned char __fastcall__ den_carry (unsigned n, unsigned char hand_first);
 unsigned char __fastcall__ den_store (unsigned n, unsigned c, unsigned char on);
-void __fastcall__ den_robbed (unsigned char purse);   /* (Part 116's: the character's robbery) */
-void __fastcall__ den_stash (const struct msg* q);  /* (Part 116's: a robber's takings put by at its lair) */
+void __fastcall__ den_robbed (unsigned char purse);   /* (Part den_store's: the character's robbery) */
+void __fastcall__ den_stash (const struct msg* q);  /* (Part den_store's: a robber's takings put by at its lair) */
 #undef own
 #define own(i)          den_own ((i), bd.did)
 
-/* The act table's row ac's time (part 115's own) */
+/* The act table's row ac's time (part den_errands's own) */
 static unsigned __fastcall__ row_u (unsigned char ac)
 {
     struct actq q;
@@ -468,7 +468,7 @@ unsigned char __fastcall__ s_den_things (const struct msg* m)
     unsigned char e = I_ROB_ERRAND (*m), r, b, h;
 
     if (e == FE_STASH) {
-        den_stash (m);                          /* (Part 116's) */
+        den_stash (m);                          /* (Part den_store's) */
         return IR_OK;
     }
     if (!n && (e == FE_STOW || e == FE_DON || e == FE_HAND)) {
@@ -522,7 +522,7 @@ unsigned char __fastcall__ s_den_things (const struct msg* m)
         memcpy (&iq, &k, sizeof iq);
         hub_map (0);
         return r;                               /* (Told by its noise: E_DEN DE_DRAGS) */
-    case FE_ROBBED:                             /* (Robbed by the character: part 116's) */
+    case FE_ROBBED:                             /* (Robbed by the character: part den_store's) */
         den_robbed (I_ROB_PURSE (*m) & RB_PURSE);
         return IR_OK;
     case FE_HAND:
@@ -546,19 +546,19 @@ unsigned char __fastcall__ s_den_things (const struct msg* m)
     return r;
 }
 
-/* ==== Part 116's (parts 114 and 115 full): a thing put away, put in or on another; through part 114's stubs */
-#pragma code-name ("SW116CODE")
-#pragma rodata-name ("SW116RODATA")
-#pragma bss-name ("SW116RODATA")
+/* ==== Part den_store's (parts den_acts and den_errands full): a thing put away, put in or on another; through part den_acts's stubs */
+#pragma code-name ("SW_den_store_CODE")
+#pragma rodata-name ("SW_den_store_RODATA")
+#pragma bss-name ("SW_den_store_RODATA")
 
-void __fastcall__ den_putin (unsigned n, unsigned c, unsigned char cc);   /* (Part 114's: its stubs) */
+void __fastcall__ den_putin (unsigned n, unsigned c, unsigned char cc);   /* (Part den_acts's: its stubs) */
 unsigned __fastcall__ den_home (unsigned n, unsigned char cr);
 unsigned char __fastcall__ den_own (unsigned i, unsigned did);
 unsigned __fastcall__ den_lvl (unsigned c, unsigned char from);
 #undef own
 #define own(i)          den_own ((i), bd.did)
 
-/* The act table's row ac's time (part 116's own) */
+/* The act table's row ac's time (part den_store's own) */
 static unsigned __fastcall__ row_v (unsigned char ac)
 {
     struct actq q;
@@ -623,7 +623,7 @@ static unsigned char __fastcall__ put (unsigned n, unsigned c, unsigned char on)
     return IR_OK;
 }
 
-/* Its thing put away (FE_STOW: c 0), or put in or on thing c (FE_PUT): part 115's way in */
+/* Its thing put away (FE_STOW: c 0), or put in or on thing c (FE_PUT): part den_errands's way in */
 unsigned char __fastcall__ s_den_store (unsigned n, unsigned c, unsigned char on)
 {
     return c ? put (n, c, on) : stow (n);
@@ -632,9 +632,9 @@ unsigned char __fastcall__ s_den_store (unsigned n, unsigned c, unsigned char on
 /* ---- The character's robbery (the one-path plan's stage 2, things and robbery, 2026-11-23: ONE-PATH.md's 2.7, the
 ** character robbing and filching a living denizen; the denizens' own robbery, wfight.c's s_den_rob, the other way
 ** about) */
-unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's: the character's) */
+unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part things's: the character's) */
 unsigned char __fastcall__ icomp (unsigned i);  /* (things.c's: thing i's compartment in what holds it, crow its row) */
-void light_now (void);                          /* (Part 10's) */
+void light_now (void);                          /* (Part serve's) */
 void den_equip (void);
 extern unsigned char den_eq_all;
 #define told(how, kind) (evb = E_TASK_FETCHED_B (bk + 1, (how)), event (E_TASK, 0, E_TASK_FETCHED_W1 (kind)),                          ++HUB->den_seq)

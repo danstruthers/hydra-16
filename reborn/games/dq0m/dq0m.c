@@ -37,9 +37,9 @@ unsigned char __fastcall__ num (const char* s);
 /* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */
 /* The chunks in the cache of strata no longer in the hub's records (their slots made way for another's: M_PLAN's,
 ** M_SLOT's) theirs no more, what's been seen of them kept (but those a task's reading, or stocked, not yet marked;
-** part 3's since 2026-11-03: the main RAM's room, the sky's stub) */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+** part sconces's since 2026-11-03: the main RAM's room, the sky's stub) */
+#pragma code-name (push, "SW_sconces_CODE")
+#pragma rodata-name (push, "SW_sconces_RODATA")
 void s_stale (void)
 {
     struct cslot* c;
@@ -244,8 +244,8 @@ unsigned char ahead_wanted (void)
 ** then the rest once the maker has made it"), the chunk its eyes reached, not made, made ahead before any other (in the
 ** background, giving way as they do: make_ahead's); made ahead, or in the cache, WW_MADE, the world to ask its rest; no
 ** room for it, let go (the next look one way's to tell it).  The hub's header in the window after */
-#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room) */
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_sconces_CODE")     /* (The main RAM's room) */
+#pragma rodata-name (push, "SW_sconces_RODATA")
 unsigned char s_way_next (void)
 {
     struct akey k;                              /* (On the C stack: the main RAM's room) */

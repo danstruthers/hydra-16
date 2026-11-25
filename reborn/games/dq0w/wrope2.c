@@ -1,11 +1,11 @@
 /*
-** wrope2.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part 98's: a rope in place untied, shaken
+** wrope2.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part rope_untie's: a rope in place untied, shaken
 ** loose, its grapple giving, and looked at.
 */
 
 #pragma local-strings (on)
-#pragma code-name ("SW98CODE")
-#pragma rodata-name ("SW98RODATA")
+#pragma code-name ("SW_rope_untie_CODE")
+#pragma rodata-name ("SW_rope_untie_RODATA")
 
 #include "wrope.h"
 

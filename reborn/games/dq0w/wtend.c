@@ -1,5 +1,5 @@
 /*
-** wtend.c - (dq0w, swapped part 70: ../dq0/swap.inc) wounds over time, the world's part (slice 4.3: HOUSE.md's wounds
+** wtend.c - (dq0w, swapped part tend: ../dq0/swap.inc) wounds over time, the world's part (slice 4.3: HOUSE.md's wounds
 ** over time): the bodies' time told the referee (RS_TIME), a minute at a time while anyone bleeds or the character's
 ** poisoned, else as the referee's next watch comes (its marks: the shock's recovery, the healing of wounds), what the
 ** character was about with it (at rest, about, at vigorous work: a venom's interval, the bestiary's) and which
@@ -18,10 +18,10 @@
 #include "things.h"
 #include "wbody.h"
 
-unsigned char __fastcall__ on_pc (unsigned i);   /* (Part 10's stub: carried by the character) */
+unsigned char __fastcall__ on_pc (unsigned i);   /* (Part things's stub: carried by the character) */
 
-#pragma code-name ("SW70CODE")
-#pragma rodata-name ("SW70RODATA")
+#pragma code-name ("SW_tend_CODE")
+#pragma rodata-name ("SW_tend_RODATA")
 #pragma local-strings (on)
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a hurt stops its long task, hard) */
@@ -54,7 +54,7 @@ unsigned s_body_ask (void)
     if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED | C_NEWS)) && HUB->pcsum.health == H_FINE &&
         !HUB->pc_air && HUB->now < wdue)) && HUB->pc_under != 0xFF && !HUB->pc_aff && !HUB->pc_flm) {   /* (Hurt:
                                                 **   its rest toward its healing told, a minute at a time; in bad air,
-                                                **   the same; drowned, part 73's, exposed or its flame's news, told
+                                                **   the same; drowned, part water's, exposed or its flame's news, told
                                                 **   at once) */
         return 0;
     }

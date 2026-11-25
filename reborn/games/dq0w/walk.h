@@ -1,5 +1,5 @@
-/* walk.h - (the world's dq0w.c, part 21: the character's ways across a room or about a passage; the denizens'
-** dq0d.c, part 18: an actor's way to its mark) one way-finder over one rule for a step (ENGINE-CRITIQUE.md's §4,
+/* walk.h - (the world's dq0w.c, part ways: the character's ways across a room or about a passage; the denizens'
+** dq0d.c, part way_find: an actor's way to its mark) one way-finder over one rule for a step (ENGINE-CRITIQUE.md's §4,
 ** step 2's second part: one source 2026-11-09, walk.inc compiled into each; the paged ROM's 2026-11-14, the game's
 ** library's modules/dq0lib/walk.s, its contract the zero page's block, ../dq0/lnzp.inc's LZ_CL ..., named here).
 **

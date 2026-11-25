@@ -2,7 +2,7 @@
 ** wpour2.c - (dq0w) the empty done, and its words, the pour's (P4, the user's, 2026-11-18; H11, 2026-11-19): what
 ** wpour.c's s_pour found may be, done (every actor's), told the character ("You empty the sack into the iron pot. The water goes in too.", "You pour a pint of the water
 ** into the vial: it's full, and the rest stays in the waterskin."), from the request's copy, iq, as s_pour left it.
-** Swapped part 113's (dq0w.cfg's SW113: part 112's room), through its stub, pour_said
+** Swapped part pour_words's (dq0w.cfg's SW_pour_words: part pour's room), through its stub, pour_said
 */
 
 #pragma local-strings (on)
@@ -19,9 +19,9 @@
 extern struct ireq iq;                          /* (things.c's: the request's copy) */
 void __fastcall__ put (const char* s);          /* (tlist.s's: its words after the text) */
 
-#pragma code-name ("SW113CODE")
-#pragma rodata-name ("SW113RODATA")
-#pragma bss-name ("SW113RODATA")
+#pragma code-name ("SW_pour_words_CODE")
+#pragma rodata-name ("SW_pour_words_RODATA")
+#pragma bss-name ("SW_pour_words_RODATA")
 #pragma static-locals (on)
 
 #define TAKE_T          20                      /* (Tenths: a thing taken out, a take's moment, wtake.c's got) */

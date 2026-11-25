@@ -18,15 +18,15 @@
 ** again, so the character's near ones are always there).
 **
 ** Each row into the UI bank as it's drawn, its layers after it (the UI shows it as the last of them comes: the user's,
-** 2026-11-17).  All of it a swapped part's (part 1: ../dq0/swap.inc), draw_map called through its stub (bank.s's).
+** 2026-11-17).  All of it a swapped part's (part map: ../dq0/swap.inc), draw_map called through its stub (bank.s's).
 */
 
 #include <string.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 
-#pragma code-name ("SW1CODE")
-#pragma rodata-name ("SW1RODATA")
+#pragma code-name ("SW_map_CODE")
+#pragma rodata-name ("SW_map_RODATA")
 #pragma local-strings (on)
 #pragma static-locals (on)
 

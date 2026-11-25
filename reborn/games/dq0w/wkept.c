@@ -11,7 +11,7 @@
 ** changed.  And a stratum's populations waited for as its plan's grown, so its chunks are stocked by them from the
 ** first.
 **
-** All of it swapped part 34's (../dq0/swap.inc: dq0w.cfg's SW34, its image in overlay 11's bank, the blows' filling
+** All of it swapped part sconces's (../dq0/swap.inc: dq0w.cfg's SW_sconces, its image in overlay 11's bank, the blows' filling
 ** overlay 2's), called through its stubs (bank.s's), its locals the C stack's (not the main RAM's).
 */
 
@@ -25,8 +25,8 @@
 #include "things.h"
 #include "wbody.h"
 
-#pragma code-name ("SW34CODE")
-#pragma rodata-name ("SW34RODATA")
+#pragma code-name ("SW_sconces_CODE")
+#pragma rodata-name ("SW_sconces_RODATA")
 #pragma local-strings (on)
 
 extern struct change rec;                       /* (store.c's: the record written) */
@@ -192,14 +192,14 @@ unsigned char __fastcall__ s_sconce_lights (unsigned char reach)
         lights (HUB->pc_stratum, HUB->pc_x - reach, HUB->pc_y - reach, 2 * reach + 1, 0);
 }
 
-/* ==== Part 71's (its image in overlay 21's bank: part 34's had no room): a stratum's populations done after chunks
+/* ==== Part kept_late's (its image in overlay 21's bank: part sconces's had no room): a stratum's populations done after chunks
 ** of it were stocked (the real paces': s_kept_wait's, owed), each chunk in the cache stocked meanwhile, its rooms the
 ** maker would have kept lit had its keepers been placed (sconce.c's squares, by its dice, a copy; a room lit by its
 ** own light not), lit now (lit_late), one at a time; its locals the C stack's (a part it calls copies its image
 ** in again as it returns: none kept in its image) (the hub's header in the window after) */
-#pragma code-name (push, "SW71CODE")
-#pragma rodata-name (push, "SW71RODATA")
-/* (Part 34's kept and room_lit, copies: no stubs for them, the main RAM's room) */
+#pragma code-name (push, "SW_kept_late_CODE")
+#pragma rodata-name (push, "SW_kept_late_RODATA")
+/* (Part sconces's kept and room_lit, copies: no stubs for them, the main RAM's room) */
 /* Square x, y of stratum sn kept lit: within the range of a keeping whose keepers live (no further than their range
 ** either way from their lair's chunk's middle: the hub's places kept, the denizens'); the hub's header in the window
 ** after */

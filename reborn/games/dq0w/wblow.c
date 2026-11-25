@@ -17,7 +17,7 @@
 ** it?"), once a door.  A soft thing named that strikes (dq0w.c's door_work: the house's, rshouse.h's) one attempt, no
 ** harm, a blow's time, told (PO_SOFT), and no long task (the user's, 2026-10-22).
 **
-** All of it swapped part 6's (../dq0/swap.inc: dq0w.cfg's SW6), blows () called through its stub (bank.s's).
+** All of it swapped part blows's (../dq0/swap.inc: dq0w.cfg's SW_blows), blows () called through its stub (bank.s's).
 */
 
 #include <string.h>
@@ -27,8 +27,8 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW6CODE")
-#pragma rodata-name ("SW6RODATA")
+#pragma code-name ("SW_blows_CODE")
+#pragma rodata-name ("SW_blows_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS
@@ -38,7 +38,7 @@
 #define W_SPRING
 #include "workpart.h"
 #include "body.h"
-void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part 49's: wbody.h) */
+void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part limbs's: wbody.h) */
 
 /* The next blow at the portal's part (its material mat, PM_* or 4 glass; its body), if the battering goes on: a dozen
 ** at most (BLOWS: the hub's pc_task done, those struck), four that make no mark at all given up (its harm as it
@@ -94,7 +94,7 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     r->state = REQ_FREE;
     if (RS_ATTACK_OUT (*r)) {
         bearings_off (BO_OUT);                  /* (Knocked senseless by its own blow's hurt: its bearings astray as
-                                                **   it comes round, part 52's, slice 4.2's) */
+                                                **   it comes round, part bearings's, slice 4.2's) */
     }
     if (i) {
         if ((unsigned) h + i >= body) {

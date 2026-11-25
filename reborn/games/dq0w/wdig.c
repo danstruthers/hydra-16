@@ -2,8 +2,8 @@
 ** wdig.c - (dq0w) a tunneller's dig (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders; HOUSE.md's
 ** tunnellers, for review): an actor's way dug through rock, a wall or rubble by the character's rules and the
 ** character's code (the one-path plan's stage 2, digging, 2026-11-23: ONE-PATH.md's 2.1 and 2.7, the act audit's E1
-** and G-13): a spell of work at a time (the act table's dig row, ten minutes, every actor's), each spell part 1's
-** dig_spell, the character's own (dq0w.c's, part 1's): the rock it's into, the referee's test by its sheet (RS_TEST P_DIG, the
+** and G-13): a spell of work at a time (the act table's dig row, ten minutes, every actor's), each spell part dig_spell's
+** dig_spell, the character's own (dq0w.c's, part dig_spell's): the rock it's into, the referee's test by its sheet (RS_TEST P_DIG, the
 ** actor's: the tool among its own things that suits it best, its claws a burrower's, the referee's rate and wear, the
 ** house's table, every ruleset's; its own copy of the rates before), the rock's hardness the rate's, poor rock come
 ** down on a spell gone badly, its tool worn (its own thing's wear, as the character's is), a hidden door dug into as
@@ -18,8 +18,8 @@
 ** way, its doing still DO_DIG: a spell cut short by another intent, a step, a blow, is lost, as the character's part
 ** spell is; a rouse, back to it, the spell's rest).
 **
-** All of it swapped part 79's (../dq0/swap.inc: dq0w.cfg's SW79), called through its stub (bank.s's den_dig) from
-** part 51's den_other, I_KIT's.
+** All of it swapped part den_dig's (../dq0/swap.inc: dq0w.cfg's SW_den_dig), called through its stub (bank.s's den_dig) from
+** part den_limbs's den_other, I_KIT's.
 */
 
 #include <string.h>
@@ -34,14 +34,14 @@
 #include "acts.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW79CODE")
-#pragma rodata-name ("SW79RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
+#pragma code-name ("SW_den_dig_CODE")
+#pragma rodata-name ("SW_den_dig_RODATA")             /* (No data of its own: its locals on the C stack, as it calls other
                                                 **   parts, which copy this one in again after) */
 
 #define DUG_LOUD        7                       /* The way through: the spoil falling (the act table's dug row's, as
                                                 **   told: DE_DUG's own den_told, its DT_SEEN) */
 
-unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: a DUG record looked up, rec's) */
+unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part game_files's: a DUG record looked up, rec's) */
 extern struct change rec;                       /* (store.c's) */
 
 /* A diagonal's corner, square x, y, cut (T_CUT) if it's rock or a wall: the way through walked corner to corner (as
@@ -56,11 +56,11 @@ static void __fastcall__ cut_corner (unsigned x, unsigned y)
 }
 
 /* A builder's work (I_KIT's KT_BUILD, slice 4.11's rest: HOUSE.md's builders): at m's w1, w2, a door broken down
-** put up again, or a way dug walled up: the character's own building, every actor's (wbuild.c's, part 124's: the
+** put up again, or a way dug walled up: the character's own building, every actor's (wbuild.c's, part build's: the
 ** user's, 2026-11-23, "The character builds anywhere, with materials"; its hammer, its leaf or its stones, its test,
 ** the act table's hang and wallup rows' times and noise; a record's, away, its tools the house's, untested, untold) */
 extern struct ireq iq;                          /* (things.c's: the request's copy) */
-unsigned char build (void);                     /* (Part 124's: wbuild.c) */
+unsigned char build (void);                     /* (Part build's: wbuild.c) */
 static void __fastcall__ built (const struct msg* m, unsigned char rd)
 {
     iq.to = TO_DEN | (rd ? BD_REC : 0) | BD_ANY;
@@ -118,7 +118,7 @@ static void __fastcall__ tools_of (unsigned char g, unsigned char rd)
     memcpy (HUB->slot[SLOT_WORLD].text, t, sizeof t);
 }
 
-/* The spell (part 1's dig_spell, the character's) of body bd at its stand, digging square dx, dy (its way, what it's
+/* The spell (part dig_spell's dig_spell, the character's) of body bd at its stand, digging square dx, dy (its way, what it's
 ** into, the half-feet it needs, *done dug so far: on by it), its tools g (a record's rd): the character's dig kept
 ** round it; its grade (who | DIG_ASK: only whether anything it has bites, DS_CANT if nothing does), *f dig.found */
 static signed char __fastcall__ spell_of (unsigned char who, unsigned char way, unsigned char mat, unsigned dx,

@@ -26,7 +26,7 @@ struct pc_activity {
     unsigned char trav;                         /* A journey's next leg (1), or a dig's tool put away after it,
                                                 **   TRV_TOOL (travel_on) */
     /* The long task's own going on, and its stop */
-    unsigned char fight;                        /* Fighting on (part 24's: 1 an enemy may engage it, looked at as it's
+    unsigned char fight;                        /* Fighting on (part engage's: 1 an enemy may engage it, looked at as it's
                                                 **   free; 2 a command took a fight over; | FW_RUN a flight's run on) */
     unsigned char cut;                          /* Its long task stopped, hard or by the player (work.h's: no outcome,
                                                 **   the stop told) */

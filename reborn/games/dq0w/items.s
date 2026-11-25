@@ -208,9 +208,9 @@ items_from  =           *                   ; (den_draw's: from the one after at
 
 .ifndef ITEMS_ALL
 ; den_draw (want): body bd's weapon drawn as it strikes, or a thing of its own of kind want taken in hand (wbody.h's), by
-; part 60's den_draws, asked only of one with a thing of its own (a record IW_DEN, its owner and hide its did): none, 0,
-; as den_draws's own first test has it (kit_next's), so a beast's every blow doesn't copy part 60 in over part 15 and
-; part 15 back after it, some 78,000 cycles of each round a denizen strikes in (speed11's, 2026-11-22: dq0fightcmd's
+; part den_things's den_draws, asked only of one with a thing of its own (a record IW_DEN, its owner and hide its did): none, 0,
+; as den_draws's own first test has it (kit_next's), so a beast's every blow doesn't copy part den_things in over part fight_blows and
+; part fight_blows back after it, some 78,000 cycles of each round a denizen strikes in (speed11's, 2026-11-22: dq0fightcmd's
 ; wait typed as a rat fought, 760,174).  The window as den_draws's test left it: an item bank, or as it was (no did)
             .export     _den_draw
             .import     _den_draws, _bd

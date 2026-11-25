@@ -4,8 +4,8 @@
 ; from 2026-11-08), each call an XCALL of it, its arguments taken off the C stack into the zero page's block
 ; (../dq0/lnzp.inc's LZ_*), where it keeps its work and the task's C reads its answers (line.h's ln_n ...: at.s's
 ; names).  Its squares read by the library's own at () (the task's chunk state, at.s's), the task's ln_way called back.
-; The line's stub in the segment its includer sets (the world's part 65: its line of fire's, wshoot.c's lof, no other
-; part draws one), ln_pass's and ln_portal's in the main RAM (the world's: a missile's flight on, part 68's; a smell's
+; The line's stub in the segment its includer sets (the world's part missiles: its line of fire's, wshoot.c's lof, no other
+; part draws one), ln_pass's and ln_portal's in the main RAM (the world's: a missile's flight on, part missile_fall's; a smell's
 ; way, wtrace.c's).
 ;
 ;   unsigned char __fastcall__ line (unsigned char sn, unsigned x, unsigned y, unsigned tx, unsigned ty,

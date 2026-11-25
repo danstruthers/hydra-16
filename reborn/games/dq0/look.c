@@ -10,7 +10,7 @@
 ** The words for the places are the theme's (theme.h: a stratum's name, a room's by its kind, a lit room's light;
 ** theme.c's).
 **
-** The map's code is a swapped part's (part 3: swap.inc), called through its stub (bank.s's map): the maker draws it
+** The map's code is a swapped part's (part map: swap.inc), called through its stub (bank.s's map): the maker draws it
 ** (dq0m/map.c: what the character sees now as it is, the rest as it's kept, turned as it faces for one that doesn't
 ** know north), each square's layer beside it, coloured here (the player's colour on: what's seen now bright, what's
 ** remembered dim, what's drawn on its map brown, the character bright cyan; colour off, plain letters: pace.c's), the
@@ -64,7 +64,7 @@ const char* tt (void)
 
 /* The senses' record copied (sight_copy), summed up to the things: where it stands, how much of it's seen, its dark, its
 ** own light, its doors, ways and ceiling; not its seq, nor first, the UI's (sight_same's, a light's change compared
-** with the last look's: the main RAM's, part 8 not copied in for each look's words, 2026-11-18) */
+** with the last look's: the main RAM's, part where not copied in for each look's words, 2026-11-18) */
 static unsigned sight_sum;
 static unsigned sight_sum_of (void)
 {
@@ -130,8 +130,8 @@ void stir (void)
 typedef char panel_fits[PLINES * (PANEL + 1) <= sizeof lb ? 1 : -1];
 static unsigned char np;
 
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
+#pragma code-name (push, "SW_map_CODE")
+#pragma rodata-name (push, "SW_map_RODATA")
 
 static void __fastcall__ pline (const char* s)
 {
@@ -205,7 +205,7 @@ static const char* const sgr[] = { "\x1b[97m", "\x1b[90m", "\x1b[33m", "\x1b[96m
 ** it along one of its two, a staircase of short steps, drawn '/' or '\' along it; a bend's corner alone stays '#'.  A
 ** row's worked out from the rows as drawn, two above it and two below, into the row shown (the same as the rows marked
 ** whole: a mark was a passage's square to the others; 2026-11-17, the map shown a row at a time) */
-#pragma bss-name (push, "SW3RODATA")            /* (Its state the part's own: none kept from one map to the next) */
+#pragma bss-name (push, "SW_map_RODATA")        /* (Its state the part's own: none kept from one map to the next) */
 static unsigned char ml[MAP_H], em;
 static const signed char ex[4] = { 0, 1, 0, -1 }, ey[4] = { -1, 0, 1, 0 };
 
@@ -389,13 +389,13 @@ void __fastcall__ s_map (const char* rules)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 8: where in its room the character is, and the things it sees there, in words (HOUSE.md's where you are:
+/* ==== Part where: where in its room the character is, and the things it sees there, in words (HOUSE.md's where you are:
 ** by the facing alone, the user's, never the compass; only what's known, the senses' record's copy) */
 
 char where_w[34];
 
-#pragma code-name (push, "SW8CODE")
-#pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW_where_CODE")
+#pragma rodata-name (push, "SW_where_RODATA")
 
 #define SC          sight_copy
 

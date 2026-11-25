@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; run.inc - (a part's: the senses' part 2, dq0p/run.s; the world's part 23, dq0w/run.s; RUNSEG the part's segment)
+; run.inc - (a part's: the senses' part perceive, dq0p/run.s; the world's part long_task, dq0w/run.s; RUNSEG the part's segment)
 ; ../dq0/run.h's run_of in assembly, for the parts' room: a passage's run in a walk's steps (run_s, headings, eighths),
 ; its length (run_n) and its bearing in sixteenths.  Two headings an eighth or a quarter apart, the one that comes
 ; twice running the main one, the other never twice running: a slant, its bearing the steps' sum, if it's three steps

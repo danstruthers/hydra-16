@@ -66,7 +66,7 @@ Their roles are hub.h's `enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T
   - The dungeon's change records; doors, portals and traps; the item store; the actors' bodies; every blow.
 - **dq0d, the minds** (dq0d/dq0d.c; C with some assembly; 7 overlays, 24 parts).
   - The denizens: each stratum's population, placed; the nearby actors' decisions, posted as intents; attitudes.
-  - Not to be confused with dq0/minds.c, which is the UI's part 28 (say, knock, sway).
+  - Not to be confused with dq0/minds.c, which is the UI's part minds (say, knock, sway).
 - **dq0p, the senses** (dq0p/dq0p.c, with view.c, sight.c, eyes.c, light.c, sense.c and sound.c; 4 overlays, 6 parts).
   - The look for the character, and each denizen's senses.
   - The light and sound layers, and the memory of what's been seen.
@@ -111,7 +111,8 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
 ### The hub
 
 - **What it is.** A shared segment of 26 banks of 8K (HUB_BANKS, hub.h:77). The UI makes it; every other task
-  attaches to it and checks its magic "DQ" and its HUB_VERSION (hub.h:28-29).
+  attaches to it and checks its magic "DQ" and its HUB_VERSION (hub.h's, from obj/gen/dq0ver.h: the build's hash of
+  the headers' layouts, hubgen.js; not bumped by hand).
 - **Bank 0** holds struct hub:
   - a doorbell for each task (a counting semaphore it waits on);
   - the clock;
@@ -251,8 +252,8 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
   defines the format every outfits file uses. dq0w/outfits.js compiles it into dq0o.dat, after each referee's own.
 - **styles.txt**: the maker's style proportions, in named sets (house and open). tools/dq0build.js makes
   styles.dat; a theme may name a set.
-- **parts.txt**: the UI's swapped parts, a line each: `N OV what` (section 5: swapped parts). Every task with parts
-  has one.
+- **parts.txt**: the UI's swapped parts, a line each: `NAME WISH what` (section 5: swapped parts). Every task with
+  parts has one; .gitattributes merges it with git's union driver.
 - **themes/1crypt.txt, 2temple.txt, 3warren.txt**: the hand-written stand-in themes. 1crypt.txt documents the theme's
   format. The build compiles them with themec into dq0t.dat. A seed under 65,536 picks one.
 - **town/town.txt, scholar.txt**: the town's and the scholar's words (on hold).
@@ -287,10 +288,10 @@ peoples.txt and deities.txt.
 - **tests/dq0/looks.ref**: dq0looks' hashes of the senses' replies. `DQ0LOOKS=write` makes it again.
 
 **Generated, never edited by hand** (obj/ isn't in git; the build makes it all):
-- obj/gen/actions.h, dq0hub.json, dq0msg.h, dq0rec.h and dq0hub_*.inc (hubgen.js);
+- obj/gen/actions.h, dq0hub.json, dq0msg.h, dq0rec.h, dq0ver.h (HUB_VERSION, SAVE_VER) and dq0hub_*.inc (hubgen.js);
 - obj/gen/dq0said.h (saidgen.js);
 - obj/games/dq0c.dat and dq0cover.txt (the coverage report);
-- each task's parts.inc, link config and placed.txt (parts.js, pack.js);
+- each task's parts.inc, ovfn.inc (its overlays' stubs), parts.json, link config and placed.txt (parts.js, pack.js);
 - the .dat files above.
 
 bin/prom*.bin and bin/sdcard.img are build outputs that are kept in git: rebuild and commit them with a change to
@@ -310,7 +311,8 @@ machine's load allows.
 - `node build.js --clean` empties obj/cache first: a build from nothing. `--no-cache` uses none.
 - Before any game, tools/dq0build.js runs hubgen.js, then saidgen.js, then the styles file (tools/dq0build.js:86-88).
 - Then each game folder is compiled, and its make.js run.
-- A folder with a parts.txt gets its stubs and link config made by parts.js (build.js:318-325).
+- A folder with a parts.txt gets its parts numbered, its stubs (SWFN and OVFN) and its link config made by parts.js
+  (tools/dq0build.js's swappedParts).
 - **The floors** (build.js:259): every dq0 task must keep 2,048 bytes of main RAM free (HEADROOM), or the build
   fails; themec and themegen 512. An overlay or a part under 512 bytes free only warns. The UI's own floor of 3,000 is
   a rule the build doesn't check yet (AGENTS.md).
@@ -416,6 +418,8 @@ machine's load allows.
   `ovbank[n-1]` is overlay n's bank.
   - A code overlay is linked at $8000. A call goes through an OVFN stub that keeps the window, puts the overlay in,
     calls it and puts the window back. Its code can't read the hub while it runs: the hub's bank isn't in the window.
+  - A function goes in overlay n by `#pragma code-name ("OVnCODE")`. If it's named o_NAME and called as NAME, the build
+    makes its stub (parts.js's ovstubs: obj/games/TASK/ovfn.inc, which bank.s includes); there's no stub to write.
   - Some hold only data: the UI's phrase rows are overlays 28, 29 and 30 (linked at $8000, $A000 and $C000 so one
     address names a row in any of them), read a byte at a time by bank.s's said_b.
   - An overlay with another after it in the same file needs `fill = yes, fillval = $FF` in the .cfg (AGENTS.md).
@@ -434,6 +438,10 @@ machine's load allows.
 - **said.txt's rows, SA codes and pieces**: a row is `KIND.outcome`; SA is the kind for the world's sentences about
   things. The world writes an SA_* code and the names into the UI bank's things_text, and the UI words it by the SA
   rows (items.h:554-562). A piece (`@NAME "text"`) is text shared between rows.
+- **SAVE_VER**: the save's version (life.h's, from obj/gen/dq0ver.h), a hash the build makes of SAVE_FORMAT and the
+  layouts of the structs that reach the save's files (hubgen.js's SAVED); a save of another version isn't carried on.
+  SAVE_FORMAT, life.h's, is bumped by hand only for a change no layout shows (what's written, in what order, what a
+  number means). A struct written whole to a file that SAVED doesn't list fails the build.
 - **Scenes**: the whole machine saved at a dq0 test's first prompt, and taken up by the next test with the same start.
   It skips the start's 235M cycles or so (sim/lib/scenes.js; tests/TESTING.md).
 - **The soak** (sim/tools/soak.js): many seeds played by a random player at the turns pace, looking for crashes,
@@ -442,9 +450,11 @@ machine's load allows.
   (built, natural, mine or mixed), purpose and plan (dq0w/world.h; DUNGEON.md).
 - **Swapped parts**: main-RAM code run one part at a time in a swap area under the C stack (the UI's is $1100
   bytes: dq0.cfg's __SWAPSIZE__). A part's image is kept in an overlay bank and copied in when a function of it is
-  called. A function is put in part n by `#pragma code-name (push, "SWnCODE")`, and called through an SWFN stub and
-  sw_call. parts.txt says where each part's image is kept; parts.js makes the stubs, and pack.js moves code between
-  parts that are too full. Unlike an overlay's code, a part's code can read the hub.
+  called. A function is put in a part by the part's name, `#pragma code-name (push, "SW_name_CODE")` and
+  `rodata-name (push, "SW_name_RODATA")`, and called through an SWFN stub and sw_call. parts.txt names each part, the
+  bank it wishes and what it's for; a part's number is its place there, the build's, so nothing typed names one.
+  parts.js makes the stubs and places each part in a bank; pack.js moves code between parts that are too full.
+  Unlike an overlay's code, a part's code can read the hub.
 - **Sway**: words that would change a denizen's attitude (talk, persuade, deceive, threaten, calm, befriend), and
   requests to an ally. The UI asks the minds; the referee judges the contest.
 - **Themes**: what a dungeon is about, as data: its name, story, strata, room words, bestiary, eight kinds of its
@@ -483,9 +493,9 @@ show the handler half only.
    hself.c:114, `case H_PRAY:`). A missing case falls silently to the switch's default (hself.c has none: nothing
    happens).
 9. **cmds.h** (only for a new group entry or a function shared between files).
-10. **Room**: if the handler's part is full, a new part (parts.txt and `#pragma code-name (push, "SWnCODE")`). A new
-    overlay takes three hand edits that must agree: dq0.cfg's OVn line, bank.s's OVMAX, and dq0.h's ovbank[] (which
-    already says 27 against OVMAX's 30).
+10. **Room**: if the handler's part is full, a new part: a line at the end of parts.txt, `NAME - what` (a name of
+    its own; "-" lets the packer choose its bank), and `#pragma code-name (push, "SW_NAME_CODE")` with its
+    rodata-name. A new overlay is its .cfg's OVn line; the build counts them (OVLS).
 11. **The world**, if it must act: an IO_* request (items.h, e.g. IO_RIP), its case in dq0w/things.c's s_serve, the
     world's code (dq0w/wcloth.c) and its line in dq0w/parts.txt; or an intent (hub.h's I_*, its payload in msgs.def,
     a case in dq0w/dq0w.c's switch). Add the minds and both referees when the rules are theirs (9b13e40f, grappling).

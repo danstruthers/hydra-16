@@ -57,10 +57,10 @@ static struct {
 static unsigned     sstamp;
 static struct rpt srt = { RP_FIND, NSREG, sizeof sreg[0], 0x07, sreg, 3, RTF_HAND, 0, { 0 }, 0, 0, 0, 0xFF };
                                                 /* (Its table, the record store's: a region found, one made way for) */
-void __fastcall__ wet_put (struct chunk* k, unsigned xy, unsigned char tile);  /* (Part 2's, below) */
+void __fastcall__ wet_put (struct chunk* k, unsigned xy, unsigned char tile);  /* (Part seen_save's, below) */
 
-#pragma code-name (push, "SW2CODE")           /* (Part 2's since 2026-11-06, once: the main RAM's room, a well's water) */
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_seen_save_CODE")   /* (Part seen_save's since 2026-11-06, once: the main RAM's room, a well's water) */
+#pragma rodata-name (push, "SW_seen_save_RODATA")
 void s_changes_init (void)
 {
     int b = hy_banks_alloc (SEEN_BANKS + 2);
@@ -150,7 +150,7 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
         }
         return;
     }
-    if (link == WELL_WET) {                     /* (A well's water on its square, tile its surface: part 2's, 2026-11-06) */
+    if (link == WELL_WET) {                     /* (A well's water on its square, tile its surface: part seen_save's, 2026-11-06) */
         wet_put (k, lx | ly << 8, tile);
         return;
     }
@@ -602,8 +602,8 @@ void o_pl_flush (void)
 ** seen in the chunks in the cache kept first (seen_keep), so nothing seen is lost.  (The change records are the
 ** world's: its changes.dat and the regions' files.)  0, or -1 */
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_seen_save_CODE")
+#pragma rodata-name (push, "SW_seen_save_RODATA")
 
 static int __fastcall__ open_in (const char* name, int how)
 {

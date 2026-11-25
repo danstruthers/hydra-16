@@ -97,7 +97,7 @@ static void __fastcall__ piece_down (const struct chunk* c, unsigned char i, uns
 /* (Overlay 5's) The mint of the coins lying in the chunk (2026-10-28, the user's: a historic hoard's coins "appropriately
 ** stocked"): its layer's era's people's (theme.h's struct tmint, its number), if that era has ended (old coins; a
 ** stratum of no layers its theme's first era's), 0x80 more if it struck gold; else 0, today's (the world's to mix as
-** they're first wanted: part 63's) */
+** they're first wanted: part kit's) */
 #pragma code-name (push, "OV5CODE")
 #pragma rodata-name (push, "OV5RODATA")
 unsigned char __fastcall__ o_coin_mint (unsigned char sn)

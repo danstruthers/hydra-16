@@ -32,7 +32,8 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
 - **Plain ASCII.** said.txt's rows must be plain ASCII, or the build fails (saidgen.js). In the docs, characters
   past ASCII have been mangled before (DECISIONS.md's section signs and arrows, a plus-minus in HOUSE.md): prefer
   ASCII, and read a doc's diff for mangled characters before committing.
-- **Generated files** (obj/gen, the .dat files, parts.inc, dq0cover.txt) are the build's: change their sources.
+- **Generated files** (obj/gen, the .dat files, parts.inc, ovfn.inc, dq0cover.txt) are the build's: change their
+  sources.
 - **The images.** Don't commit reborn/bin's images (prom*.bin, sdcard.img) with a change: they are rebuilt and
   committed on their own once the work is merged (as c7a8c5b7 did).
 
@@ -45,18 +46,31 @@ is built; OPEN.md holds the open questions; ../../tests/TESTING.md says which te
   - 2,048 bytes in every other task;
   - 512 bytes in themec and themegen.
 
-  At ae74df17: dq0 3,263; dq0w 2,326; dq0d 2,406; dq0p 2,290; dq0m 2,202; dq0harn 2,182. The build fails a task
-  below its floor (build.js's FLOORS). The UI's main RAM is the tightest room in the game: put new code in overlays
-  and swapped parts, not there.
+  At names1 (2026-11-24): dq0 3,262; dq0w 2,326; dq0d 2,406; dq0p 2,290; dq0m 2,208; dq0harn 2,182. The build
+  fails a task below its floor (build.js's FLOORS). The UI's main RAM is the tightest room in the game: put new code
+  in overlays and swapped parts, not there.
 - **The headroom rule** (the user's, 2026-11-17): a part or bank under 64 bytes free, or a measure past 90% of its
   target, has its room or time won back before the next feature. The build lists the first (its "headroom" lines),
   the suite the second (after the tests).
-- **Overlays** are 8K banks in each task's .cfg, with bank.s's OVMAX (OVBANKS in the world) and ovbank[]. The three
-  must agree. In the world, dq0w/make.js checks them; elsewhere nothing does.
+- **Overlays** are 8K banks, each an OVn line of its task's .cfg; the build counts them (OVLS: bank.s's OVMAX,
+  OVBANKS in the world, and ovbank[]), and fails a count kept by hand (build.js's overlaysCounted). A function goes in
+  overlay n by `#pragma code-name ("OVnCODE")`; one named o_NAME and called as NAME gets its OVFN stub from the build
+  (parts.js's ovstubs: obj/games/TASK/ovfn.inc). Write no stub.
 - **The fill rule.** An overlay followed by another in the same file needs `fill = yes, fillval = $FF` in its .cfg
   line. Without it the banks after it load shifted. Only the world's make.js checks this, so check it in the others.
-- **Swapped parts** are set in parts.txt, `#@SWn` lines and `#pragma code-name (push, "SWnCODE")`, and packed by
-  pack.js. A function moves between parts by its pragma alone.
+- **Swapped parts** are named, not numbered. parts.txt has a line a part, `NAME WISH what`; the C and the assembly
+  put a function in it by its name, `#pragma code-name (push, "SW_NAME_CODE")` and `rodata-name (push,
+  "SW_NAME_RODATA")`; the UI's dq0.cfg places a part's image among its bank's others by `#@SW NAME`. A part's number is
+  its place in parts.txt, the build's: add a new part at the end, by a name of its own. WISH is the bank its image is
+  wished in: `-` the packer's choice (a new part's, as a rule), N the first file's Nth bank, `rop` any of the rope
+  file's, `rop:N` its Nth. A function moves between parts by its pragma alone; pack.js moves pieces of a part that's
+  too big. parts.txt merges with git's union driver (.gitattributes): two branches that each add a part merge with
+  no conflict and none renumbered. The build fails at a pragma naming no part, a part no code names (a line a merge
+  left), a name twice and a wish no bank answers.
+- **The versions.** HUB_VERSION and SAVE_VER are the build's (obj/gen/dq0ver.h: hashes of the layouts, hubgen.js):
+  bump neither. A change to what the save holds that no struct's layout shows (what's written, in what order, what a
+  number means) bumps life.h's SAVE_FORMAT; a new struct written whole to a save goes in hubgen.js's SAVED (the build
+  fails at one it doesn't list).
 - **The bank window.** A call between an overlay and a part, or from an overlay into code that maps the hub, can
   return with the wrong bank in the window. It is the commonest bug class. The emulator's guards (sim/lib/guards.js,
   in every test) stop a test at an instruction fetched from the window with no code there, and at a store or a load

@@ -144,6 +144,8 @@ function swappedParts(dir, objdir, extra = [], b) {
   else for (const f of cs) b.cc65([...b.flags.cc, ...extra, '-o', sOf(f), f]);
   const compiled = cs.map(sOf), rest = ss.filter(f => path.basename(f) !== 'bank.s'), bank = ss.filter(f => path.basename(f) === 'bank.s');
   const asm = () => b.compileC(compiled, objdir).forEach((x, i) => o.set(cs[i], x));
+  const list = P.read(path.join(dir, 'parts.txt')), bytes = new Map(list.parts.map(p => [p.n, 0]));
+  K.useParts(list.num);                                 // (The parts' names, numbered: pack.js's)
   K.route(compiled);
   asm();
   b.compileC(rest, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(rest[i], x));
@@ -151,17 +153,17 @@ function swappedParts(dir, objdir, extra = [], b) {
   let text = dump();
   const cfgText = fs.readFileSync(path.join(dir, path.basename(dir) + '.cfg'), 'latin1');
   const cap = parseInt((/__SWAPSIZE__:[^;]*value\s*=\s*\$([0-9A-Fa-f]+)/.exec(cfgText) || [])[1] || '0', 16);
-  const list = P.read(path.join(dir, 'parts.txt')), bytes = new Map(list.parts.map(p => [p.n, 0]));
-  const count = () => { for (const k of bytes.keys()) bytes.set(k, 0); for (const [s, z] of P.segsizes(text)) { const m = /^SW(\d+)(CODE|RODATA)$/.exec(s); if (m) bytes.set(+m[1], (bytes.get(+m[1]) || 0) + z); } };
+  const count = () => { for (const k of bytes.keys()) bytes.set(k, 0); for (const [s, z] of P.segsizes(text)) { const m = P.SEG.exec(s), k = m && list.num.get(m[1]); if (k) bytes.set(k, bytes.get(k) + z); } };
   count();
   let moves = [];
   const squeeze = new Map((process.env.DQ0_PACK_SQUEEZE || '').split(';').map(t => t.split(':')).filter(([t]) => t === path.basename(dir))   // (A test's:
-    .flatMap(([, l]) => (l || '').split(',').map(x => x.split('=').map(Number))));   //   DQ0_PACK_SQUEEZE=TASK:PART=BYTES,...;... parts given less room, the packer made to move)
+    .flatMap(([, l]) => (l || '').split(',').map(x => x.split('=')).map(([p, n]) => [list.num.get(p) || +p, +n])));   //   DQ0_PACK_SQUEEZE=TASK:PART=BYTES,...;... parts (by name)
+                                                                    //   given less room, the packer made to move)
   const room = k => Math.min(cap, squeeze.has(k) ? squeeze.get(k) : cap);
   if (cap && [...bytes].some(([k, n]) => n > room(k))) {
     const depth = +((/^SWDEPTH\s*=\s*(\d+)/m.exec(bank.length ? fs.readFileSync(bank[0], 'latin1') : '') || [])[1] || 8);
     const r = K.pieces({ lsts: compiled.map(f => f.replace(/\.s$/, '.lst')), asm: rest, sizes: K.objectSizes(text) });
-    const bk = P.banks(cfgText, list, P.segsizes(text), dir);   // (The banks' room and files, the parts in them as they are)
+    const bk = P.banks(cfgText, P.wished(cfgText, list, dir), P.segsizes(text), dir);   // (The banks' room and files, the parts in them as they are)
     moves = K.plan(r, bytes, room, depth, new Set(bytes.keys()), bk);
     K.apply(moves, objdir);
     K.route(compiled);
@@ -169,7 +171,8 @@ function swappedParts(dir, objdir, extra = [], b) {
     text = dump();
     count();
   }
-  fs.writeFileSync(path.join(objdir, 'moved.txt'), moves.map(m => m.piece.id.replace(/^_/, '') + ' ' + m.from + ' ' + m.to + ' ' + m.piece.bytes + '\n').join(''));
+  const nm = k => list.parts[k - 1].name;
+  fs.writeFileSync(path.join(objdir, 'moved.txt'), moves.map(m => m.piece.id.replace(/^_/, '') + ' ' + nm(m.from) + ' ' + nm(m.to) + ' ' + m.piece.bytes + '\n').join(''));
   P.make({ dir, objdir, own: ss, sizes: P.segsizes(text), compiled });
   b.compileC(bank, objdir, extra, ['-I', objdir]).forEach((x, i) => o.set(bank[i], x));
   return src.map(f => o.get(f));

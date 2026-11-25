@@ -468,7 +468,7 @@ void o_sheet (void)
     put (" (");
     put (harn_sunsign_name (pc.att[HARN_SS]));
     put (")");
-    if (age) {                                  /* (Its age: the life's record, part 3's age_get) */
+    if (age) {                                  /* (Its age: the life's record, part dig_tool's age_get) */
         put (", aged ");
         putn (age);
     }

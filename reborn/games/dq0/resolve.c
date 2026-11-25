@@ -371,7 +371,7 @@ unsigned char o_resolve (void)
                                                 **   copied) */
     unsigned char k, n, a = cmd.action;
 
-    if (reach < 5) {                           /* (A line's own: no run of handlings yet, part 19's) */
+    if (reach < 5) {                           /* (A line's own: no run of handlings yet, part reach_steps's) */
         take_more = take_all = 0;
         hub_mem (0, &HUB->pc_lump, &nosteps, 1);
     }
@@ -380,7 +380,7 @@ unsigned char o_resolve (void)
     }
     hub_mem (0, &k, &HUB->pcsum.cond, 1);       /* (C_STUNNED its low byte's) */
     if (((k & C_STUNNED) || a == VB_TEND) && (k = early ()) != 0) {
-        return k - 1;                           /* (In shock, refused; first aid its own: part 12's, slice 4.3's) */
+        return k - 1;                           /* (In shock, refused; first aid its own: part tend's, slice 4.3's) */
     }
     hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now) */
     if (untarget) {                             /* (The world's events: the character turned) */
@@ -601,7 +601,7 @@ void __fastcall__ o_throw_said (unsigned r)
     struct msg c;
 
     switch ((unsigned char) r) {
-    case IR_FIXED:                              /* (A step of the reach first: part 19's) */
+    case IR_FIXED:                              /* (A step of the reach first: part reach_steps's) */
         return;
     case IR_NOT_HERE:
         say_no (A_SEE_NO, cmd.other.word);

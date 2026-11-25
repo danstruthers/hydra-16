@@ -6,23 +6,23 @@
 ** the foot, so it's seen and used from there; on a shaft open to the sky (no top on any stratum) the rope itself a KI_HUNG
 ** at the foot.  Each one's fuel RK_* | the way to its other end's square times 16 | RK_SLIP | the feet of its hold above the
 ** foot times 256, its owner the feet of its end above the foot, its hide the kind it's tied to.  A drop found, the rope
-** put in place, a grapple thrown up: wrope3.c, part 95's.  Untied, and looked at: wrope2.c, part 98's.  The climb itself:
-** dq0w.c's part 97.
+** put in place, a grapple thrown up: wrope3.c, part rope_set's.  Untied, and looked at: wrope2.c, part rope_untie's.  The climb itself:
+** dq0w.c's part climb_on.
 **
-** All of it swapped part 96's (../dq0/swap.inc: dq0w.cfg's SW96), through things.c's s_hide: a request of the things,
+** All of it swapped part rope_tie's (../dq0/swap.inc: dq0w.cfg's SW_rope_tie), through things.c's s_hide: a request of the things,
 ** IO_HIDE's shape, IO_ROPE in its to (the UI's words.c: its steps, its timed work, its reply as a thing hidden's are).
 */
 
 #pragma local-strings (on)
-#pragma code-name ("SW96CODE")
-#pragma rodata-name ("SW96RODATA")
+#pragma code-name ("SW_rope_tie_CODE")
+#pragma rodata-name ("SW_rope_tie_RODATA")
 
 #include "wrope.h"
 
-unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
-unsigned __fastcall__ at_hand (const char* name);   /* (Part 4's) */
+unsigned __fastcall__ weight_of (unsigned i);   /* (Part things's) */
+unsigned __fastcall__ at_hand (const char* name);   /* (Part ui_requests's) */
 unsigned __fastcall__ carried_named (const char* name);
-void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
+void __fastcall__ make_own (unsigned i);        /* (Part item_store's) */
 
 #define ROPE_HEAVY      120                     /* (Quarter pounds: 30 lb, a thing too heavy to come away with a climber) */
 #define ROPE_RUN        5                       /* (Feet of it gone from what it's tied to, beside, to the edge) */

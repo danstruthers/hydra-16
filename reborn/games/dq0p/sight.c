@@ -12,8 +12,8 @@
 #include "eyes.h"
 #include "view.h"
 
-#pragma code-name ("SW2CODE")                   /* (Part 2's, all of it: swapped, bank.s's stubs, once a look) */
-#pragma rodata-name ("SW2RODATA")
+#pragma code-name ("SW_perceive_CODE")                   /* (Part perceive's, all of it: swapped, bank.s's stubs, once a look) */
+#pragma rodata-name ("SW_perceive_RODATA")
 #pragma local-strings (on)
 #pragma static-locals (on)                      /* (Its locals static: quicker, the code the less; none of it called
                                                 **   in itself) */
@@ -48,7 +48,7 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 
 /* A passage's square (i, j) of the chunk in the window, at a room's edge: a mouth, unless one's been counted
 ** beside it (a wide tunnel's three squares one mouth) */
-#pragma data-name (push, "SW2RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
+#pragma data-name (push, "SW_perceive_RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
 static unsigned char mx_[SEE_DOORS] = { 0 }, my_[SEE_DOORS] = { 0 };     /* (The mouths' squares, as they're counted) */
 static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
 static const struct opening* wo_ = 0;           /* (A well's shaft over the character, perceive's, 2026-11-06: its opening, */
@@ -173,8 +173,8 @@ static void __fastcall__ door_add (unsigned char i, unsigned char j, const struc
     ++e_;
 }
 
-#pragma code-name (push, "SW6CODE")             /* (Part 6's since 2026-11-02: part 2's room, a dark look's touch) */
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW_den_senses_CODE")  /* (Part den_senses's since 2026-11-02: part perceive's room, a dark look's touch) */
+#pragma rodata-name (push, "SW_den_senses_RODATA")
 
 static int __fastcall__ abs6 (int v)
 {
@@ -258,7 +258,7 @@ void __fastcall__ s_zones_seen (struct room* rp, unsigned char mine, unsigned ch
 #pragma rodata-name (pop)
 
 void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
-    unsigned char ly);                          /* (Its stub: part 6's) */
+    unsigned char ly);                          /* (Its stub: part den_senses's) */
 
 unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face,
     unsigned char light, unsigned char first)
@@ -349,7 +349,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
         }
     }
-    some_ = e_ = kn_ = 0;                       /* (The part's own: after part 6's zones_seen, its image copied back) */
+    some_ = e_ = kn_ = 0;                       /* (The part's own: after part den_senses's zones_seen, its image copied back) */
     fzz = myz;
     fox = x - lx;
     foy = y - ly;

@@ -284,7 +284,7 @@ function listings(p, segs, mods, f) {
   };
   const asmRe = H.asm.size ? new RegExp('\\b(' + [...H.asm.keys()].join('|') + ')\\b') : null;
   const out = { main: [], parts: {}, window: [], loads: { main: [], parts: {}, window: [] }, spans: [], lines: [], procs: [] };
-  const partOf = seg => { const m = /^SW(\d+)/.exec(seg); return m ? +m[1] : 0; };
+  const partOf = require('../../games/dq0/parts.js').names(p.dir).of;   // (A part's segment, SW_name_CODE: its number, swapped's)
   for (const lst of fs.readdirSync(p.dir).filter(n => n.endsWith('.lst')).sort()) {
     const offs = mods[lst.replace(/\.lst$/, '.o')];
     if (!offs) continue;

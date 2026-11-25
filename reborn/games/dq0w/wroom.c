@@ -3,7 +3,7 @@
 ** referee's P_SEARCH against each hidden trap in the block about wk.fx, wk.fy (the square and the eight round it), and
 ** each hidden door, and each door's hidden trap, in the walls beside those squares; each at the steps a search's are
 ** (wtrap.c's search, whose form this is; by touch, in the dark, 2 steps the harder).  Told as found, as a search's are;
-** quiet if nothing is.  Swapped part 83's: its own copy of the work's helpers (workpart.h).
+** quiet if nothing is.  Swapped part room_tests's: its own copy of the work's helpers (workpart.h).
 */
 
 #include <string.h>
@@ -13,8 +13,8 @@
 #include "world.h"
 #include "work.h"
 
-#pragma code-name ("SW83CODE")
-#pragma rodata-name ("SW83RODATA")
+#pragma code-name ("SW_room_tests_CODE")
+#pragma rodata-name ("SW_room_tests_RODATA")
 #pragma local-strings (on)
 
 #define W_TRAPS

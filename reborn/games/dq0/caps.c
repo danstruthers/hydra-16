@@ -547,7 +547,7 @@ asked:
 
 /* A denizen's sound (an E_DEN: main.c's heard, the main RAM's room, 2026-11-06) weighed: heard (how far, the walls and
 ** doors between, the background masking it, its hearing; listened for that way, twice as far), not so soon again from the
-** same way: its way (REL8), main.c's to tell (part 14's noise_told, from the main code: a part's hub_map leaves the hub in
+** same way: its way (REL8), main.c's to tell (part positions's noise_told, from the main code: a part's hub_map leaves the hub in
 ** the window, not this bank); else 0xFF */
 #pragma static-locals (push, off)
 unsigned char __fastcall__ o_den_heard (const struct msg* m)

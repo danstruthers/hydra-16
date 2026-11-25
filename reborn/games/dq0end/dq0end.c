@@ -192,7 +192,7 @@ static unsigned char next_is (void)
     if ((fd = open (in_ (dir, "game.dat"), O_RDONLY)) < 0) {
         return L.h.dungeon > 1 ? NX_AGAIN : NX_NEW;
     }
-    y = read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done;
+    y = read (fd, &sv, sizeof sv) == sizeof sv && SAVE_IS (sv) && !sv.q.done;
     close (fd);
     return y ? NX_SAVE : NX_NEW;
 }

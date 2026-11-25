@@ -458,14 +458,14 @@ extern unsigned char cx_, cy_;                  /* at ()'s square in it */
 signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y);
 unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* Walkable to d */
 unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* That step a wide
-                                                **   passage's breadth alone, no way on (the senses' part 2's) */
+                                                **   passage's breadth alone, no way on (the senses' part perceive's) */
 unsigned char __fastcall__ slant (unsigned char sn, unsigned x, unsigned y, unsigned char h);    /* Heading h (odd)
                                                 **   a diagonal way: past two corners not stood on, one a cut */
 unsigned char __fastcall__ step8 (unsigned char sn, unsigned x, unsigned y, unsigned char h);  /* Walkable heading h:
                                                 **   the four as step_ok, a diagonal a diagonal way's */
 #define STEP8(sn, x, y, h)  step8 (sn, x, y, h)
 unsigned char __fastcall__ way_ok (unsigned char sn, unsigned x, unsigned y, unsigned char h);  /* A way on heading
-                                                **   h: walkable, not a wide passage's breadth (the senses' part 2's) */
+                                                **   h: walkable, not a wide passage's breadth (the senses' part perceive's) */
 unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char h);    /* The ways on
                                                 **   heading h (of the eight), not behind nor breadth: how many, one
                                                 **   in way_on (a heading) */

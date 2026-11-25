@@ -5,12 +5,12 @@
 ** neighbouring square or its own), told; what's to hand told the referee after (RS_EQUIP); a harm's effects (a fall's,
 ** a trap's: what it dropped, a leg's stumble laying it prone).
 **
-** And the denizens' limbs (part 51's): its weapon's word, its legs at a move's start (stuck, prone); and their things
-** (part 60's, the outfits' gear, 2026-10-27): made as a lair's placed, told the referee, a weapon drawn before a blow,
+** And the denizens' limbs (part den_limbs's): its weapon's word, its legs at a move's start (stuck, prone); and their things
+** (part den_things's, the outfits' gear, 2026-10-27): made as a lair's placed, told the referee, a weapon drawn before a blow,
 ** let fall (the referee's X_DROP, a creature's: on the floor, seen, taken up again in its reach, its turn), on its body
 ** as it dies.
 **
-** All of it swapped parts 49's, 51's and 60's (../dq0/swap.inc: dq0w.cfg's SW49, SW51, SW60), called through their
+** All of it swapped parts limbs's, den_limbs's and den_things's (../dq0/swap.inc: dq0w.cfg's SW_limbs, SW_den_limbs, SW_den_things), called through their
 ** stubs (bank.s's).
 */
 
@@ -32,10 +32,10 @@ unsigned char den_eq_all;                       /* (s_den_equip's: told even wit
                                                 **   bestiary's, untold) */
 
 #pragma local-strings (on)
-#pragma code-name ("SW49CODE")
-#pragma rodata-name ("SW49RODATA")
+#pragma code-name ("SW_limbs_CODE")
+#pragma rodata-name ("SW_limbs_RODATA")
 
-unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's) */
+unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part things's, things.c's) */
 
 static struct msg lm;                           /* (An event told) */
 static struct item* lp;
@@ -45,7 +45,7 @@ static unsigned char __fastcall__ on_me (void)
 {
     for (lp = ip; lp->where == IW_ITEM; lp = item_at (lp->x)) {
     }
-    return (lp->where == IW_ACTOR && !lp->x) || lp == item_at (rs_pack);   /* (A pack off for a handling: part 82's) */
+    return (lp->where == IW_ACTOR && !lp->x) || lp == item_at (rs_pack);   /* (A pack off for a handling: part room_search's) */
 }
 
 /* What's to hand told the referee at once (RS_EQUIP 2, as the UI's to_hand tells it a thing handled): the keys of the
@@ -101,7 +101,7 @@ void s_equip_now (void)
     RS_EQUIP_HOW (*r) = 2;
     RS_EQUIP_LOAD (*r) = i;
     RS_EQUIP_HELD (*r) = hh;
-    HUB->pc_clank = 0xFF;                       /* (Its armour weighed again as it next moves: part 50's, slice 4.5's) */
+    HUB->pc_clank = 0xFF;                       /* (Its armour weighed again as it next moves: part legs's, slice 4.5's) */
     hub_ask (SLOT_WORLD)->state = REQ_FREE;
 }
 
@@ -188,7 +188,7 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
 
 /* A harm's effects (the referee's RS_HARM reply, the world's slot, as it's answered: a fall's, a trap's), the
 ** character's: what its hands let go of (X_DROP, an arm's fumble), fallen prone (a leg's stumble: an X_WOUND's
-** C_PRONE), the world's body's position (the hub's pc_pos); a fall, its bearings shaken (part 52's, slice 4.2's) */
+** C_PRONE), the world's body's position (the hub's pc_pos); a fall, its bearings shaken (part bearings's, slice 4.2's) */
 void s_harm_fx (void)
 {
     static const struct rs_effect* e;
@@ -213,23 +213,23 @@ void s_harm_fx (void)
         lm.t = HUB->now;
         hub_event (&lm);
     }
-    bearings_off (0);                           /* (A fall's, its bearings shaken: part 52's, slice 4.2's, the
+    bearings_off (0);                           /* (A fall's, its bearings shaken: part bearings's, slice 4.2's, the
                                                 **   harm's request read before what's let go of is told the referee) */
     if (h) {
         s_drop_held (h, 0);
     }
 }
 
-/* ==== Part 51: the denizens' limbs (slice 4.1b; the brief's: "The same rules for every actor with hands and legs: a
+/* ==== Part den_limbs: the denizens' limbs (slice 4.1b; the brief's: "The same rules for every actor with hands and legs: a
 ** denizen's fumble drops its weapon (the world's floor, seen and taken up), a useless leg hops or crawls as the
 ** character's does (a quadruped on three good legs at half its move, the book's), a prone denizen gets up (its round).
 ** A creature's own parts (bites, claws) are not dropped."): body bd's (wbody.h's) weapon let fall, its word the
 ** referee's, its kind the catalogue's of that name, where the book's die puts it (as the character's: Skills 21),
 ** kept as the body's to take up again in its reach, its turn (the referee's RS_REARM, O_REARM); its legs at a move's
-** start.  Its own part, the main RAM's room; and a denizen's things' making asked (part 60's once, 2026-10-29: its
+** start.  Its own part, the main RAM's room; and a denizen's things' making asked (part den_things's once, 2026-10-29: its
 ** room, a shield readied) */
-#pragma code-name (push, "SW51CODE")
-#pragma rodata-name (push, "SW51RODATA")
+#pragma code-name (push, "SW_den_limbs_CODE")
+#pragma rodata-name (push, "SW_den_limbs_RODATA")
 
 static char dword[8];                           /* (Its weapon let fall, in a word: the referee's) */
 
@@ -267,13 +267,13 @@ unsigned char s_den_legs (void)
     return 0;
 }
 
-/* A denizen's things made (I_KIT's, the denizens' ring's, part 14's: its lair placed): drawn and made (part 57's), but
+/* A denizen's things made (I_KIT's, the denizens' ring's, part den_bodies's: its lair placed): drawn and made (part outfit's), but
 ** for dq0 -K (the tests': none of theirs) */
 /* A section m asks for (I_KIT's a: its role's, its lair's) in the outfits' index for its kind (its entry "#" or "&" and
 ** its number, outfits.js's: the index read in, the character's outfit's, as the game began), or its personal things
-** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not
+** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part outfit not
 ** called) */
-#pragma bss-name (push, "SW51RODATA")          /* (Its locals its part's own: no part swapped in while it runs) */
+#pragma bss-name (push, "SW_den_limbs_RODATA")  /* (Its locals its part's own: no part swapped in while it runs) */
 static unsigned char hn, hf, rl, rh, ll, lh;
 static unsigned char* hq;
 #pragma bss-name (pop)
@@ -307,13 +307,13 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
 void __fastcall__ s_den_other (const struct msg* m)
 {
     if (I_KIT_DRAW (*m) == KT_TRAPS) {
-        own_traps (m);                          /* (A lair of folk placed: its chunk's traps its faction's, part 122's,
+        own_traps (m);                          /* (A lair of folk placed: its chunk's traps its faction's, part trap_told's,
                                                 **   2026-11-23) */
         return;
     }
     if (I_KIT_DRAW (*m) & KT_DIG) {
-        look_more (0, LM_ROPES);                /* (Part 79 read in, the first time: things.c's) */
-        den_dig (m);                            /* (Not things: a tunneller's dig, part 79's, slice 4.11's) */
+        look_more (0, LM_ROPES);                /* (Part den_dig read in, the first time: things.c's) */
+        den_dig (m);                            /* (Not things: a tunneller's dig, part den_dig's, slice 4.11's) */
         return;
     }
     hub_map (0);
@@ -328,7 +328,7 @@ void __fastcall__ s_den_other (const struct msg* m)
     }
     if ((I_KIT_DRAW (*m) & KT_LAIR) && !(kit_off & 1)) {
         kit_off = 1;
-        den_more (m);                           /* (Its lair's locked doors' keys, its first denizen's: part 80's; once,
+        den_more (m);                           /* (Its lair's locked doors' keys, its first denizen's: part den_doors's; once,
                                                 **   the kit drawn again if a command comes between: kit_off) */
     }
     if (has_role (m)) {
@@ -361,7 +361,7 @@ void __fastcall__ s_den_other (const struct msg* m)
 }
 
 /* The mint of the people of the oldest era of the lair's stratum (its first layer's: the theme's era and its mint of
-** that era), 0 none (no era said, or one still held: today's coins): old coins', the dead's lairs' (part 59's, as the first is drawn, 2026-10-29) */
+** that era), 0 none (no era said, or one still held: today's coins): old coins', the dead's lairs' (part outdraw's, as the first is drawn, 2026-10-29) */
 unsigned char s_old_mint (void)
 {
     unsigned char k = ost.hsn < TSTRATA ? ost.hsn : TSTRATA - 1, era, n;
@@ -379,7 +379,7 @@ unsigned char s_old_mint (void)
 
 /* Body bd dead (wfight.c's died: its remains, body, put down where it fell, or 0 none): its things on it (worn, hung
 ** from it: on its body, what's in them with them), what it held let fall where it lies; its own no longer (the
-** body's, the floor's: anyone's to take).  Part 51's (part 60's till 2026-10-30, its room) */
+** body's, the floor's: anyone's to take).  Part den_limbs's (part den_things's till 2026-10-30, its room) */
 void __fastcall__ s_den_strip (unsigned body)
 {
     unsigned i;
@@ -426,9 +426,9 @@ unsigned char s_den_reach (void)
 #pragma rodata-name (pop)
 
 void den_equip (void);
-#pragma code-name (push, "SW91CODE")            /* (Part 91's: part 60's room, 2026-11-03) */
-#pragma rodata-name (push, "SW91RODATA")
-#pragma bss-name (push, "SW91RODATA")
+#pragma code-name (push, "SW_den_drop_CODE")    /* (Part den_things's room, 2026-11-03) */
+#pragma rodata-name (push, "SW_den_drop_RODATA")
+#pragma bss-name (push, "SW_den_drop_RODATA")
 /* Its weapon on the floor (dword's kind: none of that name, nothing), beside it or where it stands (a d10: 1-6 the
 ** square that way, if it's open floor), kept as its (bd's arm, dropped), told (E_BEAT's WB_DROP, its kind, its b the
 ** body's: the denizens' ring, after the blow's words), the world to look about again.  A weapon of its own in its hand
@@ -499,17 +499,17 @@ void __fastcall__ s_den_drop (unsigned char den_brk)   /* (Broken as it's let fa
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 60: the denizens' things (the outfits' gear, 2026-10-27), and a weapon let fall and taken up again (part
+/* ==== Part den_things: the denizens' things (the outfits' gear, 2026-10-27), and a weapon let fall and taken up again (part
 ** 51's once: its room) */
-#pragma code-name (push, "SW60CODE")
-#pragma rodata-name (push, "SW60RODATA")
+#pragma code-name (push, "SW_den_things_CODE")
+#pragma rodata-name (push, "SW_den_things_RODATA")
 
 /* ---- The denizens' things (the outfits' gear, 2026-10-27: DENIZENS.md's gear; items.h's IW_DEN): made as a lair's
 ** placed (I_KIT's, the world's draw), filed at its lair's home, the actor's while it is one (its did: the hub's), told
 ** the referee as it comes near and as they change (RS_EQUIP's, the actor's), a weapon drawn from its belt before it
 ** strikes, on its body as it dies.  Their data the image's (each of these calls no part after it sets it: zeros each
 ** time it's copied in) */
-#pragma bss-name (push, "SW60RODATA")
+#pragma bss-name (push, "SW_den_things_RODATA")
 
 
 static struct kind dk;                          /* (A thing's kind, copied out) */
@@ -667,7 +667,7 @@ void s_den_equip (void)
     hub_ask (SLOT_WORLD)->state = REQ_FREE;
 }
 
-/* Body bd come into the world's keeping (I_ENTER's, m: part 14's, its body's from its record): on its feet, walking,
+/* Body bd come into the world's keeping (I_ENTER's, m: part den_bodies's, its body's from its record): on its feet, walking,
 ** its legs the referee's; its things in the store (its lair's home's chunk read in, if it's out: an actor far from
 ** home), the referee told them */
 void __fastcall__ s_den_enter (const struct msg* m)
@@ -834,7 +834,7 @@ void s_den_took (void)
     }
 }
 
-/* ---- An actor's lights (the one-path plan's lights, 2026-11-23: wlink.c's, part 119, its own lights lit, put out) */
+/* ---- An actor's lights (the one-path plan's lights, 2026-11-23: wlink.c's, part den_lights, its own lights lit, put out) */
 
 /* Thing i's way up to whoever has it: body bd's own (worn, held, hung from it, or in what it carries), 1; and in a
 ** carrier not a belt (its pack, a sack), 2 (wlink.c's the same) */

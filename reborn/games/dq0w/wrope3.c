@@ -1,17 +1,17 @@
 /*
-** wrope3.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part 95's: the drop a rope goes down or a
+** wrope3.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part rope_set's: the drop a rope goes down or a
 ** grapple's thrown up, a rope put in place by the R_*'s (wrope.h's), a grapple tied on, thrown up.
 */
 
 #pragma local-strings (on)
-#pragma code-name ("SW95CODE")
-#pragma rodata-name ("SW95RODATA")
+#pragma code-name ("SW_rope_set_CODE")
+#pragma rodata-name ("SW_rope_set_RODATA")
 
 #define RP_THROWN
 #include "wrope.h"
 
-void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
-void __fastcall__ grow_below (unsigned char n); /* (Part 3's) */
+void __fastcall__ make_own (unsigned i);        /* (Part item_store's) */
+void __fastcall__ grow_below (unsigned char n); /* (Part dungeon_begin's) */
 unsigned __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);
 
 #define ROPE_REACH      9                       /* (Feet: an end hanging lower than that's in reach, dq0w.c's SHAFT_REACH) */
@@ -35,7 +35,7 @@ static unsigned char rp_pit (void)
 /* The drop down from where the character stands (up: the height above it), the R_*'s: a shaft on its own square (the top of
 ** one going down; going up, one open to the sky its hold at the roof, no top on any stratum); in a pit, up, its edge; a
 ** ledge, or down a pit, beside it, the four ways, the way it faces first.  1, or 0 none */
-#pragma bss-name (push, "SW95RODATA")
+#pragma bss-name (push, "SW_rope_set_RODATA")
 #pragma static-locals (push, on)
 static unsigned char __fastcall__ rp_scan (unsigned char up)
 {
@@ -157,7 +157,7 @@ static unsigned char __fastcall__ rp_drop (unsigned char up)
     int d;
 
     if (!r && !up) {
-        r = well (WL_ROPE);                     /* (Down a well within reach: part 103's, 2026-11-06) */
+        r = well (WL_ROPE);                     /* (Down a well within reach: part well's, 2026-11-06) */
     }
     if (r == 2) {
         r = up ? R_TSN : R_FSN;
@@ -243,7 +243,7 @@ static unsigned char rp_up (void)
         return rp_no (SA_TOO_HIGH);
     }
     handled = R_M;                              /* (The grapple never put away to free a hand for its rope: the hands'
-                                                **   rule's, part 90's, 2026-11-17) */
+                                                **   rule's, part hands_free's, 2026-11-17) */
     if (reach_step (R_N, RS_TOOL)) {
         return IR_NO;
     }

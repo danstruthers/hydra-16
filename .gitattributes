@@ -59,3 +59,7 @@ reborn/games/hmchar/hmchar.fs text eol=crlf
 reborn/games/dq0/help.txt text eol=crlf
 # And its own shortcut words (the parser's commands.aliases), on the card as aliases.txt
 reborn/games/dq0/commands.aliases text eol=crlf
+# Dingus Quest Zero's swapped parts (reborn/games/*/parts.txt: a line a part, by name, its number its place, the
+# build's): a merge keeps both sides' lines (git's union driver), so a part added on two branches merges with none
+# renumbered and no conflict; a part's line changed on both sides is kept twice, and the build names it (parts.js's read)
+reborn/games/*/parts.txt merge=union

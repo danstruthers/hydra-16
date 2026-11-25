@@ -1,8 +1,8 @@
 /*
 ** wwell2.c - (dq0w) a thing let fall into a well, or down any shaft or hole within reach (the user's, 2026-11-06: "A real
 ** shaft"; HOUSE.md's a well's shaft): put on the head's square, then down to its foot, its landing heard, a splash in its
-** water.  Swapped part 104's (dq0w.rop's overlay 32, as part 103 is: the things' serve reads it in first), through its
-** stub, well_put; the well's own work part 103's, through its stub (well: WL_NEAR, WL_SHAFT, WL_FOOT), what it keeps in
+** water.  Swapped part well_drop's (dq0w.rop's overlay 32, as part well is: the things' serve reads it in first), through its
+** stub, well_put; the well's own work part well's, through its stub (well: WL_NEAR, WL_SHAFT, WL_FOOT), what it keeps in
 ** the things' request's copy (iq), wwell.c's W_*.
 */
 
@@ -16,9 +16,9 @@
 #include "things.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW104CODE")
-#pragma rodata-name ("SW104RODATA")
-#pragma bss-name ("SW104RODATA")
+#pragma code-name ("SW_well_drop_CODE")
+#pragma rodata-name ("SW_well_drop_RODATA")
+#pragma bss-name ("SW_well_drop_RODATA")
 
 unsigned __fastcall__ at_hand (const char* name);
 unsigned __fastcall__ seen_named (const char* name);
@@ -132,7 +132,7 @@ unsigned char s_well_put (void)
         return IR_NO;                           /* (A step of the reach first: got out of the pack ...) */
     }
     if (!pit && (w ? well (WL_SHAFT) != 0xFF : well (WL_FOOT))) {
-        wet = WET_BIT (C, cx_, cy_) != 0;       /* (Its foot, in the window: part 103's footed) */
+        wet = WET_BIT (C, cx_, cy_) != 0;       /* (Its foot, in the window: part well's footed) */
         s = &STRATUM (W_B);
         k = it_need (W_B, (W_X - s->x0) >> CW_BITS, (W_Y - s->y0) >> CW_BITS);
     } else {

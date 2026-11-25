@@ -1,5 +1,5 @@
 /*
-** minds.c - (part 28, its own: overlay 26's bank, 2026-11-10) words said aloud, a knock, and the minds swayed: the verbs plan's
+** minds.c - (part minds, its own: overlay 26's bank, 2026-11-10) words said aloud, a knock, and the minds swayed: the verbs plan's
 ** batches B2 (the noise) and B3 (the minds), 2026-11-10, DECISIONS.md's "Words said, a knock, the minds swayed".  Each
 ** does a thing in the world (the user's rule):
 **   say, yell, whisper   the words said back, then heard by their loudness (the world's I_NOISE: 1 a whisper, 3 a word,
@@ -15,7 +15,7 @@
 **   pretend              dead or asleep: lying prone, an Acting contest with each foe that senses it (SW_DECEIVE |
 **                        SWO_ALL), the fooled taking it for helpless while it lies still in its wait (ten minutes, or
 **                        till "stop"); any other pretence a deception of the nearest
-** Their words here; the denizens' task the minds (the hub's sway: dq0d.c's s_sway, part 16's provoke and crowd).
+** Their words here; the denizens' task the minds (the hub's sway: dq0d.c's s_sway, part gifts's provoke and crowd).
 */
 
 #include <string.h>
@@ -25,8 +25,8 @@
 #include "cmds.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW28CODE")
-#pragma rodata-name ("SW28RODATA")
+#pragma code-name ("SW_minds_CODE")
+#pragma rodata-name ("SW_minds_RODATA")
 
 extern unsigned char finds;                     /* (main.c's: a search's end awaited) */
 

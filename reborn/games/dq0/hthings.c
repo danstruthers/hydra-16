@@ -1,7 +1,7 @@
 /*
 ** hthings.c - the things' verbs (COMMANDS-CRITIQUE.md's §5.2, step L, stage 3: the command handlers by meaning,
 ** cmds.h): a thing taken up, put down, handled (held, stowed, put in or on another, taken from it, worn, taken off,
-** lit, put out), hidden, eaten or drunk (part 2's, the commands' own: things_do); and their timed works, a thing
+** lit, put out), hidden, eaten or drunk (part commands's, the commands' own: things_do); and their timed works, a thing
 ** filled, tied, looked into, one that closes worked (a lid, a tie, a lock: the door verbs' first) and a hide begun
 ** (overlay 1's: things_work, words.c's in overlay 16 till stage 3, its room).  Each verb's work as it was in main.c's
 ** s_command and words.c's more; every one the one path for things (main.c's things with IO_GO: §5.2's step H).
@@ -15,8 +15,8 @@
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's in it, an overlay's in it) */
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW_commands_CODE")
+#pragma rodata-name (push, "SW_commands_RODATA")
 
 /* After a thing's handled (taken up, put down ...): its light changed (lit, put out, a torch put down), the world's
 ** look about in the new light; else the time it took (t tenths), quietly */
@@ -99,13 +99,13 @@ static void do_drop (void)
     }
 }
 
-void __fastcall__ things_use (unsigned char h);    /* (Part 29's, below: use, push, pull, touch, taste) */
+void __fastcall__ things_use (unsigned char h);    /* (Part thing_verbs's, below: use, push, pull, touch, taste) */
 
 /* The things' verbs, by their handler's number (H_TAKE ... H_TASTE) */
 void __fastcall__ s_things_do (unsigned h)
 {
     if ((unsigned char) h >= H_USE && (unsigned char) h <= H_TASTE) {
-        things_use ((unsigned char) h);         /* (The verbs plan's B4: part 29's, part 2 full) */
+        things_use ((unsigned char) h);         /* (The verbs plan's B4: part thing_verbs's, part commands full) */
         return;
     }
     switch ((unsigned char) h) {
@@ -115,10 +115,10 @@ void __fastcall__ s_things_do (unsigned h)
     case H_DROP:
         do_drop ();
         break;
-    case H_HIDE:                                /* (P_CONCEAL: a thing; else oneself: HOUSE.md's; main.c's, part 18) */
+    case H_HIDE:                                /* (P_CONCEAL: a thing; else oneself: HOUSE.md's; main.c's, part door_words) */
         hide (cmd.obj.word);
         break;
-    case H_EAT:                                 /* (Eating, drinking: part 16's, slice 4.9's) */
+    case H_EAT:                                 /* (Eating, drinking: part feed's, slice 4.9's) */
         feed (cmd.action == VB_EAT_OBJECT);
         break;
     default:                                    /* (H_HANDLE: a thing handled, the things' request the verb's, IO_*;
@@ -136,10 +136,10 @@ void __fastcall__ s_things_do (unsigned h)
 #pragma rodata-name (pop)
 
 /* ---- The things' verbs the plan's batch B4 built (2026-11-10, DECISIONS.md's "The things' verbs: use, push, pull, touch,
-** taste"): part 29's, part 2 full.  Its strings are its own: each said (msg, sayf, say_no copy it) before any other part's
+** taste"): part thing_verbs's, part commands full.  Its strings are its own: each said (msg, sayf, say_no copy it) before any other part's
 ** called, none kept across a call */
-#pragma code-name (push, "SW29CODE")
-#pragma rodata-name (push, "SW29RODATA")
+#pragma code-name (push, "SW_thing_verbs_CODE")
+#pragma rodata-name (push, "SW_thing_verbs_RODATA")
 
 /* The command carried out as verb v's, aux its request (0: the row's), the same things: its handler the dispatch table's
 ** (main.c's s_command's), its command kept as that verb's (a timed work's end, a walk over first: that verb again) */
@@ -465,7 +465,7 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
     case H_FILL:                                /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
         if (cmd.aux == IO_SHARP) {              /* (IO_SHARP: "sharpen", "hone", "whet", the verb's; "use the whetstone",
-                                                **   part 29's) */
+                                                **   part thing_verbs's) */
             d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
         }
         worked (othings (IO_FILL | IO_STEPS | IO_GO, cmd.obj.word, cmd.other.word, d));
@@ -483,7 +483,7 @@ unsigned char __fastcall__ o_things_work (unsigned char h)
                                                 **   "look on the chest", 4: its lid's top, step 6b's) */
         if (action == IR_NONE) {
             say_no (A_SEE_NO, cmd.obj.word);
-        } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 19's) */
+        } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part reach_steps's) */
             msg (lb);
             intend2 (I_WAIT, 30, I_WAIT_W2 (0, 0, 1));   /* (A look's three seconds) */
         }

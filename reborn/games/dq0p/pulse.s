@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; pulse.s - (dq0p) the sound layer's pulse (sound.c's s_pulse, part 5's), in the hub's SIGHT_BANK (in the window): a
+; pulse.s - (dq0p) the sound layer's pulse (sound.c's s_pulse, part pulse's), in the hub's SIGHT_BANK (in the window): a
 ; grid of the squares round the character, SND_W across (hub.h's SOUND_AT, SND_GRID: a row a border square each side),
 ; each a byte: $FF rock, none; $FE open; $FD shut (a door, a closed window); $FC a wall; worked out, the squares a
 ; sound goes from the character's to each it reaches, round corners (the eight ways, a corner cut only beside one
@@ -49,7 +49,7 @@ _fl_ddh:    .res        32
 _fl_dcj:    .res        32
 buf:        .res        W
 
-            .segment    "SW5CODE"
+            .segment    "SW_pulse_CODE"
 
 ; A chunk's rectangle of squares (fl_src: its first, in its bank, fl_su and fl_sx its U and $00; fl_w across, h rows,
 ; CW apart) classified into the grid (fl_dst, in its bank, fl_du, fl_dx; SND_W apart) by their kinds (world.h's

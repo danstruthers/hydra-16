@@ -2,7 +2,7 @@
 ** sfile.c - (dq0w) the strata's records out of the hub's cache (world.h's MAXSTRATA: stratum n's in its slot n & 7,
 ** move 2.8's no fixed count of strata): a stratum's record written to the save folder as its slot's made way for
 ** another's (stSS.dat, SS its number in hex: a version each time, the record store's: ../dq0/rp.h), and read back into its slot as it's
-** wanted again (the world's, as the character or a shaft comes to it: dq0w.c's stratum_in).  Swapped part 22's
+** wanted again (the world's, as the character or a shaft comes to it: dq0w.c's stratum_in).  Swapped part strata_out's
 ** (../dq0/swap.inc, bank.s's stubs).
 */
 
@@ -19,9 +19,9 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW22CODE")
-#pragma rodata-name (push, "SW22RODATA")
-#pragma bss-name (push, "SW22RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+#pragma code-name (push, "SW_strata_out_CODE")
+#pragma rodata-name (push, "SW_strata_out_RODATA")
+#pragma bss-name (push, "SW_strata_out_RODATA") /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #pragma bss-name (push, "BSS")
 static struct rpk st_kind;                      /* (Its versions counted: the main RAM's) */

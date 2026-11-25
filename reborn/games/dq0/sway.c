@@ -774,7 +774,7 @@ told:
 ** side, the far one (the other side, the far end, the wall ahead) unless it says which (near, left, right, the way it
 ** lies); a corner ("the far left corner"; unsaid, the nearest).  Thing o's (cmd.obj's, a move's: place_go's; cmd.other's,
 ** a put's).  OUT: 2, its square in tx, ty (the nearest the way reaches, a cave's rock about it, the world's walk's); 1, not
-** in a room (told); 3, in the dark (a move straight on, place_go's); 0, not such a place.  (Part 7's place_go's till
+** in a room (told); 3, in the dark (a move straight on, place_go's); 0, not such a place.  (Part game_args's place_go's till
 ** 2026-11-18: P5's put there too) */
 static unsigned char __fastcall__ place_sq (const struct cthing* o)
 {

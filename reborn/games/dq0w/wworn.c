@@ -1,5 +1,5 @@
 /*
-** wworn.c - (dq0w, swapped part 107: ../dq0/swap.inc) where a thing's worn (the user's, 2026-11-10: "Wearing should
+** wworn.c - (dq0w, swapped part worn: ../dq0/swap.inc) where a thing's worn (the user's, 2026-11-10: "Wearing should
 ** extend to rings, necklaces, earrings, and other jewelry, as well as scarves, and should keep track of where worn (as
 ** should all worn items that can be worn in more than one place)"; HOUSE.md's worn places).  A thing of a kind worn in
 ** more than one place (kinds.c's wplaces) is worn at a place, its record's sn (items.h's WP_*: a place on the body,
@@ -31,9 +31,9 @@ extern const unsigned char wroom[];
 unsigned char wplace = WP_NONE;                 /* (The place a thing's to be worn at, worn_at's: things.c's don's, WP_NONE
                                                 **   one worn the one way; the main RAM's, the catalogue's code reads it) */
 
-#pragma code-name ("SW107CODE")
-#pragma rodata-name ("SW107RODATA")
-#pragma bss-name ("SW107RODATA")                /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma code-name ("SW_worn_CODE")
+#pragma rodata-name ("SW_worn_RODATA")
+#pragma bss-name ("SW_worn_RODATA")                /* (Its own data, wanted only while it runs: not the main RAM's) */
 #pragma local-strings (on)
 #pragma static-locals (on)
 

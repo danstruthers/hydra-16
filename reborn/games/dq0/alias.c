@@ -1,5 +1,5 @@
 /*
-** alias.c - (part 9) the player's shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming
+** alias.c - (part aliases) the player's shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming
 ** things"; the command grammar's alias-cmd, commandcompile.js's alias): "alias dd is dig down" (or "alias dd = dig
 ** down") a word standing for a line, asked before one's replaced; "alias dd" one shown; "alias" them all, and the
 ** game's own words (its lib folder's aliases.txt: commands.aliases, the parser's); "unalias dd" (or "forget alias dd")
@@ -10,7 +10,7 @@
 ** word of the game's own ("peer") may be made a shortcut: the player's then, as a line's first word; the game's own
 ** words can't be removed (HOUSE.md's commands).  The shortcuts are kept in the theme bank (hub.h's ALIAS_AT: TALIASES,
 ** and one more for a replacement asked about) and in the save.  Its commands, its making a line and its keeping are
-** a swapped part's (part 9, a bank of its own: swap.inc), called through bank.s's stubs; a line's first look the
+** a swapped part's (part aliases, a bank of its own: swap.inc), called through bank.s's stubs; a line's first look the
 ** main code's (alias_hit: a count and a hash of the shortcuts' words) and overlay 4's (alias_said)
 */
 
@@ -48,8 +48,8 @@ unsigned char __fastcall__ o_alias_said (const char* l)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW9CODE")             /* ---- Part 9: the commands, a line made, the save's */
-#pragma rodata-name (push, "SW9RODATA")
+#pragma code-name (push, "SW_aliases_CODE")     /* ---- Part aliases: the commands, a line made, the save's */
+#pragma rodata-name (push, "SW_aliases_RODATA")
 
 #define a           (*(struct talias*) (lb + 256))  /* An entry, copied out (lb's end: its start the line's, own's) */
 #define w           (lb + 368)                  /* A word of the line's (its case aside, 15 letters at most), */

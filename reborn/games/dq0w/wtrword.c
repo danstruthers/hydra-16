@@ -4,7 +4,7 @@
 ** are the marks of feet."  "Several small clawed feet have crossed the dust here, recently, leading ahead to your
 ** left: giant rats, by the look of them."  "A rank animal smell hangs here, fresh: something large passed not long
 ** ago."  "A musky smell hangs heavy here: giant rats, by the smell of it." (a scent strong, its passings and stays
-** many: a lair's).  Each way by the character's facing, never the compass (HOUSE.md's).  Swapped part 31's
+** many: a lair's).  Each way by the character's facing, never the compass (HOUSE.md's).  Swapped part trace_words's
 ** (../dq0/swap.inc, bank.s's stub tr_words).
 */
 
@@ -23,14 +23,14 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW31CODE")
-#pragma rodata-name (push, "SW31RODATA")
-#pragma bss-name (push, "SW31RODATA")
+#pragma code-name (push, "SW_trace_words_CODE")
+#pragma rodata-name (push, "SW_trace_words_RODATA")
+#pragma bss-name (push, "SW_trace_words_RODATA")
 
 static struct tread R;
 
 /* What the character wears on its feet: 0 bare, 1 boots, 2 sandals, 3 shoes, 4 hobnails (its prints' words: shod's; their
-** tread, part 29's through its stub, feet: the user's, 2026-11-03) */
+** tread, part traces_read's through its stub, feet: the user's, 2026-11-03) */
 unsigned char s_feet (void)
 {
     static unsigned i;

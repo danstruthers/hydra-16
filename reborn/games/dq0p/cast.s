@@ -99,7 +99,7 @@ lk:         .res        1                   ; (A lamp)
 qf:         .res        1                   ; (quarter's: how far ahead, how far across)
 qc:         .res        1
 
-            .segment    "SW1RODATA"
+            .segment    "SW_look_RODATA"
 sq:         .word       0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361
             .word       400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961
 wdx:        .byte       $FF, 0, 1, $FF, 1, $FF, 0, 1            ; (The eight round a square)
@@ -108,7 +108,7 @@ wol:        .byte       <-130, <-128, <-126, <-2, <2, <126, <128, <130
 woh:        .byte       >-130, >-128, >-126, >-2, >2, >126, >128, >130
 wall:       .byte       G_WALL
 
-            .segment    "SW1CODE"
+            .segment    "SW_look_CODE"
 ; The grid's square (column .X, row .A) in .A (low) and .Y (high): $8000 + row * 128 + column * 2
 square:
             lsr         a
@@ -909,12 +909,12 @@ _run_lb:    .res        1
 cnt:        .res        1
 doors:      .res        1
 
-            .segment    "SW1RODATA"
+            .segment    "SW_look_RODATA"
 kind:       .byte       G_OPAQUE | G_SKIP, G_INSIDE, G_OPAQUE | G_WALL, G_WALL | G_DOOR, 0, G_INSIDE
             .byte       G_WALL | G_DOOR, G_INSIDE, G_INSIDE, G_INSIDE           ; (world.h's T_ROCK ... T_PIT;
             .res        6, 0                                    ;   the rest 0: TILE's four bits)
 
-            .segment    "SW1CODE"
+            .segment    "SW_look_CODE"
 ; unsigned char __fastcall__ run_in (unsigned char n): its squares' flags (what each is: kind; G_DOOR, a door or a
 ; window) into piece, their floors into piece + 128; not 0 if a door or a window is among them
 _run_in:
@@ -1155,7 +1155,7 @@ st:         .res        1
 snb:        .res        1
 sj:         .res        1
 
-            .segment    "SW1CODE"
+            .segment    "SW_look_CODE"
 ; band (x, x1): x1 in .A .X, x on the C stack
 _band:
             sta         bq1

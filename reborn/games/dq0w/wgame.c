@@ -10,7 +10,7 @@
 ** its body's position, its bearings, the puzzle's, the strata's records), written with the game (WQ_SAVE) and read
 ** back as it's carried on.
 **
-** All of it swapped part 16's (../dq0/swap.inc: dq0w.cfg's SW16), called through its stubs (bank.s's).
+** All of it swapped part game_rules's (../dq0/swap.inc: dq0w.cfg's SW_game_rules), called through its stubs (bank.s's).
 */
 
 #include <fcntl.h>
@@ -40,8 +40,8 @@ static unsigned char done_;                     /* (The rules done, a bit each: 
 extern unsigned char bold_;                     /* (dq0w.c's: a pace said outright, for the dark) */
 static char an[16], bn[16];                     /* (The things named) */
 
-#pragma code-name ("SW16CODE")
-#pragma rodata-name ("SW16RODATA")
+#pragma code-name ("SW_game_rules_CODE")
+#pragma rodata-name ("SW_game_rules_RODATA")
 
 /* ---- The theme's puzzle */
 
@@ -97,11 +97,11 @@ static void __fastcall__ rule_done (unsigned char r)
     hub_map (0);
     if (k) {
         HUB->way_open = 1;
-        burn_ask |= TS_ASK;                     /* (The sky through it: the time it believes, part 76's) */
+        burn_ask |= TS_ASK;                     /* (The sky through it: the time it believes, part time_believed's) */
     }
 }
 
-/* Thing of the theme's kind k come into the character's hands (the item store's place: part 10's): its take rule, the first
+/* Thing of the theme's kind k come into the character's hands (the item store's place: part things's): its take rule, the first
 ** time, done and told (E_LEFT's EL_RULE on: the UI's words).  The artifact's: it's found what it came for (Q2) */
 static void __fastcall__ took (unsigned char k)
 {
@@ -123,7 +123,7 @@ static void __fastcall__ took (unsigned char k)
 ** HOUSE.md's reading and clues): a sheet ("sheet": paper, parchment; its number in sheet_n), and a point that draws ("draw":
 ** charcoal, a pencil, chalk) or a quill and ink: 1, or 0 */
 static unsigned sheet_n;
-#pragma bss-name (push, "SW16RODATA")          /* (Its locals its part's own: no part swapped in while it runs;
+#pragma bss-name (push, "SW_game_rules_RODATA") /* (Its locals its part's own: no part swapped in while it runs;
                                                 **   the main RAM's room, 2026-11-21) */
 static unsigned char copy_with (void)
 {
@@ -359,7 +359,7 @@ static int __fastcall__ world_dat (unsigned char out)
 }
 
 
-unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's: its LM_KIT, kit.dat) */
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part look_more's: its LM_KIT, kit.dat) */
 
 /* The world's part of the game kept (WQ_SAVE's, after the change records) */
 void s_world_keep (void)
@@ -396,7 +396,7 @@ void s_world_keep (void)
     write (fd, WREC->strata, sizeof WREC->strata);
     hub_map (0);
     close (fd);
-    look_more (0, LM_KIT);                      /* (Its things, kit.dat: to carry on, part 40's, slice 4.4's) */
+    look_more (0, LM_KIT);                      /* (Its things, kit.dat: to carry on, part look_more's, slice 4.4's) */
 }
 
 /* A game carried on: the world's part of its save read back (the clock, the character's place, state and bearings, the
@@ -436,7 +436,7 @@ static void world_back (void)
             look_more (0, LM_ROPES);            /* (Its parts read in, to climb it: things.c's) */
             hub_map (0);
         }
-        memcpy (&HUB->tb, &w.tb, sizeof w.tb); /* (The time of day it believes: part 76's) */
+        memcpy (&HUB->tb, &w.tb, sizeof w.tb); /* (The time of day it believes: part time_believed's) */
         done_ = w.done;
         if (HUB->pcsum.cond & C_UNCONSCIOUS) {  /* (Kept senseless, the referee's file read: out still, its shock
                                                 **   rolls asked as main goes round, its bearings off already (the
@@ -479,7 +479,7 @@ void s_pc_asked (void)
     case WS_PACE:
         if (x != 0xFF) {
             HUB->gait = x & 7;
-            pmode = x & (GA_CRAWL | GA_HOP);    /* (The legs' way said: dq0w.c's part 50, slice 4.1b's) */
+            pmode = x & (GA_CRAWL | GA_HOP);    /* (The legs' way said: dq0w.c's part legs, slice 4.1b's) */
             bold_ = 0;
             if (x & GA_SAID) {                  /* (Said outright in the dark, or blind: gone at there, its dangers,
                                                 **   dq0w.c's paced; said in the light, the dark's walk cautious) */

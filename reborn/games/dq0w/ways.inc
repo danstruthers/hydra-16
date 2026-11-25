@@ -1,4 +1,4 @@
-/* ways.inc - (the world's; chunk.c includes it, and the senses' view.c a copy of its own, renamed, for part 4) a
+/* ways.inc - (the world's; chunk.c includes it, and the senses' view.c a copy of its own, renamed, for part kept) a
 ** passage's breadth, a way on, the ways on from a square: chunk.c's breadth, way_ok, ways_from */
 
 unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, unsigned char d)
