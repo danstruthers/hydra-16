@@ -306,7 +306,10 @@ function dq0RouteTest() {
         const side = s => [1, 2, 3].map(i => tile(sn, px + i * dx + s * dy, py + i * dy - s * dx));
         m.route = { k, x, y, px, py, mx, my, chunk: !!c, ahead: [1, 2, 3, 4].map(i => tile(sn, px + i * dx, py + i * dy)), left: side(1), right: side(-1), seen: [] };
       };
-      dq0Scene(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: scene },
+      dq0Scene(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: scene,
+        rig: [{ kind: 'ATTACK', actor: -1, faces: [1, 100] }, { kind: 'ATTACK', faces: [99, 1] }] },   // (The fight that follows the
+        //   dwarf's coming the character's, dice2: its blows landing, none struck back, the dwarf's dodged; the dwarf felled beside
+        //   it as the next lines are typed, as before: the keyed dice felled the character, the dwarf walked off)
         { g: 1, line: 'wait 1 minute', n: 2, call: (h, L, K, at) => where(h, L, at) },
         { g: 1, line: 'wait 1 minute', n: 3, call: (h, L, K, at) => where(h, L, at) },
         { g: 1, line: 'look', n: 1, call: (h, L, K, at) => where(h, L, at) },
@@ -399,11 +402,12 @@ function dq0FeaturesTest() {
       'one behind it); at seed 3 in the passage off the cell, "exit the door" by the door beyond the passage walks up to it ' +
       'first, as "go through the door" does ("You head for the door.", not "You can\'t go that way.")',
     init: 't_rc', cycles: 1400e6,
-    // (The second game -R 2, felled1's, 2026-11-21: a felled one's shock rolls a round each as the time comes, the dice in
-    // another order, a rat engaged it on its way out; a search of -R 1-14 found 2, 7, 9, 12 and 14)
+    // (The second game's rats sent off as it steps west, dice2: the cell's rats engaged it on its way out as the dice fell,
+    // its -R 2 till then, felled1's, 2026-11-21; the passage off the cell the test's, not a fight)
+    start(m) { dq0Scene(m, [{ g: 2, line: 'step west', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, []) }]); },
     machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
       'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
-      'dq0 -p t -s 8 -c /ram/c.hm -S /ram/s.sc', ...a, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 2 -S /ram/s.sc', ...b, 'quit', 'echo $status']) },
+      'dq0 -p t -s 8 -c /ram/c.hm -S /ram/s.sc', ...a, 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', ...b, 'quit', 'echo $status']) },
     expect: ['% echo $status'],
     check(m, out) {
       const T = dq0Turns(m), A = dq0Answers(out), f = [], said = l => (A.filter(y => y.cmd === l).pop() || { text: '' }).text;
@@ -629,6 +633,12 @@ function dq0CoverTest() {
     init: 't_rc', cycles: 600e6 + COVER_LINES.length * 120e6,
     machine: { input: dq0Typed(dq0Game({ lines: [
       'dq0 -p t -s 3 -c /ram/c.hm -T', ...COVER_LINES] })) + '\u001b' + dq0Typed(['look', 'quit', 'echo $status']) },
+    start(m) {   // (A rat put beside it as each word to one is typed, and the line before, seen by then, dice2: the minds' keyed
+      //   steps took them all from sight by then, the words naming one unseen; the calm failed, as before: not swayed, not set
+      //   against it)
+      dq0Scene(m, ['link the rat', 'intimidate the rat', 'command the rat', 'bluff the rat', 'deceive the rat', 'threaten the rat', 'calm the rat']
+        .map(line => ({ g: 1, line, n: 1, name: 'giant rat', beside: 'face' })).concat([{ g: 1, line: 'calm the rat', n: 1, rig: [{ kind: 'TEST', a: 'P_ANIMALS', grade: 'fail' }] }]));
+    },
     expect: ['% echo $status'],
     check(m, out) {
       const A = dq0Answers(out), f = [];
@@ -694,7 +704,17 @@ module.exports = {
           'look around the corner', 'n', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       start(m) {        // (The scene set, 2026-11-03: the rats wary from here on, the things' words the test's, not a fight)
         const wary = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) h[L.actor + k * L.actorSize + L.aAttitude] = 2; };
-        dq0Scene(m, ['drop pick', 'examine the torch', 'take', 'the bones', 'the closest', 'take all', 'i', 'drop', 'take it', 'throw the dagger', 'look north', 'look around the corner', 'n'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([{ g: 1, line: 'take', n: 2, call: wary }, { g: 1, line: 'clear target', n: 2, call: wary }, { g: 1, line: 'target', n: 2, call: wary }, ...[0, 1, 2, 3].map(k => ({ g: 1, line: 'throw the dagger hard at the closest rat', n: 1, k, senseless: 600 })),
+        // (The thrown dagger's miss laid out of sight, down the passage past the portcullis round its bend, a square of it 8
+        //  south and 1 east of the stair (dice2: where a miss falls the world's keyed roll now, in the room in sight; the
+        //  things near the test's, the dagger out of sight as before)
+        const strayed = (h, L, K) => {
+          const per = Math.floor(0x2000 / L.itemSize), x = (h[L.pcX] | h[L.pcX + 1] << 8) + 1, y = (h[L.pcY] | h[L.pcY + 1] << 8) + 8;
+          for (let i = 0; i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (b && b[o + L.iKind] === K.KI_DAGGER && b[o + L.iWhere] === K.IW_SQUARE) { b[o + L.iX] = x & 255; b[o + L.iX + 1] = x >> 8; b[o + L.iY] = y & 255; b[o + L.iY + 1] = y >> 8; }
+          }
+        };
+        dq0Scene(m, ['drop pick', 'examine the torch', 'take', 'the bones', 'the closest', 'take all', 'i', 'drop', 'take it', 'throw the dagger', 'look north', 'look around the corner', 'n'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([{ g: 1, line: 'clear target', n: 1, call: strayed }, { g: 1, line: 'take', n: 2, call: wary }, { g: 1, line: 'clear target', n: 2, call: wary }, { g: 1, line: 'target', n: 2, call: wary }, ...[0, 1, 2, 3].map(k => ({ g: 1, line: 'throw the dagger hard at the closest rat', n: 1, k, senseless: 600 })),
           // (Its bare attack: a rat senseless beside it, as the fight would leave one: the dice no longer do)
           { g: 1, line: 'attack', n: 1, call: wary }, { g: 1, line: 'attack', n: 1, name: 'giant rat', beside: 'face', senseless: 600 }, { g: 1, line: 'attack', n: 2, call: wary }, { g: 1, line: 'attack', n: 2, name: 'giant rat', beside: 'face', senseless: 600 }]));
       },
@@ -891,6 +911,10 @@ module.exports = {
         'name my sword Linda', 'name the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'drop Linda',
         'look', 'take Linda', 'examine Linda', 'attack the rat with Linda', 'call this room the mausoleum', 'quit', 'dq0 -d /ram/kept',
         'forget the name Linda', 'quit', 'echo $status'] })) },
+      start(m) {   // (The rats sent off as the attack's typed, dice2: the minds' keyed steps kept one in sight, the character led
+        //   out of the room after it; none in reach, as before, the sword taken in hand and the room named where it stands)
+        dq0Scene(m, [{ g: 1, line: 'attack the rat with Linda', n: 1, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, []) }]);
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], NAMED = 0x40;
@@ -1015,6 +1039,9 @@ module.exports = {
         'turn around', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'examine the door ahead to my left', 'examine bar', 'drop the torch',
         'break the door ahead to my left', 'look',
         'close', 'quit', 'echo $status'] })) },
+      start(m) {   // (The window punched well, dice2: its glass shattered, the shards and the climb through the test's words)
+        dq0Scene(m, [{ g: 2, line: 'break window', n: 1, rig: [{ kind: 'ATTACK', actor: -1, grade: 'well' }] }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\([A-Z]{1,2}\) /g, '').replace(/\s+/g, ' '), f = [];

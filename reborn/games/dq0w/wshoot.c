@@ -786,10 +786,10 @@ static unsigned char __fastcall__ stray (const struct stray* s)
     if (!sh && n && c[0] == 0xFE) {
         c[0] = c[--n];                          /* (The character the shooter: not struck by its own) */
     }
-    if (!n || random (100) >= (eng ? 50 : 20)) {
+    if (!n || wroll (100) >= (eng ? 50 : 20)) {
         return 0xFF;
     }
-    k = c[random (n)];
+    k = c[wroll (n)];
     BD_PUT ();                                  /* (The body in hand, the mark's or the shooter's, kept) */
     mshot.kind = s->thr ? item_at (s->thr)->kind : sl_kind;
     hub_map (0);
@@ -818,6 +818,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
     struct item* p;
     struct stray st;
 
+    wkey (WD_SHOT | ((sx ^ sy << 6) & 0x0FFF), tx ^ ty << 6);    /* (Its dice its own: the shot's, the moment's) */
     x = tx;                                     /* (Where it falls) */
     y = ty;
     st.sn = sn;                                 /* (A miss's stray at one beside the mark: part gather's) */
@@ -833,7 +834,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
     } else if (out == O_MISS || out == O_DODGED) {     /* (On past it, along the line) */
         dx = (tx > sx) - (tx < sx);
         dy = (ty > sy) - (ty < sy);
-        for (k = random (4) + 1; k; --k) {
+        for (k = wroll (4) + 1; k; --k) {
             lx = x + dx;
             ly = y + dy;
             if (!on_through (sn, lx, ly)) {
@@ -843,8 +844,8 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
             y = ly;
         }
     } else if (out == O_FUMBLE) {               /* (Wild: somewhere near) */
-        lx = tx - 2 + random (5);
-        ly = ty - 2 + random (5);
+        lx = tx - 2 + wroll (5);
+        ly = ty - 2 + wroll (5);
         if (on_through (sn, lx, ly)) {
             x = lx;
             y = ly;
@@ -868,7 +869,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
             c = 50 + c / 2;                     /* (Wild: lost one time in two, else broken by its chance) */
         }
         hub_map (0);
-        if (random (100) < c || !(thr = lay_body (mk, sn, x, y))) {
+        if (wroll (100) < c || !(thr = lay_body (mk, sn, x, y))) {
             return;                             /* (Broken: lost) */
         }
         p = item_at (thr);

@@ -297,10 +297,9 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'status', 'wait 3 hours 20 minutes', 'wait 3 hours and 20 minutes', 'rest', 'sleep 8 hours', 'quit',
         'dq0 -p n -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'quit',
         'dq0 -p t -s 21 -c /ram/c.hm -T', 'd', 'wait 8 hours', 'no', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 1', 'sleep 8 hours', 'quit', 'echo $status'] })) },
-      // (The bitten sleep -R 1, felled1's, 2026-11-21: a sleeping character struck as a sleeper is, no defence (RS_ASLEEP, one
-      // path), and a felled one's rolls a round each: at -R 0 the first bite knocked it senseless, in shock after, its rest
-      // the night; a search of -R 1-12 found all but 9)
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'sleep 8 hours', 'quit', 'echo $status'] })) },
+      // (The bitten sleep, felled1's, 2026-11-21: a sleeping character struck as a sleeper is, no defence (RS_ASLEEP, one
+      // path), and a felled one's rolls a round each; its pin, -R 1, dropped with dice2's keyed dice, 2026-11-24)
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Prose(out);
@@ -478,10 +477,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0turnsame', near: ['time', 'fight'], meaning: true, what: 'Dingus Quest Zero at the turns pace the same game whatever the tasks\' timing (the turns pace: a game turns on its seed and its commands alone): dq0cmd\'s fight at seed 3 (-T, -R 30: three giant rats, a dagger thrown at one, then blows) played twice, the second time its commands typed late (its first some 6M cycles after the prompt, the rest 2M), every event of the world\'s and the denizens\' the same, in the same order, at the same game times; 2026-10-31: a throw\'s two intents (taken in hand, then thrown) let the world\'s clock and the denizens\' turn in between them as the tasks\' timing fell (ui_giving)',
+      name: 'dq0turnsame', near: ['time', 'fight'], meaning: true, what: 'Dingus Quest Zero at the turns pace the same game whatever the tasks\' timing (the turns pace: a game turns on its seed and its commands alone): dq0cmd\'s fight at seed 3 (-T: three giant rats, a dagger thrown at one, then blows) played twice, the second time its commands typed late (its first some 6M cycles after the prompt, the rest 2M), every event of the world\'s and the denizens\' the same, in the same order, at the same game times; 2026-10-31: a throw\'s two intents (taken in hand, then thrown) let the world\'s clock and the denizens\' turn in between them as the tasks\' timing fell (ui_giving)',
       init: 't_rc', cycles: 1500e6,
       get machine() {
-        const g = 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -R 30', cmds = ['target the rat', '1', 'throw the dagger hard at the closest rat', 'attack', 'attack', 'wait', 'quit'];
+        const g = 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', cmds = ['target the rat', '1', 'throw the dagger hard at the closest rat', 'attack', 'attack', 'wait', 'quit'];
         return { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', g, ...cmds].map(l => '\u0101' + l + '\r').join('') +
           '\u0101' + g + '\r' + cmds.map((l, i) => '\u0101' + (i ? '\u0100' : '\u0100\u0100\u0100') + l + '\r').join('') + '\u0101echo $status\r' };
       },
@@ -616,6 +615,9 @@ module.exports = {
         'track']) + 'stop tracking\r' + dq0Typed(['quit', 'dq0 -p t -s 17 -c /ram/c.hm -T -k lockpicks,chalk,candle', 'wait', 'wait', 'wait', 'open the chest',
         'pick the lock of the chest', 'hide the dagger', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
+      start(m) {   // (The third search finding the dart trap rigged, dice2: dq0traps' own)
+        dq0Scene(m, [{ g: 1, line: 'search', n: 3, rig: [{ kind: 'TEST', a: 'P_SEARCH', actor: -1, grade: 'pass' }] }]);
+      },
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out), tasks = m.dq0.games.flatMap(g => g.tasks);
         const begun = (t, task) => dq0Ev(t, 'E_TASK', { te: 'TE_BEGUN', task })[0];
@@ -917,7 +919,11 @@ module.exports = {
       start(m) {   // (2026-11-08, one line of sight: seed 3's rats sent off as the digs begin, dq0Alone's: one in the passage
         // below, out of the character's sight now as the character's out of its, wanders in and out of view, its stirring
         // stopping the spell short)
-        dq0Scene(m, [1, 2].map(n => ({ g: 1, line: 'dig down', n, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, -1) })));
+        dq0Scene(m, [1, 2].map(n => ({ g: 1, line: 'dig down', n, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, -1) })).concat([
+          // (Rigged, dice2: the ledge's climb a round without a hold first (a marginal failure), then made; the third search
+          // stopped part way finding the trap it reaches, at the full chance dq0traps' whole one has)
+          { g: 2, line: 'u', n: 1, rig: [{ kind: 'TEST', a: 'P_CLIMB', actor: -1, uses: 1, grade: 'fail' }, { kind: 'TEST', a: 'P_CLIMB', actor: -1, grade: 'pass' }] },
+          { g: 5, line: 'search', n: 3, rig: [{ kind: 'TEST', a: 'P_SEARCH', actor: -1, grade: 'pass' }] }]));
       },
       expect: ['% echo $status'],
       check(m) {

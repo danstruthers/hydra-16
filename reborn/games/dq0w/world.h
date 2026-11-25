@@ -492,4 +492,14 @@ struct edges {
 };
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);
 
+/* The world's keyed dice (wdice.c, part wdice's: dice2, 2026-11-24): the generator's state a function of the game's seed,
+** its dice offset, the moment, and a and b (what the roll's for, WD_*, | what it's about; and more of that), the dice
+** after it random ()'s; the hub's bank 0 left in */
+#define WD_FALL         0x1000                  /* (A thing let fall, where it lies: | its item, or its kind) */
+#define WD_DROP         0x2000                  /* (A denizen's weapon let fall: b its did) */
+#define WD_SHOT         0x3000                  /* (A missile's fall: its stray, its flight on, lost: | its shooter's
+                                                **   square, b its mark's) */
+void __fastcall__ wkey (unsigned a, unsigned b);
+unsigned __fastcall__ wroll (unsigned n);      /* (A roll after the key, 0 ... n - 1: a test's rig's face, else random's) */
+
 #endif

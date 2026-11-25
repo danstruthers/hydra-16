@@ -832,8 +832,9 @@ void __fastcall__ s_stress (struct req* r)
 ** first, rolls every die after it, the faces given first (then the generator's), and keeps what each was (its sides) */
 
 #define DFIX    sizeof ((struct req*) 0)->x
-static char dface[DFIX + 1];                    /* The faces forced, to a 0, */
-static unsigned char dk, drep;                  /*   the next, and the face after them (0: the generator's) */
+char dface[DFIX + 1];                           /* The faces forced, to a 0, */
+unsigned char dk, drep;                         /*   the next, and the face after them (0: the generator's): a test's
+                                                **   rigged dice's too (../dq0/dice.inc's, hub.h's struct rig) */
 static unsigned char dlog[DFIX], dl;            /* The sides of the first dice rolled, how many kept */
 static unsigned drolled;                        /* The dice rolled */
 
@@ -859,6 +860,7 @@ void __fastcall__ s_dice_set (struct req* r)
 {
     if (RS_DICE_SEEDED (*r)) {
         rseed (RS_DICE_SEED (*r));
+        HUB->dkey.own = 1;                      /* (The test's own stream from here on: no keys, dice.inc's) */
     }
     RS_DICE_ROLLED (*r) = drolled;
     RS_DICE_UNROLLED (*r) = strlen (dface + dk);

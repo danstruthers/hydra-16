@@ -68,6 +68,10 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
         'turn around', 'jump down', 'creep', 'listen as I go', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'] })) },
+      start(m) {   // (Rigged, dice2: the climb's first test a critical failure at its foot; the fall's dice dq0tend's, a minor bruise)
+        dq0Scene(m, [{ g: 1, line: 'u', n: 1, rig: [{ kind: 'TEST', a: 'P_CLIMB', actor: -1, uses: 1, grade: 'badly' }] },
+          { g: 1, line: 'jump down', n: 1, rig: [{ kind: 'HARM', a: 'HC_FALL', uses: 1, faces: [1, 1, 92] }] }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], e = T.of('e'), u = T.of('u'), u2 = T.after(u, 'u'), j = T.of('jump down');
@@ -128,10 +132,11 @@ module.exports = {
       init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', lines: ['echo ml dge 5 >> /ram/c.hm', 'echo ml shd 90 >> /ram/c.hm',
         'echo ml swd 20 >> /ram/c.hm', 'echo hour 128 >> /ram/s.sc', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk' -R 1 -S /ram/s.sc", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk' -S /ram/s.sc", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(30).fill('wait'), 'quit', 'echo $status'] })) },
       start(m) {
-        dq0Scene(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
+        dq0Scene(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4,
+          rig: [{ kind: 'ATTACK', actor: 0, uses: 1, faces: [1, 1] }] }));   // (Its first blow rigged, dice2: a marginal success, the shield's block one too: blocked)
         dq0Grow(m);
       },
       expect: ['% echo $status'],
@@ -151,7 +156,10 @@ module.exports = {
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml swd 100 >> /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc',
         "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', 'look', ...Array(14).fill('wait'), 'quit', 'echo $status'] })) },
       start(m) {
-        dq0Scene(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: [0, 2, 4, 6][k] })));
+        dq0Scene(m, [...[0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: [0, 2, 4, 6][k] })),
+          // (Rigged, dice2's keyed dice: each courage tested on facing it a critical failure, its breakdown 60, broken: the
+          // band flees with no blow struck, as before; the keyed dice had them stand, four felled in the wait's one answer)
+          { g: 1, line: 'wait', n: 1, rig: [{ kind: 'MORALE', a: 'MR_FACED', faces: [100, 60] }] }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -209,7 +217,7 @@ module.exports = {
       name: 'dq0broke', outfit: true, asks: true, initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapons broken by the book (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage, 3d6 over its Weapon Quality, on a Block), every actor's: dq0shield's bandit set on the character, sword in hand, its stance a block: a block, weapon against weapon, breaks one of them: told, its pieces a 'broken weapon' on the floor, none of it in hand after; the character's next blow by its fists, or the bandit's",
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', lines: ['echo ml dge 5 >> /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo hour 128 >> /ram/s.sc', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 1 -S /ram/s.sc", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status'] })) },
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -S /ram/s.sc", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status'] })) },
       start(m) {
         dq0Scene(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
       },
@@ -356,6 +364,9 @@ module.exports = {
         'dq0 -p t -s 514 -c /ram/s.hm', 'lower portcullis', 'bend the bars', 'bend bars', 'go through the portcullis', 'quit',
         'dq0 -p t -s 12 -c /ram/c.hm', 'go through the door to the north', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit',
         'echo $status'] })) },
+      start(m) {        // (Its sill climbed: the climb's test a pass, dice2's keyed dice had it fail)
+        dq0Scene(m, [{ g: 3, line: 'climb through window', n: 2, rig: [{ kind: 'TEST', a: 'P_CLIMB', actor: -1, uses: 1, grade: 'pass' }] }]);
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], g1 = T.of('dq0 -p t -s 514 -c /ram/c.hm -k pick'), g2 = T.of('dq0 -p t -s 514 -c /ram/s.hm');
@@ -390,6 +401,12 @@ module.exports = {
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 23 -c /ram/u.hm', 'punch the door', 'quit',
         'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'drop the torch', 'break the door ahead to my left', 'close', 'quit', 'echo $status'] })) },
+      start(m) {        // (Rigged, dice2's keyed dice: the first punching a critical failure stopped short, then marginal failures,
+                        //   no mark, the second's too; the third's first blow gone wrong, a serious hurt; the head butt's first gone wrong)
+        dq0Scene(m, [{ g: 1, line: 'punch the door', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, grade: 'badly' }, { kind: 'ATTACK', actor: -1, grade: 'fail' }] },
+          { g: 1, line: 'punch the door', n: 3, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [100, 2, 2] }] },
+          { g: 3, line: 'head butt the door', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [100, 4, 4] }] }]);
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], hurt = t => Math.max(0, ...dq0Ev(t, 'E_HARM', { hc: 'HC_STRUCK' }).map(e => e.band));
@@ -441,6 +458,16 @@ module.exports = {
           return read(r, t);
         };
         dq0OnWords(m, [{ g: 2, line: 'break the door', n: 1, words: 'You keep at it.', call: () => { a.rxQueue.unshift(...held); a.promptFrom = -1; } }]);
+        // (Rigged, dice2's keyed dice a blow's by its moment: the pick's every blow the same, a marginal success and
+        // its three dice 5, its point's 5 past the door's 5: 5 a blow, a dozen leaving it giving, a few more breaking
+        // it, so the stop's run and the one without it are alike blow for blow; the first punching a critical failure
+        // stopped short then marginal failures, no mark; the second a blow that marks it, then one gone wrong, a
+        // serious hurt; the bare-footed kick's first gone wrong, stopped short)
+        const pick = [{ kind: 'ATTACK', actor: -1, faces: [1, 1, 1, 3] }];
+        dq0Scene(m, [{ g: 1, line: 'break the door', n: 1, rig: pick }, { g: 2, line: 'break the door', n: 1, rig: pick },
+          { g: 4, line: 'punch the door', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, grade: 'badly' }, { kind: 'ATTACK', actor: -1, grade: 'fail' }] },
+          { g: 4, line: 'punch the door', n: 2, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 3, 3, 3] }, { kind: 'ATTACK', actor: -1, uses: 1, faces: [100, 2, 2] }] },
+          { g: 6, line: 'kick the door ahead to my left', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, grade: 'badly' }] }]);
       },
       expect: ['% echo $status'],
       check(m) {
@@ -505,7 +532,13 @@ module.exports = {
         'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'd', 'wait', 'go right', 'attack the rat', 'quit', 'echo $status'] })) },
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[1, 2].flatMap(g => [0, 1, 2, 3].map(k => ({ g, line: 'attack the rat', n: 1, k, hurt: 8 })))]);   // (The kin steady: hub.h's AM_STEADY; the book's rat dodges at 90, 2026-11-04: all set hurt, so a blow lands and their courage is shaken)
+        dq0Scene(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[1, 2].flatMap(g => [0, 1, 2, 3].map(k => ({ g, line: 'attack the rat', n: 1, k, hurt: 8 }))),   // (The kin steady: hub.h's AM_STEADY; the book's rat dodges at 90, 2026-11-04: all set hurt, so a blow lands and their courage is shaken)
+          // (Rigged, dice2's keyed dice felling both rats at the second blow, one by its bite met by the sword: the fight
+          // fought on as before, the character's first three blows dodged (both a marginal success), the next two a
+          // hit of one die, a 1 (felled, not killed); the rats' first bite a hit (it's hurt), the rest marginal failures
+          // the character meets (no bite blocked by the sword, which wounds the rat))
+          { g: 1, line: 'attack the rat', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 3, faces: [1, 1] }, { kind: 'ATTACK', actor: -1, uses: 2, faces: [1, 99, 1] },
+            { kind: 'ATTACK', actor: -1, faces: [] }, { kind: 'ATTACK', uses: 1, faces: [1, 99] }, { kind: 'ATTACK', faces: [99, 1] }] }]);
       },
       expect: ['% echo $status'],
       check(m) {
@@ -580,8 +613,11 @@ module.exports = {
         'd', 'wait', 'go right', 'wrestle the rat', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'wait', 'go right', 'throw the rat', 'let go', 'wrestle the rat', 'let go', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'wait', 'go right', 'pin the rat', 'choke the rat', 'quit', 'echo $status'] })) },
-      start(m) {        // (Every rat hurt as it's come beside, each game; the first game's made wary and shy as the first wait after the hold's typed: AT_WARY, DO_SHY)
-        dq0Scene(m, [1, 2, 3].flatMap(g => [0, 1, 2, 3].map(k => ({ g, line: 'go right', n: 1, k, hurt: 8 }))).concat([0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 2, k, set: { attitude: 2, doing: 3 } }))));
+      start(m) {        // (Every rat hurt as it's come beside, each game; the first game's made wary and shy as the first wait after the hold's typed: AT_WARY, DO_SHY;
+                        //   its tries to break free rigged then, dice2: the first a marginal failure, a struggle, the second a critical success against
+                        //   the character's marginal failure, free)
+        dq0Scene(m, [1, 2, 3].flatMap(g => [0, 1, 2, 3].map(k => ({ g, line: 'go right', n: 1, k, hurt: 8 }))).concat([0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 2, k, set: { attitude: 2, doing: 3 } })),
+          { g: 1, line: 'wait', n: 2, rig: [{ kind: 'ATTACK', a: 'GM_BREAK', uses: 1, faces: [99] }, { kind: 'ATTACK', a: 'GM_BREAK', uses: 1, faces: [5, 99] }] }));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -705,16 +741,29 @@ module.exports = {
       // -R 25 bandit H comes in at the twenty-third wait and falters in its guard, seven waits to spare)
       // (Game 2 -R 16, felled1's, 2026-11-21: a felled one's shock rolls a round each as the time comes, the dice in another
       // order; at -R 48 the bandit came round before a look saw it lie; a search of -R 1-24 found 16)
+      // (No -R since dice2's keyed dice, 2026-11-24: both games' scenes rigged and set in start, the dice searched no more)
       machine: { input: (() => {
-        const game = (d, r, talks, w = 15) => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/" + d + " -k 'sword,gambeson,mail hauberk' -S /ram/s.sc -R " + r, 'drop the backpack', 'wear the gambeson',
+        const game = (d, talks, w = 15) => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/" + d + " -k 'sword,gambeson,mail hauberk' -S /ram/s.sc", 'drop the backpack', 'wear the gambeson',
           'wear the mail hauberk', 'defend block', 'wait', 'close the door', 'open the door', 'go south', 'go south', ...Array(w).fill('wait'),
           ...Array(talks).fill('talk to the bandit'), ...Array(3).fill('wait'), 'quit'];
         return dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
           'echo ml swd 60 >> /ram/c.hm', 'echo hour 128 >> /ram/s.sc', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 25, 1, 30), ...game('h', 16, 2), 'echo $status']);
+          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 1, 30), ...game('h', 2), 'echo $status']);
       })() },
       start(m) {        // (Told as it falls, 2026-11-03: the lines typed no longer fall on it)
-        dq0Scene(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.nolurk] = 1; } })));   // (No robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
+        dq0Scene(m, [...[1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.nolurk] = 1; } })),   // (No robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
+          // (Rigged since dice2's keyed dice, no -R: game 1's second bandit blow (its first, the quicker's, as it falls) a
+          // critical failure, blocked by a marginal failure (AF: its fumble), its fumble roll two 6s and a die, its sword
+          // let fall; the character's own blows kept from it.  Game 2's bandit, felled on the walk in by a grievous wound
+          // and a serious one (the keyed dice's: its courage broken by the first, its shock rolls never passed), lies
+          // through the waits and the first talk; at the second its wounds one minor one of two levels (dq0Poke's hurt)
+          // and its flight forgotten (the minds' md.fled), its shock rolls 1s: it comes round at its next, and its first
+          // turn up is the fight's (O_RISE), not a flight on its own legs)
+          { g: 1, line: 'go south', n: 2, rig: [{ kind: 'ATTACK', actor: -1, faces: [] }, { kind: 'ATTACK', uses: 1, faces: [] }, { kind: 'ATTACK', uses: 1, faces: [100, 99, 6, 6] }] },
+          { g: 2, line: 'talk to the bandit', n: 2, rig: [{ kind: 'ROUSE', faces: [1, 1, 1, 1] }], call: (h, L, K, at, named, sc) => {
+            const ad = dq0Ad(fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1')), ram = m.taskRam[h[12 + 2]];
+            for (let k = 0; k < L.nactors; k++) if (named(k) === 'bandit' && h[at(k) + L.aDoing] === K.DO_DOWN) { ram[ad('fled') + k] = 0; sc.hurt(k, 2); }
+          } }]);
         dq0OnWords(m, Array.from({ length: 15 }, (_, i) => ({ g: 2, line: 'wait', n: i + 2, words: 'They fall senseless.', text: 'talk to the bandit\r' })));
       },
       expect: ['% echo $status'],
@@ -752,15 +801,15 @@ module.exports = {
     {
       name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one.  The scene set (since the denizens\' day and leisure, 2026-10-31: bandits keep watches, and dice and drink at leisure): no day (the environment\'s dq0hour=128, rc\'s), every one about as before',
       init: 't_rc', cycles: 1200e6,
-      // (-R 2: the dice's offset that gives the scene it was written for, 2026-11-03 (a lit torch let fall no time); since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', lines: ['echo ml dge 90 >> /ram/c.hm',
         'echo ml swd 90 >> /ram/c.hm', 'echo hour 128 >> /ram/s.sc', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -S /ram/s.sc -R 3", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -S /ram/s.sc", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(44).fill('wait'), 'quit', 'echo $status'] })) },
       start(m) {
-        // (One of the band set on it, hostile, beside it, the rest friendly, a scene's: their way to it the dice's, 2026-11-03)
-        dq0Scene(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
+        // (One of the band set on it, hostile, beside it, the rest friendly, a scene's: their way to it the dice's, 2026-11-03; its
+        // first blow and the character's rigged, dice2: each a marginal success met by one, blocked, the character's by its shield)
+        dq0Scene(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4,
+          rig: [{ kind: 'ATTACK', actor: 0, uses: 1, faces: [1, 1] }, { kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 1] }] }));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -789,7 +838,7 @@ module.exports = {
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', lines: ['echo ml dge 90 >> /ram/c.hm',
         'echo ml swd 90 >> /ram/c.hm', 'echo hour 128 >> /ram/s.sc', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 3 -S /ram/s.sc", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -S /ram/s.sc", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(44).fill('wait'), 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -S /ram/s.sc', 'f', 'look', 'quit', 'echo $status'] })) },
       start(m) {
         dq0Scene(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
@@ -1132,9 +1181,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml slg 5 >> /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sling,sling stones' -R 5", 'drop the torch', 'hold the sling', 'wait', ...Array(30).fill(['shoot the adder', 'take the sling', 'hold the sling']).flat(), 'quit', 'echo $status'] })) },
-      // (-R 5, felled1's, 2026-11-21: a felled one's shock rolls a round each as the time comes, the dice in another order, one
-      // wild shot in thirty; a search of -R 1-14 found 4, 5, 6, 8, 9, 10 and 12)
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sling,sling stones'", 'drop the torch', 'hold the sling', 'wait', ...Array(30).fill(['shoot the adder', 'take the sling', 'hold the sling']).flat(), 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) { dq0Scene(m, [{ g: 1, line: 'drop the torch', n: 1, item: { 'sling stones': { qty: 200 } } }, { g: 1, line: 'wait', n: 1, k: 0, beside: 4, engage: true }]); },
       check(m, out) {
@@ -1171,8 +1218,10 @@ module.exports = {
         'defend block', ...Array(4).fill('wait'), 'quit',
         'mkdir /ram/h', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt",
         "dq0 -p t -s 4 -c /ram/d.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
-        'drop the torch', 'drop the staff', 'autotarget at medium range', 'defend block', ...Array(3).fill('wait'), 'quit', 'echo $status'] })) },
-      start(m) {   // (A stray's scene: a second rat kept beside the first as each of game 1's rounds is typed, 2026-11-03)
+        'drop the torch', 'drop the staff', 'drop the sword', 'autotarget at medium range', 'defend block', ...Array(3).fill('wait'), 'quit', 'echo $status'] })) },   // (Its sword put down,
+                                                //   dice2: its hands free for its shortbow, as an elf's hit to its forearm had them)
+      start(m) {   // (A stray's scene: a second rat kept beside the first as each of game 1's rounds is typed, 2026-11-03;
+        //   the world's stray roll rigged, dice2: a miss strikes the one beside, the book's half the time made every time)
         const beside = (h, L, K, at, named) => {
           const u = o => h[o] | h[o + 1] << 8, rats = [...Array(L.nactors).keys()].filter(q => h[at(q) + L.aState] && named(q) === 'giant rat');
           if (rats.length > 1) {   // (On open floor beside it: dq0dentake's way)
@@ -1183,7 +1232,7 @@ module.exports = {
             if (d) { const x = x0 + d[0], y = y0 + d[1], o = at(rats[1]); h[o + L.aX] = x & 255; h[o + L.aX + 1] = x >> 8; h[o + L.aY] = y & 255; h[o + L.aY + 1] = y >> 8; h[o + L.aSn] = sn; const R = dq0Rec(m), q = R.at(h[o + L.aDen]); R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; h[L.denSeq] = h[L.denSeq] + 1 & 255; }
           }
         };
-        dq0Scene(m, [{ g: 1, line: 'shoot the rat', n: 1, call: beside }, ...Array.from({ length: 12 }, (_, i) => ({ g: 1, line: 'wait', n: i + 1, call: beside }))]);
+        dq0Scene(m, [{ g: 1, line: 'shoot the rat', n: 1, call: beside, rig: [{ kind: 'WORLD', a: 'WD_SHOT', faces: [1] }] }, ...Array.from({ length: 12 }, (_, i) => ({ g: 1, line: 'wait', n: i + 1, call: beside }))]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1252,7 +1301,11 @@ module.exports = {
           'defend ' + d, 'wait', 'quit']), 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {        // (The book's ghoul's 7 and a die mostly go through mail, 2026-11-04: seed 7's rat set on it too, its small bite the armour's to turn)
-        dq0Scene(m, [1, 2].map(g => ({ g, line: 'wait', n: 1, name: 'giant rat', beside: 2, engage: true })));
+        dq0Scene(m, [...[1, 2].map(g => ({ g, line: 'wait', n: 1, name: 'giant rat', beside: 2, engage: true })),
+          { g: 1, line: 'wait', n: 1, call: (h, L, K, at, named, sc) => {   // (Dodging: the ghoul's third blow, the first of a round the rat's
+            const k = [...Array(L.nactors).keys()].find(j => named(j) === 'ghoul');   //   bite hasn't taken the dodge from, both dice a pass: dodged)
+            sc.rig([{ kind: 'ATTACK', actor: k, uses: 2, faces: [] }, { kind: 'ATTACK', actor: k, uses: 1, faces: [1, 1] }]);
+          } }]);
       },
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_A_DEAD = 2, FF_D_DOWN = 4, FF_D_DEAD = 8, FF_STOPPED = 0x40;
@@ -1370,6 +1423,13 @@ module.exports = {
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'dq0 -p t -s 7 -c /ram/c.hm -T', 'defend none', 'd', ...Array(12).fill('wait'), 'echo $status'] })) },
+      start(m) {   // (The ghoul's first two blows rigged, dice2: each a marginal failure, the Ignore table's one die, a 6, at the thorax (50):
+                   //   a grievous rake (G4), no mortal one, its shock the dice's: senseless at the second)
+        dq0Scene(m, [{ g: 1, line: 'wait', n: 1, call: (h, L, K, at, named, sc) => {
+          const k = [...Array(L.nactors).keys()].find(j => named(j) === 'ghoul');
+          if (k !== undefined) sc.rig([{ kind: 'ATTACK', actor: k, uses: 2, faces: [99, 6, 50] }]);
+        } }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, FF_D_DEAD = 8, s = dq0Prose(out);
@@ -1394,11 +1454,17 @@ module.exports = {
     {
       name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (E_TASK TE_ROBBED, the robber's; unseen as it lies senseless, found as it comes round since 2026-11-14: \"You come round to find someone has been through your things.\"), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same).  The scene set (since the denizens' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before",
       init: 't_rc', cycles: 1500e6,
-      // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
-        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 1 -S /ram/s.sc',
+        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'defend none', 'hold the dagger', 'open the door', 'go through it', 'east', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status'] })) },
+      start(m) {   // (Re-aimed, dice2: the bandits keep off now, watching; one put before it, hostile and fighting it, as the first wait's
+                   //   typed, its first two blows rigged: each a marginal failure, the Ignore table's one die (a 6, then a 1) at the thorax
+                   //   (50), the shock roll's first die a 6: an S3, then an S2 that fells it, out a few rounds (its robber not home yet))
+        dq0Scene(m, [{ g: 1, line: 'wait', n: 1, call: (h, L, K, at, named, sc) => {
+          const k = [...Array(L.nactors).keys()].find(j => named(j) === 'bandit');
+          if (k !== undefined) sc.rig([{ kind: 'ATTACK', actor: k, uses: 1, faces: [99, 6, 50, 6] }, { kind: 'ATTACK', actor: k, uses: 1, faces: [99, 1, 50, 6] }]);
+        } }, { g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Prose(out), I = DQ0_I;
@@ -1449,11 +1515,9 @@ module.exports = {
     {
       name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20; its Stamina and Will 30, 2026-11-04, so the book's ghoul doesn't finish it before the pass is told) in a gambeson and a mail hauberk, two of its three rations put down (its load as it was before a ration weighed a pound: slice 4.1's counted lots), two turns about first (2026-10-26: its armour got out of its pack, the reach's times, its dice as a search of the variants found them); disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights (at its first blow's words) taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on (the ghoul left behind, out of its sight); a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; pass typed as it fights (at its next blow's words), a round given up, no blow of its own; a flight at its prompt breaking away into a corner, no run on into the wall (since 2026-10-21 a second game's, the character in shock from the start, as the first's was when it fled: in the first, knocked senseless as it fights on after the pass, it's finished, the ghoul a killer, the user's helpless character); every round it fought charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths: the book's second variant of combat fatigue, every round of active combat, whatever is done in it), each blow it struck, each struggle up from the ground, and the pass (begun engaged, the ghoul beside it).  The scene set (since the turns pace waits for a command being given, 2026-10-31, the ghoul no longer came back after the disengage on its own): the ghoul put back beside the character, facing it, hostile and fighting, as the flight is typed at its prompt (dq0Poke's beside and engage), the disengage and the pass typed on the fight's words (dq0OnWords), a look on the pass's (so the fighting on after the pass is the look's)",
       init: 't_rc', cycles: 2600e6,
-      // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml swd 20 >> /ram/c.hm', 'echo att sta 30 >> /ram/c.hm', 'echo att wil 30 >> /ram/c.hm',
-        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'disengage', 'flee',
-        'd', 'wait', 'flee', 'quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T -R 1",
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'disengage', 'flee',
+        'd', 'wait', 'flee', 'quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T",
           'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'd', 'wait', 'flee', 'look', 'quit', 'echo $status'] })) },
       start(m) {
         dq0OnWords(m, [{ g: 1, line: 'wait', n: 1, words: 'You strike at the ghoul', text: 'disengage\r' },
@@ -1536,11 +1600,11 @@ module.exports = {
       name: 'dq0bodies', near: ['fight', 'denizens'], what: "Dingus Quest Zero's every actor tiring in a fight (2026-10-31, the brief's every actor's body: HOUSE.md's fights, the denizens' bodies; the character's rules, the book's second variant of combat fatigue, a level each five minutes of active combat): seed 7's ghoul (dq0disengage's scene: the character weak with its sword in a gambeson and a mail hauberk), the fight as the character waits; the ghoul's body in the referee's bank (dq0harn's fb, tire.c's struct bbody by its sheet's number) charged for its rounds (its exertion, 2 units a tenth, a round 100 tenths at most since it was last reckoned), kept between them.  And a tired beast breaking off: a second game the same, the ghoul's body set a breath short of its thirteenth level (dq0BodyPoke's: twelve levels, 5990 units, never reckoned) as the wait's typed; its next round a level more, its courage tested with its fatigue in it, and it breaks off (an E_FIGHT with FF_FLEES, the ghoul fleeing)",
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml swd 20 >> /ram/c.hm',
-        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
         'd', 'wait', 'quit',
-        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
         'd', 'wait', 'look', 'quit',
-        "dq0 -p t -s 1 -c /ram/c.hm -k sword -T -R 1", 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'] })) },
+        "dq0 -p t -s 1 -c /ram/c.hm -k sword -T", 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'] })) },
       start(m) {
         dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 },
           ...[1, 2, 3, 4, 5].map(n => ({ g: 3, line: 'wait', n, name: 'giant rat', lv: 12, ex: 5990, at: 0 }))]);
@@ -1674,17 +1738,17 @@ module.exports = {
     {
       name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by its successor (since 2026-10-30: the most influential of those below it, dq0succession's), while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's; since the denizens' water, 2026-10-31, the band below's small orc put beside the character as it's attacked, dq0Poke's beside: the band no longer wades where it did)",
       init: 't_rc', cycles: 4000e6,
-      // (-R 79: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: (() => {
         const kit = "-k 'sword,gambeson,mail hauberk,mail cowl,great helm'", dress = ['wear the gambeson', 'wear the mail hauberk', 'wear the mail cowl', 'wear the great helm', 'hold the sword'];
-        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -R 79 -d /ram/' + d + ' ' + kit, ...dress], king = "'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -'";
+        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/' + d + ' ' + kit, ...dress], king = "'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -'";
         return dq0Typed(dq0Game({ lines: ['echo ml swd 100 >> /ram/c.hm', 'echo ml ini 100 >> /ram/c.hm',
           'echo ml dge 100 >> /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
           ...['h', 'p', 'b', 'c', 'd', 'e'].flatMap(d => ['mkdir /ram/' + d, 'echo ' + king + ' > /ram/' + d + '/theme.txt']),
           ...['b', 'c'].map(d => "echo 'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -' > /ram/" + d + '/theme.txt'),
           "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | Beasts h' > /ram/e/theme.txt", "echo 'faction | Beasts | bear | 1-1 | 1 | - | 1 | w | -' >> /ram/e/theme.txt",
-          ...game('h'), 'attack the small orc', 'wait', 'wait', 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'd', 'wait', 'attack the small orc', 'wait', 'wait', 'quit',
+          ...game('h'), 'wait', 'wait', 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'd', 'wait', 'attack the small orc', 'wait', 'wait', 'quit',   // (Its
+                                                // first "attack the small orc" gone, dice2: it came to nothing ("You can't get near enough") as the
+                                                // minds' dice fell, now it fights the band and the king falls in it)
           ...game('p'), 'wait', 'wait', 'quit', 'rm -r /ram/h',   // (The RAM disk's room: its six folders, each with its dungeon's)
           ...['b', 'c'].flatMap(d => [...game(d), 'attack the black orc', 'wait', 'attack the black orc', 'quit']),
           ...['d', 'e'].flatMap(d => [...game(d), 'attack the orc king', 'quit']), 'echo $status'] }));
@@ -1696,7 +1760,7 @@ module.exports = {
           ...band(3, { serve: 255, contact: 255 }), ...band(4, { serve: 0, contact: 0 }),             // (Games 3, 4: an old band, a new one)
           { g: 5, line: 'attack the orc king', n: 1, k: 1, set: { attitude: 5 } },                    // (Game 5: one the character's ally)
           { g: 6, line: 'attack the orc king', n: 1, k: 1, set: { faction: 2, power: 250 } },         // (Game 6: one a fearsome foe)
-          { g: 1, line: 'attack the small orc', n: 2, name: 'small orc', beside: 'face' }]);          // (Game 1: one of the band below beside
+          { g: 1, line: 'attack the small orc', n: 1, name: 'small orc', beside: 'face' }]);          // (Game 1: one of the band below beside
                                                                                                       //   the character as it's attacked, since
                                                                                                       //   their water, 2026-10-31)
       },
@@ -1834,6 +1898,15 @@ module.exports = {
         dq0Aware(m, 'go to the far side', 'ghoul');   // (Its ghoul aware of the character as the walk past it begins: slice 4.5's, an unaware one engages no one)
         dq0OnWords(m, [{ g: 1, line: 'go to the far side', n: 1, words: 'Quicker, the ghoul', text: 'go to the far side\r' }]);   // (The walk again
                                                 //   typed as it's told, as it fights: 2026-11-02, not at a fixed gap of cycles)
+        // (Rigged, dice2's keyed dice: the ghoul the quicker as it's met, the character's d100 a marginal failure, its a
+        // success; on the walk its first blow, a marginal failure blocked, an opening, as before, and its courage held
+        // (the keyed dice had the character's block wound it, or its courage fail, and the walk typed again met no foe)
+        const quick = { kind: 'CONTEST', a: 'P_INITIATIVE', uses: 1, faces: [99, 1] };
+        dq0Scene(m, [{ g: 1, line: 'go to the far side', n: 1, call: (h, L, K, at, named, sc) => {
+          const k = [...Array(L.nactors).keys()].find(j => named(j) === 'ghoul');
+          sc.rig([quick, { kind: 'ATTACK', actor: k, uses: 1, faces: [99, 1] }, { kind: 'MORALE', actor: k, grade: 'pass' }]);
+        } },
+          { g: 2, line: 'attack the ghoul', n: 1, rig: [quick] }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1911,16 +1984,22 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fighton', asks: true, what: 'Dingus Quest Zero\'s fighting on (the user\'s, 2026-10-20: "once engaged in combat, you should continue to attack your target as you can, without actively having to say "attack" each time"; HOUSE.md\'s, as built: the world\'s long task LT_FIGHT, a blow each round as the character\'s free), by the hub\'s events and the long task\'s record (the referee\'s dice at these seeds): at seed 5 one attack at the giant rats fought on, blow after blow, till its target falls senseless, then turned to the other rat engaging it ("You turn to the giant rat.") and fought till it falls too, then ended ("No foe is left beside you."), the senseless left lying and "attack the rat" finishing one, a blow alone; the status line\'s "Fighting the giant rat" as it fights; at seed 7 the hostile ghoul coming up and striking at the character as it waits fought back ("You fight back against the ghoul."), no attack typed; at seed 5 again a look typed as it fights carried out at once, the fight going on, then a walk taking it over (its round out, "You stop fighting.", the walk), fought on after it while a rat engages it still; and at seed 7 in armour but undefended (defend none), badly hurt as it fights, asked ("You\'re badly hurt.  Keep fighting?", the clock still at the turns pace), "yes" fighting on, "no" stopping it.  The scene set (since morale, 2026-10-29, and the dice by who asks, 2026-10-30, a kin seeing its fellow fall runs off, as a rule): at the first game the other rat steady (dq0Poke\'s, at the attack: its mood AM_STEADY, its courage never tested), so the fight goes on to it (dq0fight\'s the kin running off as it stands); both set hurt, the book\'s rat dodging at 90 (2026-11-04), Sword and Dodge 95; the last games\' Stamina and Will 25, so the book\'s ghoul doesn\'t kill before it asks',
+      name: 'dq0fighton', asks: true, what: 'Dingus Quest Zero\'s fighting on (the user\'s, 2026-10-20: "once engaged in combat, you should continue to attack your target as you can, without actively having to say "attack" each time"; HOUSE.md\'s, as built: the world\'s long task LT_FIGHT, a blow each round as the character\'s free), by the hub\'s events and the long task\'s record (the referee\'s dice at these seeds): at seed 5 one attack at the giant rats fought on, blow after blow, till its target falls senseless, then turned to the other rat engaging it ("You turn to the giant rat.") and fought till it falls too, then ended ("No foe is left beside you."), the senseless left lying and "attack the rat" finishing one, a blow alone; the status line\'s "Fighting the giant rat" as it fights; at seed 7 the hostile ghoul coming up and striking at the character as it waits fought back ("You fight back against the ghoul."), no attack typed; at seed 5 again a look typed as it fights carried out at once, the fight going on, then a walk taking it over (its round out, "You stop fighting.", the walk), fought on after it while a rat engages it still; and at seed 7 in armour but undefended (defend none), badly hurt as it fights, asked ("You\'re badly hurt.  Keep fighting?", the clock still at the turns pace), "yes" fighting on, "no" stopping it.  The scene set (since morale, 2026-10-29, and the dice by who asks, 2026-10-30, a kin seeing its fellow fall runs off, as a rule): at the first game the other rat steady (dq0Poke\'s, at the attack: its mood AM_STEADY, its courage never tested), so the fight goes on to it (dq0fight\'s the kin running off as it stands); both set hurt, the book\'s rat dodging at 90 (2026-11-04), Sword and Dodge 95; the last games\' Stamina and Will 8 (Endurance 9: badly hurt at three levels) and the ghoul\'s first two bites rigged (dice2, its shock roll\'s first die too), so the book\'s ghoul doesn\'t fell it before it asks',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml swd 95 >> /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'look', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T -a', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat'] })) +
-        dq0Typed(['quit', 'echo att sta 25 >> /ram/c.hm', 'echo att wil 25 >> /ram/c.hm', ...['yes', 'no'].flatMap(ans => ['dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson',
+        dq0Typed(['quit', 'echo att sta 8 >> /ram/c.hm', 'echo att wil 8 >> /ram/c.hm', ...['yes', 'no'].flatMap(ans => ['dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson',
           'wear the mail hauberk', 'defend none', 'd', 'wait', ans, 'quit']), 'echo $status']) },
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[0, 1, 2, 3].map(k => ({ g: 1, line: 'attack the rat', n: 1, k, hurt: 8 }))]);   // (The other rat steady: hub.h's AM_STEADY; the book's rat dodges at 90, 2026-11-04: both set hurt, so a blow lands)
+        dq0Scene(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }, ...[0, 1, 2, 3].map(k => ({ g: 1, line: 'attack the rat', n: 1, k, hurt: 8 })),   // (The other rat steady: hub.h's AM_STEADY; the book's rat dodges at 90, 2026-11-04: both set hurt, so a blow lands)
+          { g: 1, line: 'attack the rat', n: 1, rig: [{ kind: 'ATTACK', actor: 0, faces: [100, 99] }] },   // (Rigged, dice2: the other rat's bites each a critical failure met by a marginal
+                                                //   failure, a fumble or a stumble, none blocked onto the sword: it isn't felled before it's turned to)
+          ...[4, 5].map(g => ({ g, line: 'wait', n: 1, call: (h, L, K, at, named, sc) => {   // (The last games' ghoul rigged, dice2: its first bite a critical
+            const k = [...Array(L.nactors).keys()].find(j => named(j) === 'ghoul');      //   failure, the character's opening, fought back; its second a marginal
+            if (k !== undefined) sc.rig([{ kind: 'ATTACK', actor: k, uses: 1, faces: [100] }, { kind: 'ATTACK', actor: k, uses: 1, faces: [99, 2, 8, 1] }]);   //   failure's
+          } }))]);                                //   one die, a 2, at the face (8): an S3, badly hurt at Endurance 9, its shock roll's first die a 1)
         dq0OnWords(m, [{ g: 3, line: 'attack the rat', n: 1, words: 'You strike at the giant rat', text: 'look\r' },   // (Typed as it fights:
           { g: 3, line: 'look', n: 1, words: 'You ', text: 'go left\r' }]);   //   the look at its first blow, the walk at the look's words, 2026-10-31)
       },
@@ -1987,6 +2066,10 @@ module.exports = {
         "echo 'faction | Diggers | khuzmin | 0-1 | 29 | - | 0 | h | -' > /ram/g/theme.txt", "echo 'faction | Tribe | arak | 0-1 | 17 | - | 0 | h | Diggers h' >> /ram/g/theme.txt",
         "dq0 -p t -s 14 -c /ram/c.hm -T -d /ram/g -k 'club' -S /ram/s.sc", 'attack', 'wait', 'fight the orc', 'echo =END', 'echo $status']) },   // (Its "kick the orc" gone, 2026-11-13: typed at a
                                                 //   prompt that came as it lay senseless; now none comes till it comes round, and it dies first)
+      start(m) {        // (The first shot at it as it goes over a critical success it fails to dodge, three dice, two of them 6s: a
+                        //   mortal wound; dice2's keyed dice had a serious stab, it walked on.  Its own blows kept from the rig)
+        dq0Scene(m, [{ g: 1, line: 'fight the orc', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [] }, { kind: 'ATTACK', uses: 1, faces: [5, 100, 6, 6] }] }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], T = dq0Turns(m), a = dq0Prose(out), FF_D_DEAD = 8;
@@ -2059,7 +2142,10 @@ module.exports = {
       start(m) {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
-        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })));   // (A rat put before the character, hostile and fighting it, as the first command's typed)
+        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true,   // (A rat put before the character, hostile and fighting it, as the first command's typed)
+          rig: [{ kind: 'ATTACK', actor: -1, faces: [] }, { kind: 'ATTACK', faces: [99, 1] }] })));   // (The rats' bites a marginal failure
+        //   met by a marginal success, dodged, dice2; the character's blows as the keys have them: at the menacing pace a run of
+        //   bites felled the character, its shock rolls an hour's, and the played game's start ran out of the test's cycles)
         dq0FightPause(m);                       // (A player's pause before a line typed in the fight: the user's T3, 2026-11-22)
       },
       expect: ['% echo $status'],
@@ -2081,7 +2167,9 @@ module.exports = {
       start(m) {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
-        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })));   // (A rat put before the character, hostile and fighting it)
+        dq0Scene(m, [...[1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })),   // (A rat put before the character, hostile and fighting it)
+          { g: 2, line: 'inventory', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [99] }] }]);   // (The menacing game's blows rigged, dice2: each a marginal failure,
+                                                //   no wound, the rat fighting on through the lines: its first felled it, a gash)
         // (Each line marked MID_MARK typed only as the world's referee slot holds the character's own blow: posted, not yet
         // answered; or, none come in NO_ROUND_MID cycles, typed anyway and said so)
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
@@ -2118,18 +2206,14 @@ module.exports = {
       name: 'dq0felled', near: ['fight', 'denizens'], what: "Dingus Quest Zero's foe felled while a line waits (reach1's find, 2026-11-20: dq0fightmid's \"go left\" once 6,506,445 cycles, the blow knocking the rat senseless as the line waited, the referee's own work 4.52M of it: its rounds out worked by the book's shock rolls, a round each, up to an hour's, each a die a point of its universal penalty), by the words and dq0Timer's times: dq0fightmid's rats at seed 5, one put before the character hostile and fighting it, and hurt (a minor wound of level 8: its every shock roll failed, the most rounds out the referee works: an hour's); then lines typed as the character's own blow is being worked (dq0fightmid's way): looks, a wait and a step; a blow felling the rat as one waits, and every first letter held to D17, at the normal pace, the menacing and as played",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm', 'echo b115200 >/dev/serctl',
-        'dq0 -p n -s 5 -c /ram/c.hm -k sword -T -R 0', ...FELLED, 'quit', ...dq0Paces('dq0 -p n -s 5 -c /ram/c.hm -k sword -T', FELLED).map((l, i) => i ? l : l + ' -R 3'), 'echo $status'] })).split('ā' + MID_MARK).join(MID_MARK) },
-      // (The normal game -R 0 since scene1, 2026-11-24: its rat put in place as the scene's round trip ends, no game time
-      // gone, its blows fell otherwise and the wait typed mid-round came as the round's last blow was worked, 737,096 cycles
-      // to its first letter; -R 0 to 5 each fell it as a line waits, 0 and 3 with the wait typed mid-round as before, 0's
-      // the sooner, 452,288.  The menacing game -R 3 since speed11, 2026-11-22: at -R 1 its rat no longer an actor as inventory's typed, the
-      // poke's rat none and no fight, with the lines typed a player's pause apart (T3); -R 2 to 7 and none each felled
-      // it as a line waited.  -R 1 was felled1's, 2026-11-21: its felling as a line waits asked of every game again, and at -R 0 the
-      // rat fell dead there, a mortal gash, not senseless; a search of -R 1-12 found all but 3 and 9)
+        'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', ...FELLED, 'quit', ...dq0Paces('dq0 -p n -s 5 -c /ram/c.hm -k sword -T', FELLED), 'echo $status'] })).split('ā' + MID_MARK).join(MID_MARK) },
+      // (No -R since dice2's keyed dice, 2026-11-24: the character's first blow rigged (start's), the rat felled, not
+      // killed, as the first look waits, in every game; its -R pins, scene1's and speed11's, the dice searched for it)
       start(m) {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
-        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true, hurt: 8 })));   // (A rat before it, fighting it, its every shock roll failed)
+        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true, hurt: 8,   // (A rat before it, fighting it, its every shock roll failed)
+          rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 99, 1] }] })));   // (The character's first blow a light hit, AH(1) and a 1: the rat felled, not killed, dice2's keyed dice had its counterstrike kill it)
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
         const ST = H.off('hub', 'slot.state'), KD = H.off('hub', 'slot.kind'), AC = H.off('hub', 'slot.actor');
         let since = -1;

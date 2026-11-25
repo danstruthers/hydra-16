@@ -1,7 +1,7 @@
 /*
 ** referee.h - Dingus Quest Zero's referee skeleton (ENGINE-CRITIQUE.md's section 8, option (a), the user's choice,
 ** 2026-11-11: swappable rules a real goal): what every referee has alike, in one place, and what a ruleset gives it.
-** A referee is the skeleton (games/dq0/rf/rf.c: its main loop, the hub's slots and the dice by who asks, the words
+** A referee is the skeleton (games/dq0/rf/rf.c: its main loop, the hub's slots and the keyed dice, the words
 ** into a reply, the things to hand, the creatures' sheets' file; rf/sheets.c the file's opening), the house's rules
 ** it wants (rshouse.h: linked functions, rf/*.c), and its ruleset's answers (rf_answer and the hooks below): dq0harn
 ** (HarnMaster's) and dq0null (flat odds).  A referee's folder compiles each shared file through a file of its own that
@@ -49,8 +49,9 @@ int __fastcall__ sheets_open (unsigned char back);  /* (rf/sheets.c's) The save 
                                                 **   (back 1) or written anew (0): its fd, or -1 (none, no save folder) */
 unsigned __fastcall__ num (const char* s);      /* (Its arguments' numbers: the game's library's, dq0lib.inc's; or
                                                 **   the referee's own) */
-void __fastcall__ dice_to (unsigned char k);    /* (The dice by who asks: ../dq0/dice.inc's, a referee's .s includes it;
-                                                **   3 + n, the hub's dice, dq0 -R's: begun) */
+void __fastcall__ dice_key (unsigned char s);   /* (The keyed dice: ../dq0/dice.inc's, a referee's .s includes it;
+                                                **   slot s's request's key, hashed into the generator's state:
+                                                **   0, 1 the hub's slot[], NSLOTS DSLOT) */
 
 /* ---- The ruleset's (its own files) */
 
@@ -68,7 +69,7 @@ void __fastcall__ rf_sheets (unsigned char back);   /* Its creatures' sheets wri
 ** blow, harm, time or exertion changes) a ruleset may leave for after the reply: rf_answer sets rf_later, and the
 ** skeleton, its reply sent, lets the asker run first (a tick at most, at the real paces; at the turns pace none, the
 ** tasks' turns as they were), then calls rf_after, always before it answers anything else.  A ruleset that keeps its summary whole in rf_answer never sets rf_later; its rf_after does nothing.
-** rf_after rolls no dice (the dice go by who asks: no one asks it) */
+** rf_after rolls no dice (the dice go by each request's key: there's none) */
 extern unsigned char rf_later;                  /* (The skeleton's: set by rf_answer, cleared as rf_after's called) */
 void rf_after (void);                           /* The ruleset's: its summary's rest, after a reply that left it */
 

@@ -203,8 +203,9 @@ Each task is started with the hub's segment, its role and the lib folder (hub.c:
   G_WELL), and effects and words back. RULESETS.md tables each request: who asks it and what's read. An unknown
   request gets 0xFF.
 - **The skeleton** is dq0/rf/, with referee.h its interface:
-  - rf.c, the main loop: it attaches the hub, seeds the dice from the game's seed (a stream for each asker), and
-    answers the world's, the UI's and the denizens' slots;
+  - rf.c, the main loop: it attaches the hub, keys each request's dice (dice.inc's dice_key: the game's seed, the
+    asker, the request's kind, actor, purpose and moment; RULESETS.md), and answers the world's, the UI's and the
+    denizens' slots;
   - sheets.c reads the creatures' sheets (beasts.dat);
   - the house rules every ruleset shares (rshouse.h): dig.c (digging), notice.c (noticing), state.c (the state's
     words), bdice.c (the bearings' dice), want.c (hunger and thirst) and air.c (bad air).
@@ -344,7 +345,7 @@ machine's load allows.
   - `-E`, a dusk start;
   - `-F`, an outfit not fitted to strength;
   - `-I`, no initiative, groping or facing tests;
-  - `-R N`, a dice offset;
+  - `-R N`, a dice offset (mixed into every key: the referee's, the minds' and the world's keyed dice, dice2);
   - `-C`, small caches;
   - `-m`, minutes on the status line;
   - `-S FILE`, a scene file: a test's start, a line a fact (`hour 128`, `sky 0`, `air 21`, `well 2`, `furn 0`: hub.h's

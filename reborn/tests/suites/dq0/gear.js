@@ -71,16 +71,18 @@ module.exports = {
         "dq0 -p t -s 374 -c /ram/c.hm -k 'stone chisel,hammer' -T", 'dig north', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k spade -T', 'dig north', 'quit',
         'echo hour 128 >> /ram/s.sc', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'mattock,gambeson,mail hauberk' -R 21 -S /ram/s.sc", 'drop the mattock', 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk', 'quit', 'echo $status'] })) },
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'mattock,gambeson,mail hauberk' -S /ram/s.sc", 'drop the mattock', 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
-        dq0Scene(m, [{ g: 3, line: 'sharpen the mang', n: 1, wear: { mang: 200 } }]);
+        // (A bandit put beside the character and engaged as the hauberk's put on, dice2: the minds' keyed steps brought none to
+        //  it; its -R 21 till then, a bandit with a sword: the first that strikes, whatever with, the one its mattock's let fall for)
+        dq0Scene(m, [{ g: 3, line: 'sharpen the mang', n: 1, wear: { mang: 200 } }, { g: 7, line: 'wear the mail hauberk', n: 1, name: 'bandit', beside: 'face', engage: true }]);
         const a = m.acia, shown = a.shown;      // (A mattock on the arm of the bandit that strikes first, let fall where it stands: taken up, its next turn)
         let tail = '', armed = false;
         a.shown = (v, t) => {
           shown(v, t);
           tail = (tail + String.fromCharCode(v)).slice(-40);
-          if (armed || !tail.includes('strikes at you with their sword')) return;
+          if (armed || !tail.includes('strikes at you with their ')) return;
           dq0SceneNow(m, (h, L, K, at) => {      // (A scene's: the item's record and the actor's arm, on the copies)
             const per = Math.floor(0x2000 / L.itemSize);
             for (let k = 0; k < L.nactors && !armed; k++) {
@@ -263,9 +265,9 @@ module.exports = {
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3 -S /ram/s.sc", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -S /ram/s.sc", 'drop the staff',
         'defend dodge', 'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'attack', 'attack', 'look at the body',
-        'take the leather vest from the body', 'quit', 'dq0 -d /ram/g -S /ram/s.sc', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -R 3 -S /ram/s.sc", 'quit',
+        'take the leather vest from the body', 'quit', 'dq0 -d /ram/g -S /ram/s.sc', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -S /ram/s.sc", 'quit',
         'echo $status']) },
       start(m) {   // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
         // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
@@ -274,7 +276,23 @@ module.exports = {
         // things2's errands, step2's courage after a wound) the dice had the other bandit close as its fellow fell, knock the
         // character senseless and leave it in shock before the vest; at -R 1, 3 and 4 it holds off and the vest's taken
         // (dq0kit and dq0strip alike), at 0 and 5 the character's in shock: the dice's, the same rules)
-        dq0Scene(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
+        // (dice2: no -R; as the hauberk's put on, the bandit the dice brought before (did 21: knee boots, a dagger in its
+        // sheath, a shortsword in its scabbard) put beside the character and engaged, the rest sent off a while: the minds'
+        // keyed steps brought did 18 instead, an iron key of its own on it; its fight rigged, the character's blows landing,
+        // none struck back, the bandits' missing: the one that draws its weapon and closes felled, as the dice once had it)
+        const closer = (h, L, K, at) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && (h[at(j) + L.aDid] | h[at(j) + L.aDid + 1] << 8) === 21);
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          const R = dq0Rec(m), q = R.at(h[at(k) + L.aDen]), d = h[L.pcFace] & 7, w16 = (p, v) => { h[p] = v & 255; h[p + 1] = v >> 8 & 255; };
+          const x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d];
+          w16(at(k) + L.aX, x); w16(at(k) + L.aY, y); h[at(k) + L.aSn] = h[L.pcSn]; h[at(k) + L.aPos] = K.POS_STANDING;
+          R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = h[L.pcSn];
+          h[at(k) + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+          h[at(k) + L.aDoing] = K.DO_FIGHT;
+        };
+        dq0Scene(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })).concat([{ g: 1, line: 'wear the mail hauberk', n: 1, call: closer,
+          rig: [{ kind: 'ATTACK', actor: -1, faces: [1, 100] }, { kind: 'ATTACK', faces: [99, 1] }] }]));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -372,9 +390,9 @@ module.exports = {
       init: 't_rc', cycles: 1700e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', lines: ['echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', 'echo hour 128 >> /ram/s.sc', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3 -S /ram/s.sc", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', 'echo hour 128 >> /ram/s.sc', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -S /ram/s.sc", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
-        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -R 3 -S /ram/s.sc", 'quit',
+        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm' -S /ram/s.sc", 'quit',
         'echo $status'] })) },
       start(m) {   // (The scene set, 2026-11-03, as dq0kit's: as the first attack's typed, the bandits wary: the one down finished, the rest no longer
         // fighting on, the dice had it dead before it looked; and at the look a thing on the body beneath its clothes, I_HIDDEN and not known, a purse's
@@ -387,7 +405,9 @@ module.exports = {
             if (named(j) === 'leather vest' && b[o + L.iWhere] === m.dq0.layout().K.IW_ITEM && (b[o + L.iX] | b[o + L.iX + 1] << 8) === i) b[o + L.iFlags] = b[o + L.iFlags] & ~0x20 | DQ0_I.HIDDEN;
           }
         };
-        dq0Scene(m, [...[0, 1, 2, 3, 4, 5].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })), { g: 1, line: 'look at the body', n: 1, call: beneath }]);
+        // (dice2: no -R; its fight rigged from the hauberk on, as dq0kit's: the bandit that closes felled)
+        dq0Scene(m, [...[0, 1, 2, 3, 4, 5].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })), { g: 1, line: 'look at the body', n: 1, call: beneath },
+          { g: 1, line: 'wear the mail hauberk', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [1, 100] }, { kind: 'ATTACK', faces: [99, 1] }] }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -688,7 +708,7 @@ module.exports = {
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -R 3 -S /ram/s.sc", 'drop the staff',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -S /ram/s.sc", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
         'take the leather vest from the body', 'take the belt from the body', 'quit', 'echo $status']) },
       start(m) {
@@ -699,7 +719,9 @@ module.exports = {
         // things2's errands, step2's courage after a wound) the dice had the other bandit close as its fellow fell, knock the
         // character senseless and leave it in shock before the vest; at -R 1, 3 and 4 it holds off and the vest's taken
         // (dq0kit and dq0strip alike), at 0 and 5 the character's in shock: the dice's, the same rules)
-        dq0Scene(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
+        // (dice2: no -R; its fight rigged from the hauberk on, as dq0kit's: the bandit that closes felled)
+        dq0Scene(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })).concat([{ g: 1, line: 'wear the mail hauberk', n: 1,
+          rig: [{ kind: 'ATTACK', actor: -1, faces: [1, 100] }, { kind: 'ATTACK', faces: [99, 1] }] }]));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1786,6 +1808,9 @@ module.exports = {
         'put the chisel in the drawer', 'look in the drawer', 'close the drawer', 'lock the drawer', 'open the drawer', 'look in the secret drawer', 'search the desk',
         'put the dagger in the secret drawer', 'look in the secret drawer', 'search the desk', 'open the drawer', 'take all from the desk', 'quit',
         'echo $status'] })) },
+      start(m) {   // (The first search a success, dice2: the secret drawer found by it, as the test means)
+        dq0Scene(m, [{ g: 1, line: 'search the desk', n: 1, rig: [{ kind: 'TEST', a: 'P_SEARCH', grade: 'pass' }] }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '');
@@ -2484,7 +2509,10 @@ module.exports = {
           'take the rations from the backpack\r' + dq0Typed(['inventory', 'quit', 'echo $status']);
       })() },
       start(m) {
-        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } })));
+        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } })).concat([{ g: 2, line: 'stop', n: 1,
+          rig: [{ kind: 'ATTACK', actor: -1, faces: [1, 100] }, { kind: 'ATTACK', faces: [99, 1] }] }]));   // (The fight after the second
+          //   game's stop the character's, dice2: its blows landing, the ghoul's missing, the ghoul felled; the keyed dice killed
+          //   the character before its inventory, as the stop's step kept the pack on)
         // (reach1's, 2026-11-20: a step's words told as it's done, so typed as the pack comes off is typed in the round after the
         //  step before's words, the torch laid down (LATER cycles on: a line typed just between two steps, a flight's held to
         //  the reach's end, the report's); the crowbar's, as the fight takes its round after "You reach for your backpack.")
@@ -2776,7 +2804,11 @@ module.exports = {
       init: 't_rc', cycles: 600e6 + EMPTYPLACE.length * 150e6,
       machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 3 -c /ram/c.hm -T -k \'chest,key,lockpicks,sack,table\'', ...EMPTYPLACE, 'quit', 'echo $status'] })) },
-      start(m) { this.timer = dq0Timer(m); },
+      start(m) {
+        this.timer = dq0Timer(m);
+        dq0Scene(m, [{ g: 1, line: 'unlock the chest with the lockpicks', n: 1, rig: [{ kind: 'TEST', a: 'P_PICKLOCK', grade: 'fail' }] }]);   // (The
+        //   picking failed, dice2: the chest still locked for plain "unlock"'s key)
+      },
       expect: ['% echo $status'],
       check(m) {
         const A = dq0Answers(m.out), f = [], a = (l, n = 0) => (A.filter(x => x.cmd === l)[n] || { text: '(no answer)' }).text;

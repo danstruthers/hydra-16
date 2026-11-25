@@ -1,4 +1,4 @@
-; dice.s - (dq0null) the dice by who asks (the referee skeleton's, ../dq0/referee.h's dice_to): ../dq0/dice.inc;
+; dice.s - (dq0null) the keyed dice (the referee skeleton's, ../dq0/referee.h's dice_key): ../dq0/dice.inc, the main RAM's;
 ; and the window's bank read and set (the skeleton's put: getbank, setbank, as dq0harn's bank.s has them)
 
             .include    "../dq0/dice.inc"

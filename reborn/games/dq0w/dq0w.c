@@ -7587,9 +7587,11 @@ static unsigned char dj;                        /* (The early jobs walked: the d
 unsigned char den_held (void)
 {
     hub_map (0);
-    if (HUB->scene != HUB->scene_d) {
-        return 0;                               /* (A test's scene to put in place: the minds' intents carried out, their
-                                                **   settle let end, so they come round to theirs; the UI's line waits) */
+    if ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d) {
+        return 0;                               /* (A line's test scene to put in place: the minds' intents carried out,
+                                                **   their settle let end, so they come round to theirs; the UI's line
+                                                **   waits.  Not a scene no line waits for (dq0hold's SO_DUE, made due as
+                                                **   a line's typed): its hold kept, dice2, 2026-11-25) */
     }
     if (!dj) {
         return ui_first ();                     /* (Not main's job: a turn's wait, the populations' (wkept.c's) as
