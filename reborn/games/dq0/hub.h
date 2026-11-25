@@ -1817,6 +1817,18 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   world's to set, a scene with none of the maker's) */
     struct dkey     dkey;                       /* The referee's keyed dice's keeping (struct dkey's) */
     struct rig      rig;                        /* A test's rigged dice (the referee's: struct rig's) */
+    /* The lockstep turns pace (GAME-CRITIQUE.md's 6.4, the user's of 2026-11-17, lock1's): at the turns pace the UI
+    ** takes a line (but one held for the character, as it's free) only as the world, the minds and the senses are
+    ** idle, every intent it set going carried out and the denizens' turn done for that moment of the game, so the
+    ** game a line finds is the same whatever the tasks' timing (dq0w.c's lockstep, jobs.s) */
+    volatile unsigned char ui_want;             /* The UI's: bumped after each thing it sets going (a line taken, an
+                                                **   intent in the ring) */
+    volatile unsigned char w_idle;              /* The world's: ui_want as it read it, all of it done since (its
+                                                **   lockstep's quiet): the UI's next line taken when they're equal */
+    volatile unsigned char mk_nap;              /* The maker's: 1 as it sleeps out a long task at the real paces, the
+                                                **   world's events not ringing it (hub.c's hub_event): no burst of
+                                                **   rings let go as it wakes, some 30,000 cycles a fight round's in a
+                                                **   line's first letter (lock2's F1, 2026-11-25) */
 };
 #define AL_REACH        0x1F
 #define AL_NOFIRE       0x40
@@ -1906,6 +1918,9 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR, LK_REST, LK_LIT };  
                                                 **   LK_REST's: its rest to tell) */
 #define LC_WHOLE        4                       /* (LK_NEAR's: its last look not standing, the whole look one way done
                                                 **   as LK_WAY's would, no far part to ask: a request the less) */
+#define LC_BEGIN        8                       /* (LK_REST's, as its look goes on, at the turns pace: a way on told "so
+                                                **   far" sees on now, the rest's lead-in the UI's to tell: dq0p.c's
+                                                **   rest_seen, the UI's rest_begin; the reply's ch without it) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,
@@ -2340,6 +2355,9 @@ struct wsave {
 **   own hub.scene_m maker +world                               (The maker's part, or the world's word it has none)
 **   own hub.dkey referee                                       (The keyed dice's keeping: dice2)
 **   own hub.rig referee                                        (A test's rigged dice: its scene's SCN_HUB, dice2)
+**   own hub.ui_want ui                                         (The lockstep turns pace: what the UI's set going,
+**   own hub.w_idle world                                       (all of it done, the world's: lock1's, 2026-11-24)
+**   own hub.mk_nap maker                                       (The maker asleep out of the events' rings: lock2's F1)
 **   own.
 */
 

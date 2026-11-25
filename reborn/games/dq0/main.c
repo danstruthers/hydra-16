@@ -226,8 +226,12 @@ static void __fastcall__ ovl_in (int fd)
 
 /* ---- The character: the ruleset's (hmchar's), its file read by the referee */
 
-/* A line written to the window's consctl: on an fd kept open (raw mode lasts while the consctl that set it is) */
-void __fastcall__ consctl (const char* what)
+/* A line written to the window's consctl: on an fd kept open (raw mode lasts while the consctl that set it is).
+** Overlay 13's since lock2 (2026-11-25): the main RAM's room, the lockstep's; called at the start, a resize and the
+** end, never as a line's answered */
+#pragma code-name (push, "OV13CODE")
+#pragma rodata-name (push, "OV13RODATA")
+void __fastcall__ o_consctl (const char* what)
 {
     static int fd = -1;
 
@@ -238,6 +242,8 @@ void __fastcall__ consctl (const char* what)
         write (fd, what, strlen (what));
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW_start_end_CODE")
 #pragma rodata-name (push, "SW_start_end_RODATA")
@@ -985,6 +991,38 @@ unsigned char o_still_out (void)
     return 1;
 }
 
+/* A line entered taken now (main's): as the character's free (else held, but a line that breaks off), and at the turns
+** pace, free or asking, only as the world's said all the UI set going is done (the lockstep: hub.h's ui_want, w_idle),
+** or a line held for the character as it's free (taken before the denizens' turn after its E_READY, as ever: the world
+** waits on the UI for that, ui_eq's) */
+unsigned char o_line_free (void)
+{
+    unsigned char p[2];
+    unsigned long r[2];
+
+    if (begun) {
+        return 0;                               /* (A blow begun, its sentence not ended: the line after it, not
+                                                **   between its words, blows.c's fight_begin) */
+    }
+    if (busy && (held || !asking)) {
+        return !held;
+    }
+    hub_mem (0, p, (const void*) &HUB->pace, 1);
+    hub_mem (0, p + 1, (const void*) &HUB->pc_out, 1);
+    if ((p[0] & 3) != 3 || p[1]) {
+        return 1;                               /* (A real pace; or senseless, its blackout the world's time: a line
+                                                **   taken as ever, refused as it was, out_line's) */
+    }
+    hub_mem (0, r, (const void*) &HUB->pc_ready, 4);
+    hub_mem (0, r + 1, (const void*) &HUB->now, 4);
+    if (r[0] > r[1]) {
+        return 1;                               /* (Free to the UI, but the world's busy with it still, a foe's blows
+                                                **   at it: no quiet to come, the line taken as ever) */
+    }
+    hub_mem (0, p, (const void*) &HUB->ui_want, 2);
+    return held || p[0] == p[1];
+}
+
 void o_fore_sync (void)
 {
     unsigned char q[2], c, k, f, r[5];
@@ -992,17 +1030,31 @@ void o_fore_sync (void)
 
     hub_mem (0, q, (const void*) &HUB->iq_head, 2);     /* (The intents' ring's head and tail: iq_head, iq_tail) */
     hub_mem (0, &c, (const void*) &HUB->ui_cmd, 1);
+    hub_mem (0, &t, (const void*) &HUB->tpr, 2);
     if (owed && !busy && q[0] == q[1]) {
         hub_mem (0, &k, (const void*) &HUB->beat[T_WORLD], 1);
-        if ((unsigned char) (k - obeat) >= 2) {
+        hub_mem (0, r, (const void*) &HUB->ui_want, 2);  /* (The lockstep's, at the turns pace: the world's quiet
+                                                **   for all the line set going, not its passes, the tasks' timing) */
+        if (t ? (unsigned char) (k - obeat) >= 2 : r[0] == r[1]) {
             c = owed = 0;                       /* (Its intent taken and the world round again since: an answer
                                                 **   without news to the character, if any, given) */
             hub_mem (0, (void*) &HUB->ui_cmd, &c, 1);
         }
     }
-    hub_mem (0, &t, (const void*) &HUB->tpr, 2);
     hub_mem (0, r, (const void*) &HUB->slot[SLOT_WORLD].state, 5);   /* (Its state, kind, from, seq, actor: RQH's) */
-    k = r[0] == REQ_POSTED && (q[0] != q[1] || (c && r[1] == RS_ATTACK && !r[4]));
+    k = (c && busy) || (r[0] == REQ_POSTED && (q[0] != q[1] || (c && r[1] == RS_ATTACK && !r[4])));   /* (And all the
+                                                **   while the character's busy with a line in hand: the round it's held
+                                                **   behind asks RS_WIELD and RS_EXERT before its blow's RS_ATTACK, each
+                                                **   worked at once, not after the line's parse and on the CPU left over:
+                                                **   158,000 and 108,000 cycles of dq0fightcmd's 954,366, lock2's F1,
+                                                **   2026-11-25) */
+    if (t && c && busy && !begun && r[0] == REQ_POSTED && r[1] == RS_ATTACK && !r[4] && (hub_mem (0, q, (const void*) &HUB->ui_eq, 2),
+        hub_mem (0, r, (const void*) &HUB->eq_head, 1), hub_mem (0, r + 1, (const void*) &HUB->dq_head, 1), q[0] == r[0] && q[1] == r[1])) {
+        o_fore_set (fored = FS_UI | FS_SENS | FS_CMD);  /* (The referee out of the foreground meanwhile: the
+                                                **   words out first, not a slice each by turns with its blow's work) */
+        fight_begin ();                         /* (The round a line's held behind: its blow's first words now, not
+                                                **   after the referee's answer, at the real paces: blows.c's, lock2's F1) */
+    }
     f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (k ? FS_REF : 0) : c ? FS_UI | FS_PARSE : 0;
                                                 /* (The turns pace: the command parser with the UI, the world not: a
                                                 **   line's parse in the background some 260,000 cycles of its 165,000,
@@ -1010,6 +1062,31 @@ void o_fore_sync (void)
     if (f != fored) {
         o_fore_set (fored = f);
     }
+    hub_mem (0, &k, (const void*) &HUB->look.ch, 1);
+    if (k & LC_BEGIN) {
+        o_rest_begin ();                        /* (A look one way's rest seeing on, at the turns pace: its lead-in now,
+                                                **   way.c's, lock4's, 2026-11-25) */
+    }
+}
+
+/* The UI's nap four times as long, nothing said (main's): while the senses work a look one way out at the real paces
+** (LK_WAY ... LK_NEAR, its near part told: not its rest's, after the prompt, a line perhaps typed meanwhile); at the turns
+** pace all the while what the UI set going is under way (ui_want, w_idle: the lockstep's), but in a long task or a reach's
+** steps, a look's rest's too, told in the answer there (Ti4).  Its events,
+** the world's quiet and the replies ring it as ever; only the keys wait the longer: each look at them the UI's loop and
+** the console's call, some 13,000 cycles a fourth tick, a sixth of a look's CPU.  Not all an answer at the turns pace: a
+** line that breaks off a long task or a reach's steps, typed meanwhile, landing later (dq0reachflee2's flee; lock4's,
+** 2026-11-25) */
+unsigned char o_nap_long (void)
+{
+    unsigned char r[2], w[2], k;
+    unsigned t;
+
+    hub_mem (0, &t, (const void*) &HUB->tpr, 2);
+    hub_mem (0, w, (const void*) &HUB->ui_want, 2);        /* (ui_want, w_idle) */
+    hub_mem (0, &k, (const void*) &HUB->pc_task.kind, 1);
+    hub_mem (0, r, (const void*) &HUB->look.state, 2);     /* (Its state, kind: RQH's) */
+    return (!t && w[0] != w[1] && !k && !reach) || (r[0] == REQ_POSTED && (unsigned char) (r[1] - LK_WAY) <= (t ? LK_NEAR : LK_REST) - LK_WAY);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -1189,6 +1266,14 @@ static unsigned char events (void)          /* (How many there were) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
                                                 **   knocked senseless by one, busy again; dead of one, the
                                                 **   game's end: no prompt, however the tasks' timing falls) */
+                if (stir_held && pace == PACE_TURNS) {
+                    stir_held = 0;              /* (A stir held as a line was answered: at the turns pace told here,
+                                                **   before the prompt, the world's work for that moment all done (its
+                                                **   E_READY after it, dq0w.c's): the senses' record it tells the same
+                                                **   whatever the tasks' timing, and never after the next line's keys
+                                                **   (lock2's, 2026-11-25) */
+                    stir ();
+                }
                 if (lsn) {
                     look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
                 }
@@ -1245,7 +1330,11 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   it comes round, numb's) */
                 out_told |= k != V_STIR ? 2 : 0;
             } else if (k == V_STIR) {
-                if ((t_next () || inn || HUB->ui_cmd) && (HUB->tpr || !busy)) {
+                if (HUB->tpr ? t_next () || inn || HUB->ui_cmd : !busy || asking) {   /* (At the turns pace held as the
+                                                **   character's free, told at its E_READY or a line's own answer's end;
+                                                **   or asking, told as its answer's taken, main's; told as it comes as
+                                                **   it's busy, the world waiting on the UI's seeing it (ui_eq):
+                                                **   whatever the keys' timing, lock2's) */
                     stir_held = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
                                                 **   typed: told as it's entered and answered, or let go, its echo
@@ -3122,6 +3211,8 @@ static void act (char* l)
     }
 }
 
+static unsigned char sc_seen;                   /* (A test's line's scene waited for, its number: main's) */
+
 int main (int argc, char* argv[])
 {
     unsigned shown = 0, t;
@@ -3134,7 +3225,8 @@ int main (int argc, char* argv[])
     begin (argc, argv);
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
-        while (t_haskey ()) {
+        while (!begun && t_haskey ()) {   /* (Not as a blow's begun: its sentence ended first, a line's echo not
+                                                **   in it, blows.c's fight_begin) */
             k = t_getkey ();
             if (k == CH_ESC) {
                 wset (WS_PAUSE, paused = !paused, 0);
@@ -3155,9 +3247,13 @@ int main (int argc, char* argv[])
                 }
             }
         }
-        if (t_next () && (!busy || !held)) {
-            if ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d) {
+        if (t_next () && line_free ()) {
+            if ((HUB->scene & SCENE_LINE) && HUB->scene != sc_seen) {
                 scene_wait ();                  /* (A test's scene posted as it was entered: in place first, part scene's) */
+                sc_seen = HUB->scene;           /* (Each its once: one put in place before the line came here as well) */
+                ++HUB->ui_want;                 /* (Then, at the turns pace, the line taken at the world's quiet after
+                                                **   it, what it set going done: its den_seq's look, a stir; lock2's) */
+                continue;
             }
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
@@ -3192,7 +3288,8 @@ int main (int argc, char* argv[])
         if (!busy && !inn && (rebar || pending[0])) {   /* (Not while a line's being typed: a stop typed during "take
                                                 **   all" acted on before its next thing, the user's rule of a line typed
                                                 **   during a reach, 2026-11-06; dq0reachstop's, 2026-11-07) */
-            HUB->ui_giving = 1;                /* (Being given, as a line's command: "take all"'s next thing's two
+            HUB->ui_giving = 1;
+            ++HUB->ui_want;                     /* (Being given, as a line's command: "take all"'s next thing's two
                                                 **   intents falling with the clock moved between them or not, 2026-11-04) */
             when_free ();                       /* (A door barred, a thing lifted out: part positions's) */
             hub_map (0);
@@ -3204,6 +3301,7 @@ int main (int argc, char* argv[])
                                                 **   kept carried out again, its end; till the next's, s_command's) */
             hub_map (0);
             HUB->ui_giving = 1;                 /* (Being given, as a line's command: ui_giving's) */
+            ++HUB->ui_want;
             act (0);
             hub_map (0);
             HUB->ui_giving = 0;
@@ -3216,7 +3314,7 @@ int main (int argc, char* argv[])
             held = 0;                           /* (That line let go, parts.c's: its parse with it) */
             cq_drop ();
         }
-        if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
+        if ((l = (char*) t_next ()) != 0 && line_free ()) {
             letters_in (l);                     /* (Its letters made its things' names first: letters.c's) */
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
             if (!held) {
@@ -3241,6 +3339,13 @@ int main (int argc, char* argv[])
                     l = 0;
                 }
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
+                if (stir_held && pace == PACE_TURNS) {
+                    stir_held = 0;              /* (A stir held as it asked: told as the answer's taken, its own, so a
+                                                **   look typed as the answer doesn't tell it again; the stir came after
+                                                **   the question, before the world's quiet, and the keys anywhere
+                                                **   about it: dq0tasks' rat told twice in one answer, lock2's) */
+                    stir ();
+                }
             }
             if (l && !held) {
                 heard_rep = face_told = stop_told = 0;   /* (A command typed, not held for the character before: the sounds
@@ -3284,6 +3389,7 @@ int main (int argc, char* argv[])
         if (l) {
             HUB->ui_giving = 1;                 /* (Its command being given: the turns pace waits for it, the
                                                 **   world's turns_run) */
+            ++HUB->ui_want;                     /* (The lockstep's: after ui_giving, so the world's quiet is of the last) */
             iqh = HUB->iq_head;                 /* (The UI's intents' ring as the line's taken: one sent, its answer
                                                 **   owed, the world's news) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
@@ -3338,13 +3444,17 @@ int main (int argc, char* argv[])
                                                 **   give way till the character's news comes, events'; an intent
                                                 **   sent, the character not busy, its answer owed too: a step that
                                                 **   can't be taken, the world's words) */
-        } else if (!(fored & FS_CMD)) {
+        } else if (!(fored & FS_CMD) && !t_next ()) {   /* (Nor while a line entered waits, the turns pace's quiet:
+                                                **   its part copied in as it's taken, the world not kept waiting on the UI's
+                                                **   copy as it looks for the quiet, lock2's) */
             ready ();                           /* (The commands' part back, if another's in; not while its
                                                 **   answer's owed at the real paces (fored's FS_CMD, ui_cmd's): its copy
                                                 **   not the world's time as it works the answer out, nor in the way of
                                                 **   its first news's part, 2026-11-17) */
         }
-        if (stir_held && !inn && !HUB->ui_cmd && !took) {
+        if (stir_held && !inn && !HUB->ui_cmd && !took && (pace != PACE_TURNS || l)) {   /* (At the turns pace told at
+                                                **   the character's E_READY, events', or here as a line the UI answers
+                                                **   alone is done (l, ui_cmd none), the world's no part in it: lock2's) */
             stir_held = 0;
             t_flush ();                         /* (Its answer out, not waiting on these words) */
             stir ();                            /* (A stir held while the line was typed and answered: told now, its
@@ -3357,9 +3467,7 @@ int main (int argc, char* argv[])
         HUB->ui_dq = (unsigned char) dplace;
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
         k = t_wrote;
-        hub_nap (k && t_haskey () ? 0 : quick && k ? (--quick, 1) : HUB->tpr && !k &&
-            HUB->look.state == REQ_POSTED && (unsigned char) (HUB->look.kind - LK_WAY) <= LK_NEAR - LK_WAY ? nap << 2 :
-            nap);  /* (Keys that came as
+        hub_nap (k && t_haskey () ? 0 : quick && k ? (--quick, 1) : !k && nap_long () ? nap << 2 : nap);  /* (Keys that came as
                                                 **   it said something,
                                                 **   a line typed as an answer or a look went out: no nap, taken at
                                                 **   once, 2026-10-30.  A fiftieth of a second: the keys looked
@@ -3380,7 +3488,7 @@ int main (int argc, char* argv[])
                                                 **   at the first prompt 823,616 cycles, dq0fightcmd's); and while the senses work a look one way
                                                 **   out, nothing said, four times the nap: their look the CPU (not its
                                                 **   rest's, after the prompt, a line perhaps typed meanwhile),
-                                                **   2026-11-18) */
+                                                **   2026-11-18; at the turns pace its rest's too, lock4's: nap_long's) */
     }
     finish ();
     return 0;

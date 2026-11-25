@@ -17,6 +17,9 @@
 #include "cmds.h"
 #include "dq0said.h"
 
+unsigned char begun, begun_n, said_skip;      /* (dq0.h's: the character's blow begun, its first words' length, and
+                                                **   those not to be said again: fight_begin's, lock2's F1) */
+
 /* A creature's body (hub.h's BD_*, the actor's: kinds.txt's), for its getting up in a fight (the book's Rise: said.txt's
 ** @rises, its fall told after the blow, the world's E_BEAT WB_FALLEN) */
 static unsigned char __fastcall__ body_of (unsigned char k)
@@ -86,13 +89,88 @@ void __fastcall__ o_blow (const struct msg* m)
     }
 }
 
+/* Whether the character sees one named s (who: its actor plus 1, 0 a stray's): told seen as it closed with it, the
+** senses' look not since, by its name as it was told then (2026-11-24); else among those the senses' last look saw
+** (a step behind it), or one of its name: 1, or 0.  Overlay 6's; overlay 15's fight_begin through its stub, fight_seen */
+#pragma static-locals (push, off)               /* (On the C stack, the main RAM: hub_mem's copies) */
+unsigned char __fastcall__ o_fight_seen (const char* s, unsigned char who)
+{
+    char at[12];
+    unsigned char k, n;
+
+    hub_mem (SIGHT_BANK, &k, &SIGHT->seq, 1);
+    if (k == close_seq && close_who && close_who == who) {
+        return 1;
+    }
+    hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
+    for (k = n; k--; ) {
+        hub_mem (SIGHT_BANK, at, SIGHT->den[k].name, sizeof at);
+        if (!strcmp (at, s)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+#pragma static-locals (pop)
+
+/* The character's blow begun (o_fore_sync's: a line in hand held behind its round, the world's slot its RS_ATTACK at an
+** actor posted, every event told): its first words said before the referee works the blow out, "You strike at the giant
+** rat", the rest of the sentence its E_FIGHT's (o_fight_said's: begun, said_skip).  Only a melee blow struck at one
+** standing (not a shot, a grapple, a kick or a butt, not from the floor, not at one lying senseless): its words begin
+** so whatever comes of it (said.txt's FIGHT.begun, @blow's first words).  The first letter of a line held behind a
+** fight's round no longer waits for the referee's RS_ATTACK, some 150,000-250,000 cycles (lock2's F1, 2026-11-25).
+** Overlay 15's (overlay 6 full) */
+#pragma code-name (push, "OV15CODE")
+#pragma rodata-name (push, "OV15RODATA")
+#pragma local-strings (push, on)
+#pragma static-locals (push, off)
+void o_fight_begin (void)
+{
+    struct { unsigned char other, steps, a, b, c; unsigned w1, w2; } q;
+    char nm[13];
+    struct msg c;
+    unsigned char k, d, u;
+
+    hub_mem (0, &q, &HUB->slot[SLOT_WORLD].other, sizeof q);
+    hub_mem (0, &k, &HUB->pc_strike, 1);
+    if ((d = q.other) == 0 || d > NACTORS || (q.w2 & (RS_MISSILE | RS_GRAPPLE | RS_PRONE_A)) || k == SK_KICK || k == SK_HEAD) {
+        return;
+    }
+    hub_mem (0, &k, &HUB->actor[d - 1].doing, 1);
+    if (k == DO_DOWN) {
+        return;
+    }
+    hub_mem (0, nm, HUB->actor[d - 1].name, 12);
+    nm[12] = 0;
+    u = !fight_seen (nm, d);
+    hub_mem (0, &k, &HUB->pc_aim, 1);
+    said_s[0] = u ? "?" : nm;
+    said_s[3] = 0;
+    c.kind = UK_FIGHT;
+    c.who = 0;
+    c.a = 0;
+    c.b = k & FW_FIRST;
+    c.w1 = SAID_FIGHT_BEGUN << 8;
+    hub_mem (0, &k, &HUB->folk[d - 1], 1);
+    c.w2 = u ? 32 : k << 7;
+    said_q = 1;
+    outcome_words (&c);
+    said_q = 0;
+    begun_n = strlen (lb);
+    say (lb);
+    t_flush ();
+    begun = d | (u ? 0x80 : 0);
+}
+#pragma static-locals (pop)
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* Blow m told (UK_FIGHT, said.txt's FIGHT rows): the tenths the character's knocked senseless for, or 0 */
 #pragma static-locals (push, off)               /* (Its event on the C stack, the main RAM: the words' overlay reads it) */
 unsigned __fastcall__ o_fight_said (const struct msg* m)
 {
-    static unsigned char n;                     /* (What the character sees: whether it sees the denizen, or one of its
-                                                **   name: the senses' last look, a step behind it) */
-    static char at[12];
+    unsigned char b;
     static const char* line[4];                 /* (The referee's lines: the attacker's weapon, the defender's, what the
                                                 **   attacker's strike did, what the defender's did) */
     static const char* aname;                   /* (The attacker's name, the defender's: 0 the character) */
@@ -104,21 +182,16 @@ unsigned __fastcall__ o_fight_said (const struct msg* m)
     char* s;
 
     hub_mem (DEN_BANK, f, FIGHT_AT + E_FIGHT_WORDS (*m) % NFIGHTS, sizeof *f);
-    hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
     s = pc || (f->which & FW_STRAY) ? f->def : f->att;     /* (A stray's: the one it struck, seen or not) */
+    b = begun;
+    begun = 0;
+    if (b && (!pc || (b & 0x7F) != E_FIGHT_DEF (*m))) {
+        say (".");                              /* (Not the blow begun, fight_begin's: its words ended) */
+        b = 0;
+    }
     if (*s) {
-        hub_mem (SIGHT_BANK, &k, &SIGHT->seq, 1);
-        if (k == close_seq && close_who && !(f->which & FW_STRAY) && close_who == (pc ? E_FIGHT_DEF (*m) : m->who)) {
-            k = 0;                              /* (Told seen as it closed, the senses' look not since: by its name, as
-                                                **   it was told then, not "something" the next line, 2026-11-24) */
-        } else for (k = n; k--; ) {
-            hub_mem (SIGHT_BANK, at, SIGHT->den[k].name, sizeof at);
-            if (!strcmp (at, s)) {
-                break;
-            }
-        }
-        if (k == 0xFF) {
-            strcpy (s, "?");                    /* (Not seen: something) */
+        if (b ? b & 0x80 : !o_fight_seen (s, f->which & FW_STRAY ? 0 : pc ? E_FIGHT_DEF (*m) : m->who)) {
+            strcpy (s, "?");                    /* (Not seen: something; a blow begun, as its first words had it) */
             untarget |= !pc && !(f->which & FW_STRAY);  /* (Struck at by it: the character turns, its target let
                                                 **   go) */
         }
@@ -165,6 +238,13 @@ unsigned __fastcall__ o_fight_said (const struct msg* m)
         c.w2 |= folk_of (E_FIGHT_DEF (*m)) << 7;
     }
     c.w2 |= struck (line[2]) | struck (line[3]) << 2;
+    if (b) {
+        if (k <= O_CRIT) {
+            said_skip = begun_n;                /* (Its first words said as it began: the rest of the sentence) */
+        } else {
+            say (".");                          /* (No strike after all: its first words ended) */
+        }
+    }
     outcome_words (&c);
     if ((k >= SAID_FIGHT_GONE && k != SAID_FIGHT_STRAY) || k == O_RISE) {
         return 0;                               /* (No blow: nothing left in) */

@@ -377,8 +377,15 @@ void __fastcall__ s_map (const char* rules)
         if (n == 0xFF) {
             n = y;
         }
-        if (y > n && !ml[y]) {
-            ++held;
+        if (y > n && !ml[y] && (held || pace != PACE_TURNS || ((!cq || y >= MAP_H / 2) && (!side || k >= np)))) {
+            ++held;                             /* (A row with nothing on it said at once, nothing held before it, when
+                                                **   it would be said all the same: above the character's row, turned
+                                                **   (its @ the middle row's, cq); or beside a panel's line, its words
+                                                **   the panel's alone.  The same words, said as the row's drawn, not
+                                                **   with the next that has something: the rows of nothing to the map's
+                                                **   end one pause, 2.43M at the turns pace, lock4's, 2026-11-25.  At the
+                                                **   turns pace: at the real paces the maker's making ahead after the map
+                                                **   came out otherwise, dq0lookfar's listen) */
         } else {
             for (; held; --held) {
                 map_line (line, y - held, k++);

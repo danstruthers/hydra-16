@@ -136,3 +136,5 @@ stub start dungeon_begin
 stub begin dungeon_begin
 scene          -      A test's scene, the world's part (wscene.c: the tests' harness's, scene1, 2026-11-24)
 wdice          -      The world's keyed dice: a thing let fall, a missile's stray and flight (wdice.c: dice2, 2026-11-24)
+lockstep       -      The lockstep turns pace's quiet (jobs.s's lockstep: lock1's, its part lock2's, 2026-11-25)
+stub lockstep lockstep

@@ -176,6 +176,7 @@ static unsigned char giving (void)
         (!HUB->tpr && (HUB->pc_ready > HUB->now || HUB->iq_head != HUB->iq_tail || HUB->ui_giving))) {
         return 2;
     }
+    HUB->mk_nap = 0;                            /* (Rung by the events again: nap's) */
     if (!HUB->tpr && (HUB->ui_cmd | HUB->ui_keys)) {
         return 1;                               /* (The turns pace: while it's in hand) */
     }
@@ -204,6 +205,13 @@ unsigned char ahead_held (void)
 static unsigned char asked (void);
 static void nap (void)
 {
+    HUB->mk_nap = HUB->tpr != 0;                /* (At the real paces the events not ringing it meanwhile, hub_event's: a
+                                                **   fight's dozens, let go a slice at a time as it woke, 30,000 cycles
+                                                **   of a line's first letter, its words said and the console waiting;
+                                                **   up AH_NAP ticks at most, or as a request rings, and not again till
+                                                **   it's free to work, giving's: awake between, a background task's
+                                                **   slices away, it was rung there.  At the turns pace rung as ever:
+                                                **   the lockstep's, lock2's F1, 2026-11-25) */
     while (hy_sem_try (HUB->sem[T_MAKER]) == 0) {
     }
     if (!asked ()) {

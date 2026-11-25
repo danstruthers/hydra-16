@@ -121,6 +121,7 @@ int __fastcall__ hub_create (unsigned char banks)
     HUB->magic = HUB_MAGIC;
     HUB->version = HUB_VERSION;
     HUB->seg = seg;
+    HUB->ui_want = 1;                           /* (The lockstep's: nothing done yet, the world's w_idle 0) */
     for (t = 0; t < NTASKS; ++t) {
         if ((s = hy_sem_new (0, 0)) < 0) {
             return -1;
@@ -200,6 +201,10 @@ unsigned char __fastcall__ hub_send (const struct msg* m)
     }
     memcpy (&HUB->iq[h], m, sizeof *m);
     HUB->iq_head = n;                           /* (Written whole, then shown) */
+#ifndef HUB_ATTACHED
+    ++HUB->ui_want;                             /* (The lockstep's: set going, after it's in the ring, so a quiet the
+                                                **   world saw before it is the last count's) */
+#endif
     hub_ring (T_WORLD);
     return 1;
 }
@@ -231,7 +236,7 @@ void __fastcall__ hub_event (const struct msg* m)
     HUB->eq_head = h + 1;
     hub_ring (T_UI);                            /* (The UI woken to tell it: its loop's nap, hub_nap) */
     for (t = T_DENIZENS; t < NTASKS; ++t) {     /* (Those that wait for them) */
-        if (t != T_REFEREE && HUB->task[t]) {
+        if (t != T_REFEREE && HUB->task[t] && (t != T_MAKER || !HUB->mk_nap)) {
             hub_ring (t);
         }
     }

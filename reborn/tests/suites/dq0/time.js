@@ -11,6 +11,8 @@ const {
 } = require('../../lib/dq0.js');
 const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+// (dq0lockstep's lines: the rats about the way down at seed 3 moving as the character waits, turns and looks)
+const LOCK_LINES = ['look', 'wait 1 minute', 'turn around', 'wait 30 seconds', 'look', 'inventory', 'wait 1 minute', 'turn left', 'wait 2 minutes', 'look'];
 
 // Dingus Quest Zero's tasks' overlays as they are in their banks (at the first prompt: dq0starttime's), each the same as
 // ld65 made it (obj/games/NAME.hyx.ovl, each bank filled out to 8K with $FF): read from the card packed and unpacked
@@ -969,6 +971,44 @@ module.exports = {
         dq0Never(f, x1, 'E_TRAP', { to: 'TO_FOUND' }, 'the trap beside it found by a search that didn\'t reach it');
         dq0Need(f, x2, 'E_PORTAL', { po: 'PO_FOUND_TRAP', a: a => a >= 2 && a < 19 }, 'the search stopped part way, reaching the door, not finding its trap');
         dq0Need(f, x2, 'E_TRAP', { tk: 'TK_DARTS', tt: 'TT_DOOR', to: 'TO_FOUND' }, 'the dart trap not found by the search stopped part way');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lockstep', meaning: true, near: ['time'], what: "Dingus Quest Zero's lockstep turns pace (GAME-CRITIQUE.md's 6.4, the user's of 2026-11-17, lock1's): the UI takes a line only as the world, the minds and the senses are idle (hub.h's ui_want, w_idle), so a game at the turns pace is the same whatever the tasks' timing: seed 3 (dq0 -T, the giant rats about the way down) played three times with the same lines, each line's first key 0, 37,000 and 211,000 cycles after its prompt (acia.js's linePause: the lines landing at other phases of the denizens' turns, the minds' deciding and the senses' answers), the three games' stories the same, sentence for sentence, and the denizens' doings in them",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -u feudal -c hunter -o /ram/c.hm',
+        ...[0, 1, 2].flatMap(() => ['dq0 -p t -s 3 -c /ram/c.hm -T', ...LOCK_LINES, 'quit']), 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read, lags = [0, 37000, 211000];
+        let typed = '', g = -1;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) { if (/^dq0 -p t/.test(typed)) ++g; typed = ''; } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        a.linePause = () => g >= 0 && g < 3 ? lags[g] : 0;
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Prose(out), gs = [];
+        for (let i = s.indexOf('D I N G U S'); i >= 0; i = s.indexOf('D I N G U S', i + 1)) gs.push(i);
+        if (gs.length !== 3) return ['not three games: ' + gs.length];
+        const game = k => { const t = s.slice(gs[k], k + 1 < gs.length ? gs[k + 1] : s.length); return t.slice(0, t.indexOf('> quit')); };
+        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's)
+        const g0 = sents(game(0));
+        if (!g0.some(x => /giant rat/.test(x))) f.push('no rat met: the scene not set (' + game(0).slice(0, 400) + ')');
+        for (const k of [1, 2]) {
+          const gk = sents(game(k));
+          let i = 0;
+          while (i < g0.length && i < gk.length && g0[i] === gk[i]) i++;
+          if (i < g0.length || i < gk.length) f.push('game ' + (k + 1) + ' (its lines ' + [0, 37000, 211000][k] + ' cycles after their prompts) not the first game\'s, from sentence ' + i + ': ' + JSON.stringify(g0.slice(i, i + 3)) + ' against ' + JSON.stringify(gk.slice(i, i + 3)));
+        }
+        const dens = k => (m.dq0.games[k] || { dens: [] }).dens.map(e => [e.de, e.who, e.sx, e.sy, e.t].join(':')).join(' ');
+        if (m.dq0.games.length >= 3) for (const k of [1, 2]) if (dens(k) !== dens(0)) f.push('game ' + (k + 1) + ': its denizens\' doings not the first game\'s');
         return f;
       },
       sdcard: true

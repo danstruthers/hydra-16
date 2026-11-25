@@ -6,7 +6,12 @@
 // its reason).  A transcript's text: what the serial line drew, the status row and the typing row left out, wrapped
 // lines joined, cut into sentences; then each sentence counted, so that order doesn't matter (the timing noise moves
 // whole sentences).  Each test whose sentences differ: its sentences only in one run, with their counts; a test of the
-// noise list's, or a difference only in the noise list's sentences, marked as known noise.
+// noise list's, or a difference only in the noise list's sentences, marked as known noise.  A test listed with a
+// reason that begins "@real" (lock1's, 2026-11-24: the lockstep turns pace) is noise only in its games at a real pace:
+// its games at the turns pace (a game from its title, "D I N G U S ...", to the next; its pace its dq0 line's, "-p t",
+// those lines in the raw output in order, one a game) are held exactly, and a difference there is past the noise.
+// A sentence listed with a reason that begins "@real" (lock2's, 2026-11-25) is noise in a test's real-pace games
+// alone, the same way: its count in the test's turns-pace games held exactly.
 //
 // Usage: node sim/tools/sentdiff.js BEFORE AFTER [NAME ...] [--noise FILE] [--quiet]
 //   BEFORE, AFTER  two TRANSCRIPTS folders (a test missing from AFTER said; one only in AFTER, new)
@@ -64,6 +69,16 @@ function sentences(s) {
   }
   return out;
 }
+// Its sentences in its games at the turns pace alone, and those before its first game (null: its games and their dq0
+// lines not one for one, every game taken as a real pace's)
+function turnsOnly(raw) {
+  const all = sentences(raw), lines = raw.match(/(?<![\w\/.])dq0(?= |\r)[^\x1b\r\n]*/g) || [], out = [];
+  const starts = all.map((x, i) => /^D I N G U S/.test(x) ? i : -1).filter(i => i >= 0);
+  if (starts.length !== lines.length) return null;
+  out.push(...all.slice(0, starts.length ? starts[0] : all.length));
+  starts.forEach((a, k) => { if (/ -p t\b/.test(lines[k])) out.push(...all.slice(a, k + 1 < starts.length ? starts[k + 1] : all.length)); });
+  return out;
+}
 const count = a => { const m = new Map(); for (const x of a) m.set(x, (m.get(x) || 0) + 1); return m; };
 
 // Two transcripts' sentences that differ: [{ s, a: count before, b: count after, noise: its reason or null }]
@@ -91,9 +106,21 @@ function main(argv) {
     const a = path.join(A, name + '.txt'), b = path.join(B, name + '.txt');
     if (!fs.existsSync(b)) { console.log('MISSING ' + name + ' (not in ' + B + ')'); real++; realNames.push(name); continue; }
     if (!fs.existsSync(a)) { console.log('NEW ' + name + ' (not in ' + A + ')'); continue; }
-    const d = diff(read(a), read(b), noise);
+    const ra = read(a), rb = read(b), d = diff(ra, rb, noise);
     if (!d.length) continue;
-    const why = noise.tests.get(name), allNoise = !!why || d.every(e => e.noise);
+    let tc = null;                              // (A sentence's noise at the real paces alone: its turns-pace count held)
+    for (const e of d) if (e.noise && /^@real/.test(e.noise)) {
+      if (!tc) { const ta = turnsOnly(ra), tb = turnsOnly(rb); tc = ta && tb ? [count(ta), count(tb)] : [null, null]; }
+      if (!tc[0] || (tc[0].get(e.s) || 0) !== (tc[1].get(e.s) || 0)) e.noise = null;
+    }
+    let why = noise.tests.get(name);
+    if (why && /^@real\b/.test(why)) {         // (Noise in its real-pace games alone: its turns-pace games held exactly)
+      const ta = turnsOnly(ra), tb = turnsOnly(rb);
+      const x = ta && tb ? count(ta) : null, y = ta && tb ? count(tb) : null;
+      const same = x && y && x.size === y.size && [...x].every(([k, v]) => y.get(k) === v);
+      if (!same) why = null;                    // (Its turns-pace games differ, or its games couldn't be told apart)
+    }
+    const allNoise = !!why || d.every(e => e.noise);
     if (allNoise) known++; else { real++; realNames.push(name); }
     console.log('== ' + name + (why ? '  (known noise: ' + why + ')' : allNoise ? '  (known noise: its sentences\')' : ''));
     if (allNoise && opt.quiet) { console.log('   ' + d.length + ' sentence(s)'); continue; }
@@ -104,4 +131,4 @@ function main(argv) {
 }
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
-module.exports = { noiseList, sentences, diff, read, main };
+module.exports = { noiseList, sentences, diff, read, main, turnsOnly };

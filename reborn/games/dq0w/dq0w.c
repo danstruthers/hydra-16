@@ -383,7 +383,7 @@ static unsigned char __fastcall__ den_on (unsigned x, unsigned y)
 
 /* ---- The character's moves: worked out as they start (where to, how long), and made when they're done */
 
-static struct {
+struct {                                        /* (Not static: jobs.s's lockstep reads on) */
     unsigned char   on;                         /* A move under way */
     unsigned char   how;                        /* A_* */
     unsigned char   dir;                        /* (A_WALKED's: the passage's way out of the room, or on) */
@@ -882,10 +882,11 @@ static unsigned char __fastcall__ looked (unsigned char first)
                                                 **   the first look, drawn: how true, part portals's) */
     }
     hub_post (&HUB->look, T_SENSES);
-    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : HUB->tpr ? 16 : 4) && !HUB->quit) {  /* (Asleep meanwhile, a request rung waking it: the
+    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : 16) && !HUB->quit) {  /* (Asleep meanwhile, a request rung waking it: the
                                                 **   senses' stock, the UI's things; else sixteen ticks, the clock on from
                                                 **   the ticks gone (a tick's, a fifth of the CPU a look took from it;
-                                                **   four's, a look one way's answer the later, 2026-11-18); as
+                                                **   four's, a look one way's answer the later, 2026-11-18; at the turns
+                                                **   pace too, no clock to keep, lock4's, 2026-11-25); as
                                                 **   the game starts, no clock to keep: 2M cycles of the start's.  The
                                                 **   game ending, the senses may be gone: no reply to wait for, a look's
                                                 **   after the death's quit in the same round, the fight soak's hang) */
@@ -3451,6 +3452,7 @@ unsigned char __fastcall__ num (const char* s);
 ** task none yet, started (s_start); 1 if it can't be attached.  Part dungeon_begin's, as the world's start-up is (the main
 ** RAM's room, 2026-10-29) */
 void __fastcall__ s_start (const char* dir);
+extern unsigned char was_busy;                  /* (main's: its E_READY to come) */
 unsigned char __fastcall__ s_wstart (char** argv)
 {
     if (hub_attach (num (argv[1]), num (argv[2]))) {
@@ -3532,7 +3534,15 @@ void __fastcall__ s_start (const char* dir)
         }
         stocks ();                              /* (Last: what the rest had made stocked too) */
     } while ((chart_late || START_BURN ()) && !HUB->ui_keys && (unsigned) (hy_ticks () - t0) < START_WORK);
-    event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */
+    if ((HUB->pace & 3) == 3 && !HUB->pc_out && HUB->now >= HUB->pc_ready) {
+        was_busy = 1;                           /* (At the turns pace, free, its E_READY the main loop's, after the denizens'
+                                                **   first turn at what the start told and the jobs that made due: the
+                                                **   first line not behind them, the lockstep's quiet near; lock2's.  Not
+                                                **   a game carried on as it lies senseless: told now, as ever,
+                                                **   dq0saveout's) */
+    } else {
+        event (E_READY, 0, 0);                  /* (The UI waits for it: its commands, the world started) */
+    }
     HUB->starting = 0;
     last = hy_ticks ();
 }
@@ -3591,6 +3601,11 @@ void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's: intent_m
 ** E_VIEW V_LOOKED; as nothing's in hand (look_due's, ui_long's) */
 void s_look_rest (void)
 {
+    if (HUB->way_want.st == WW_WANTED) {       /* (The turns pace's, look_due's: the chunk its eyes reached asked of the
+                                                **   maker now, the world waiting on it, not made ahead in the background:
+                                                **   the rest told before the prompt, the user's Ti4, 2026-11-25) */
+        ask_maker (M_CHUNK, HUB->way_want.sn, HUB->way_want.cx, HUB->way_want.cy);
+    }
     bodies_first ();
     HUB->way_want.st = WW_NONE;
     HUB->look.kind = LK_REST;
@@ -7369,6 +7384,23 @@ static unsigned slice (void)
     return r < HUB->now + TURN_SLICE ? TURN_SLICE : (unsigned) (r - HUB->now);
 }
 
+/* The lockstep turns pace (hub.h's ui_want, w_idle: GAME-CRITIQUE.md's 6.4, lock1's): turns_run come to the
+** character free (or asking) with nothing to do (no command being given, no intent of the UI's waiting, every event
+** seen to by the UI, the denizens' turn done for what's told, the clock not to move on), and nothing else under way
+** (its E_READY told, no move going on, no question owed, no job of its own due, the denizens' intents all
+** carried out), found so twice, nothing told, done or intended between (the events', the denizens' and their intents'
+** places, the bodies' changes the same), the minds round their loop again between (rung to it), so what they set going
+** after their turn's end is in by then: the UI's count given back, the UI's next line taken.  And before any of it the
+** world's own jobs due done, the character's E_READY after them (1: the pass ended there; lock2's, 2026-11-25).
+** jobs.s's, part lockstep (the main RAM's room); the hub's header in the window */
+unsigned char lockstep (void);                  /* (1: its own jobs first, the pass ended) */
+
+/* The character's time up (its 32 bits compared once, here: the main RAM's room, lock2's) */
+static unsigned char ready_now (void)
+{
+    return HUB->now >= HUB->pc_ready;
+}
+
 static unsigned char turns_run (void)
 {
     static unsigned ui_t;
@@ -7405,8 +7437,9 @@ static unsigned char turns_run (void)
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
         return 1;
     }
-    if (HUB->pc_ready <= HUB->now) {
-        return 0;                               /* (Free) */
+    if (ready_now ()) {
+        return lockstep ();                     /* (Free, or asking: its own jobs first at the turns pace, the rest of
+                                                **   the pass after them; then all the UI set going done, its next line) */
     }
     d = HUB->pc_ready - HUB->now;
     if (HUB->pc_foe) {
@@ -7421,11 +7454,11 @@ static unsigned char turns_run (void)
 }
 
 /* A long wait or a sleep under way, not asking (a wait longer than a round: its long task) */
+typedef char WAIT_ON[LT_SLEEP == LT_WAIT + 1 ? 1 : -1];
 static unsigned char __fastcall__ wait_on (void)
 {
-    unsigned char k = HUB->pc_task.kind;
-
-    return (k == LT_WAIT || k == LT_SLEEP) && !HUB->pc_task.asking;
+    return (unsigned char) (HUB->pc_task.kind - LT_WAIT) < 2 && !HUB->pc_task.asking;   /* (LT_WAIT, LT_SLEEP: no local,
+                                                **   the main RAM's room, lock2's) */
 }
 
 /* A long wait or a sleep at the real paces (longer than a round, and not asking): run as the turns pace runs it, as
@@ -7694,14 +7727,20 @@ static unsigned char den_due (void)
     return DEN_INTENTS ();
 }
 
-static unsigned char was_busy;                  /* (main's: its E_READY to come) */
+unsigned char was_busy;                         /* (main's: its E_READY to come; jobs.s's lockstep's too) */
 #define REST_IDLE       600                     /* (Ticks free before a look one way's rest is asked: three seconds, the
                                                 **   player reading, not typing on; a line come, none: 2026-11-18) */
 static unsigned free_t;                         /* (main's: the character free again, E_READY told, then) */
 static unsigned char look_due (void)
 {
-    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind &&
-        (unsigned) (hy_ticks () - free_t) >= REST_IDLE)) && !move.on;
+    return (den_saw || (HUB->way_want.st == WW_MADE && !was_busy && !HUB->pc_task.kind && !(HUB->ui_keys | HUB->ui_cmd) &&
+        (unsigned) (hy_ticks () - free_t) >= REST_IDLE) || (!HUB->tpr && HUB->way_want.st && !HUB->pc_task.kind)) &&
+        !move.on;                               /* (At the turns pace the rest now, wanted or made, before its E_READY:
+                                                **   the look's own answer, whatever the keys' timing, the user's Ti4,
+                                                **   2026-11-25; look_job's) */   /* (A rest as nothing's in hand, the senses' own
+                                                **   rule (dq0p.c's look_rest: WW_MADE again as a line's in hand): at the
+                                                **   turns pace not a job owed as a line waits on the quiet, round and round
+                                                **   (dq0ahead's hang, lock2's) */
 }
 
 /* A body fallen: looked at again, the things too; or a look one way's rest, the chunk its eyes reached made since, the
@@ -7717,7 +7756,9 @@ static void look_job (void)
 
 static unsigned char dseq_due (void)
 {
-    return HUB->den_seq != dseq;
+    return HUB->den_seq != dseq && (HUB->tpr || HUB->ui_eq == (unsigned char) HUB->eq_head);   /* (At the turns
+                                                **   pace not till the UI's seen to the events: the senses' record a stir
+                                                **   it hasn't told yet reads not looked at again under it, lock2's) */
 }
 
 /* A blow left by part engage (fdef: fight_on's, fight_go's) struck now, from the main RAM: part fight_blows copied in, and not
@@ -7846,6 +7887,9 @@ void (* const jobs_run[]) (void) = {
 void __fastcall__ jobs (unsigned rows);        /* (jobs.s: the rows from the first to the end, each due run if it
                                                 **   doesn't wait) */
 
+/* (jobs.s's lockstep, the turns pace's quiet, reads these: the table's rows, move's on its first) */
+typedef char LS_READS[sizeof jobs_due == 14 ? 1 : -1];
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
@@ -7942,10 +7986,10 @@ int main (int argc, char* argv[])
         if (turns_run ()) {
             continue;                           /* (The turns pace: the denizens catching up) */
         }
-        if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking && !pc_held ()) {
+        if (move.on && ready_now () && !HUB->pc_task.asking && !pc_held ()) {
             arrive ();
         }
-        if ((was_busy || (act.fight & 1) || HUB->pc_out) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking &&
+        if ((was_busy || (act.fight & 1) || HUB->pc_out) && !move.on && ready_now () && !HUB->pc_task.asking &&
             !pc_held ()) {
             HUB->pc_out = 0;                    /* (Come round, if it was out: told as it's free, E_READY) */
             if (pc_waited & 1) {
@@ -7978,8 +8022,15 @@ int main (int argc, char* argv[])
                     turn ();                    /* (The turns pace: the denizens' turn at what's told first, as its
                                                 **   line may come at once: a line typed fast finding them where a slow
                                                 **   one doesn't, 2026-11-04, the life soak's) */
-                    if ((act.fight & 1) || HUB->pc_ready > HUB->now) {
-                        was_busy = 1;           /* (Struck in it: not free yet, fought on or not, then told) */
+                    was_busy = 1;               /* (Struck in it: not free yet, fought on or not, then told.  Else its
+                                                **   E_READY once what that turn set going is done, the turns it gives the
+                                                **   denizens and the jobs it makes due (a chunk a mind asked for stocked:
+                                                **   lockstep's 1, was_busy its quiet's look put off), turns_run's: none
+                                                **   of it after the prompt, under the next line, at the turns pace.  But
+                                                **   a reach's steps (rs_live) told at once but for such a job, its next
+                                                **   step given after its last's words with no stop between them (a thing
+                                                **   got out, then taken: dq0stopsweep's, lock2's, 2026-11-25) */
+                    if ((act.fight & 1) || !ready_now () || !rs_live || lockstep ()) {
                         continue;
                     }
                 }

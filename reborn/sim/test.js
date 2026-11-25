@@ -161,6 +161,24 @@ function guardInstrument(t) {
   return { boot: { guard: g }, attach: mm => { g.attach(mm); mm.guard = g; }, judge, state: () => g.state(), restore: s => g.restore(s) };
 }
 
+// HUBTRACE=f1,f2[:len],...: each write to those hub fields (hubgen's offsets, struct hub's, its bank 0) logged with
+// its cycle, task, PC, the return address atop its stack (a memcpy's caller) and its swapped part (the zero page's
+// swapped, $24, or HUBTRACE_SW's), to obj/hubtrace/NAME.txt; HUBTRACE_WIN=FROM,TO,TASK each write to any shared bank in
+// those cycles by that task (-1 any) too.  A debugging aid, sim/test.js --one NAME (lock2's, 2026-11-25: who writes
+// what, when; it found lock1's "unseen" late writes of the bodies the world's part scene's, a test's scene's own)
+function hubTrace(t, M, key0) {
+  const spec = process.env.HUBTRACE;
+  if (!spec) return null;
+  const H = require('../games/dq0/hubgen.js').load(), at = new Map();
+  for (const f of spec.split(',')) { const [n, l] = f.split(':'); const o = H.off('hub', n); for (let i = 0; i < (+l || 1); i++) at.set(o + i, n + (i ? '+' + i : '')); }
+  let m = null; const out = [], win = process.env.HUBTRACE_WIN ? process.env.HUBTRACE_WIN.split(',').map(Number) : null;
+  return { attach: mm => { m = mm; }, hook: (k, o, v, T, pc, W) => {
+    if (win && m && m.cpu.cyc >= win[0] && m.cpu.cyc < win[1] && (win[2] < 0 || T === win[2])) out.push(m.cpu.cyc + ' T' + T + ' ' + W.toString(16) + ':' + pc.toString(16) + ' k' + k + ' @' + o + '=' + v + ' sw ' + m.taskRam[T][0x24]);
+    if (k !== key0() || !at.has(o)) return;
+    out.push((m ? m.cpu.cyc : 0) + ' T' + T + ' ' + W.toString(16) + ':' + pc.toString(16) + ' ' + at.get(o) + '=' + v + ' ret ' + ((r => (r[0x100 + ((m.cpu.S + 1) & 0xFF)] | r[0x100 + ((m.cpu.S + 2) & 0xFF)] << 8) - 2)(m.taskRam[T])).toString(16) + ' sw ' + m.taskRam[T][+(process.env.HUBTRACE_SW || 0x24)]);
+  }, flush: () => { fs.mkdirSync(path.join(ROOT, 'obj', 'hubtrace'), { recursive: true }); fs.writeFileSync(path.join(ROOT, 'obj', 'hubtrace', t.name + '.txt'), out.join('\n')); }, out };
+}
+
 // The hub writers' check, a dq0 test's (HUBOWN=0: none): its violations each in obj/hubown/NAME.json, for the summary
 const HUBOWN = process.env.HUBOWN || '';
 const hubDir = path.join(ROOT, 'obj', 'hubown');
@@ -171,8 +189,11 @@ function dq0Instrument(t) {
   if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => { const v = inv(m); return { failures: [...dq0Check(t.name, m), ...v.failures], notes: v.notes }; },
     state: () => ({ r: r.state() }), restore: s => r.restore(s.r) };   // (A scene's: sim/lib/scenes.js)
   const M = hubown.map(), c = hubown.createCheck(M);
+  const tr = hubTrace(t, M, () => c.state().key0);
+  if (tr) { const h0 = c.hook, a0 = c.attach; c.hook = (k, o, v, T, pc, W) => { tr.hook(k, o, v, T, pc, W); h0(k, o, v, T, pc, W); }; c.attach = mm => { tr.attach(mm); a0(mm); }; }
   return { boot: { sharedWrite: (k, o, v, T, pc, W) => { c.hook(k, o, v, T, pc, W); r.hook(k, o, v); } }, attach: mm => { c.attach(mm); on(mm); },
     state: () => ({ r: r.state(), c: c.state() }), restore: s => { r.restore(s.r); c.restore(s.c); }, judge: m => {
+    if (tr) tr.flush();
     const r = c.result(), { known, fresh } = hubown.judge(r), v = inv(m), notes = [...v.notes], failures = [...fresh.map(e => 'hub: ' + hubown.line(e)), ...dq0Check(t.name, m), ...v.failures];
     try { fs.mkdirSync(hubDir, { recursive: true }); fs.writeFileSync(path.join(hubDir, t.name + '.json'), JSON.stringify(r)); } catch (e) { /* (No summary) */ }
     if (!r.found) return { failures, notes: ['hub writers: no hub made'] };

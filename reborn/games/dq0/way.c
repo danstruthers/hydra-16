@@ -528,6 +528,8 @@ static unsigned char nni, nden[SEE_DENS], nnd, ngl[SEE_GLOWS], nng, nany;   /*  
 static struct beyond nb[SEE_BEYOND];            /*   what's beyond them told (0xFF, held back: none); and a part
                                                 **   with its rest to come told (WM_REST's: what it told added, nrest) */
 static unsigned char nrest, uc;                 /* (uc: the hub's ui_cmd set as a near part's told, till its far part's) */
+static unsigned char rest_held, rb;             /* (A way on told "so far", its rest to come: rest_begin's; and the rest's
+                                                **   lead-in told already, its rest being told: focus_words') */
 
 /* Opening b, what's beyond it, as told before (its own byte by byte, told "so far" or not: the C library's memcmp not the
 ** UI's) */
@@ -622,11 +624,41 @@ static void far_new (void)
     W.nglows = n;
 }
 
+/* A look one way's rest's lead-in, "Peering on," (said.txt's AHEAD.onthrough, onglow and onmore's first words), told as
+** soon as the rest is fetched, its ground made and its squares seen, its first way on told "so far" seen further (the
+** senses' LC_BEGIN, at the turns pace: the rest told in the look's answer, the user's Ti4; o_fore_sync's), if this told
+** that way on "so far" (rest_held): the rest of its first sentence after the senses' look, focus_words' (said_skip),
+** with nothing between, blows.c's fight_begin's way (begun: BEGUN_REST, no key, line or cursor move till then).  The
+** same words, the first of them sooner: the answer's pause in two, each within D17's 1.79M (lock4's, 2026-11-25) */
+void o_rest_begin (void)
+{
+    if (rest_held && !begun) {
+        rest_held = 0;
+        said_q = 1;
+        ah (AH_ONMORE << 8);                    /* (" Peering on, you see more.": its first words, to the comma) */
+        said_q = 0;
+        strchr (lb, ',')[1] = 0;
+        begun_n = strlen (lb);
+        say (lb);
+        t_flush ();
+        begun = BEGUN_REST;
+    }
+}
+
+/* A lead-in's first sentence (its rest's): its first words told already, rest_begin's, the rest of them after them */
+static void lead_on (void)
+{
+    if (rb) {
+        said_skip = begun_n;
+        rb = 0;
+    }
+}
+
 void o_focus_words (void)
 {
     struct beyond* b;
     struct beyond* c;
-    unsigned char i, j, k, n, h, hm, part, lead, told = 0;
+    unsigned char i, j, k, n, h, hm, part, lead, pass, told = 0;
 
     hub_mem (SIGHT_BANK, &W, WAY_NEAR, sizeof W);
     part = 0;                                   /* (0 the whole of it; 1 its near part; 2 its far part, after it) */
@@ -674,9 +706,21 @@ void o_focus_words (void)
     }
     lead = (W.more & WM_RESTED) != 0;           /* (A look's rest, told after the prompt: its first sentence "Peering
                                                 **   on, ...", the look's going on, the user's, 2026-11-19, L8) */
+    rest_held = part != 1 && hm && (W.more & WM_REST);  /* (A way on told "so far" now, its rest to come: its
+                                                **   lead-in told as the rest's fetched, at the turns pace) */
+    if ((rb = lead && begun == BEGUN_REST) != 0) {
+        begun = 0;                              /* (Its lead-in told already, rest_begin's: its first sentence a
+                                                **   lead-in's, the openings with one told first, pass 0) */
+    }
     S.eye = W.eye;                              /* (What it makes out, a look one way's: twice as far) */
     if (worded != 3 && part != 2) {
         ah (AH_PEER << 8 | (S.dark != 0));
+    }
+    for (pass = !rb; pass < 2; ++pass) {
+    if (pass && rb) {
+        say (".");                              /* (No opening with a lead-in to tell: its begun words ended, as a
+                                                **   blow's not struck, its lead-in not again) */
+        rb = lead = 0;
     }
     for (i = 0, b = W.beyond; i < W.nbeyond; ++i, ++b) {    /* What's beyond the openings ahead (k: the opening,
                                                 **   BN_PASSAGE 0): "You can't see past the door ahead: it's
@@ -692,6 +736,10 @@ void o_focus_words (void)
                                                 **   it, none of the look's own said twice) */
         }
         h = hm >> i & 1;
+        if (!pass && (b->what == WB_SHUT || k >= BN_GRILLE)) {
+            continue;                           /* (Its lead-in told already: those with one first) */
+        }
+        told |= 1 << i;
         if (k >= BN_GRILLE && b->what == WB_SHUT) {
             ah (AH_COVER << 8);
             continue;                           /* (A closed door's spy-hole, the eye at it: dq0p's way.c, the user's,
@@ -712,6 +760,7 @@ void o_focus_words (void)
             continue;
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {
+            told |= 2 << i;
         }                                       /* (Alike the same way: told once, "the open doors") */
         if (k >= BN_GRILLE) {                   /* ("Through the little window in the door you see into the guardroom, lit
                                                 **   by torches.") */
@@ -720,6 +769,7 @@ void o_focus_words (void)
         } else {
             ahpl = !n ? 0 : k == BN_PORTCULLIS ? 2 : 1;
             ahrel = (b->rel + 1) & 3;
+            lead_on ();
             ah ((lead ? AH_ONTHROUGH : AH_THROUGH) << 8 | k);
             lead = 0;
         }
@@ -754,8 +804,10 @@ void o_focus_words (void)
         }
         ah (AH_END << 8);
     }
+    }
     for (i = 0; i < W.nglows; ++i) {            /* The lights far off ahead */
         ahrel = (W.glow[i].rel + 1) & 3;
+        lead_on ();
         ah ((lead ? AH_ONGLOW : AH_GLOW) << 8 | (W.glow[i].how != GL_LIGHT));
         lead = 0;
     }

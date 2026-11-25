@@ -1053,7 +1053,12 @@ module.exports = {
         };
         dq0Scene(m, [{ g: 1, line: 'throw the dagger at the closest rat', n: 1, call: put(2, 1) }, { g: 1, line: 'wait', n: 1, call: look('g1') },
           { g: 2, line: 'look', n: 1, call: unbelt }, { g: 2, line: 'throw the dagger at the closest rat', n: 1, call: put(1, 0), name: 'giant rat', senseless: 3000 },
-          { g: 2, line: 'i', n: 1, call: look('g2') }, { g: 2, line: 'look', n: 2, call: near }]);
+          { g: 2, line: 'i', n: 1, call: look('g2') }, { g: 2, line: 'look', n: 2, call: near },
+          { g: 2, line: 'throw the dagger at the closest rat', n: 2, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 99] },
+            { kind: 'WORLD', a: 'WD_SHOT', faces: [100, 4] }] }]);   // (The second throw a miss, as the playtest's, lock2's: dice2's
+        //   rig in the missile's own order (its aspect's d6 first, then the throw's d100, 99: a marginal failure, the rat senseless, no
+        //   defence), its fall the world's WD_SHOT dice (a stray's test passed by, if one's beside the mark, then four squares on past
+        //   it): the dagger lying off where it fell, gone over to.  At the normal pace a hit came as the tasks' timing had its dice)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -2169,8 +2174,11 @@ module.exports = {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
         dq0Scene(m, [...[1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })),   // (A rat put before the character, hostile and fighting it)
-          { g: 2, line: 'inventory', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [99] }] }]);   // (The menacing game's blows rigged, dice2: each a marginal failure,
-                                                //   no wound, the rat fighting on through the lines: its first felled it, a gash)
+          ...[1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [99] }] }))]);   // (Each game's blows rigged,
+                                                //   dice2: each a marginal failure, no wound, the rat fighting on through the
+                                                //   lines.  The menacing game's first felled it, a gash; the normal game's too as
+                                                //   built (lock2's, 2026-11-25): a real pace's blow falls at the tasks' timing,
+                                                //   its dice keyed by its moment, so the layout chose whether a round was met)
         // (Each line marked MID_MARK typed only as the world's referee slot holds the character's own blow: posted, not yet
         // answered; or, none come in NO_ROUND_MID cycles, typed anyway and said so)
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
