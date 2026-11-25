@@ -361,6 +361,7 @@ void facing_words (void);                       /* (Overlay 7's) The way it beli
 #define FS_SENS     8
 #define FS_PARSE    0x10                        /* (The command parser alone, not the world: the turns pace's, speed8) */
 extern unsigned char fored;
+extern unsigned char saidc;                     /* (term.c's say's count: main.c's events, the character's news told) */
 extern unsigned char stir_held;                 /* (main.c's: a denizen's stir held, told after the line's answer) */
 unsigned char still_out (void);                 /* (Overlay 13's) The character senseless still, as the world has it:
                                                 **   its black-out's end the world's next (numb's) */

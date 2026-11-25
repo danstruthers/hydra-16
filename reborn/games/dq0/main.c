@@ -1162,11 +1162,12 @@ static void heard (void)
 static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
-    static unsigned char given;
+    static unsigned char given, said0;
     unsigned char k, n = 0;
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
+        said0 = saidc;
         numb (&m);                              /* (Come round by it, or senseless still: out_told) */
         given = !m.who && (busy | owed) && (m.kind != E_VIEW || E_VIEW_WHY (m) != V_STIR);   /* (The character's news:
                                                 **   a command's answer begun, its intent out; not a denizen stirring,
@@ -1336,11 +1337,13 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         }
-        if (given) {
+        if (given && (saidc != said0 || m.kind == E_READY)) {
             hub_map (0);
             HUB->ui_cmd = owed = 0;             /* (Its answer given: as its words are told, not before, the world's
                                                 **   held jobs (the denizens' intents, part den_bodies) not let in beside the
-                                                **   telling, the menacing sit's 2026-11-19) */
+                                                **   telling, the menacing sit's 2026-11-19; an event of the character's
+                                                **   that tells nothing (a fight-back begun, a beat) not its answer, its
+                                                **   round's blow to come still: dq0fightcmd's wait, fix2, 2026-11-24) */
         }
     }
     return n;
@@ -3258,7 +3261,13 @@ int main (int argc, char* argv[])
                                                 **   first, a flight held past the next line: reach1's, 2026-11-20) */
                     }
                 }
-                HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
+                HUB->ui_cmd = took != 0;        /* (Held: the next waits for the character, not parsed again.  One
+                                                **   that takes its task over (took) a command in hand all the same
+                                                **   till the character's news comes (events' given): the round it's
+                                                **   behind given way to by the world's jobs, the denizens' intents,
+                                                **   the minds, the senses and the maker, as a line typed with the
+                                                **   character free is (gw.s's); its first letter was the whole
+                                                **   round's and the background's, 1M cycles, dq0fightcmd, fix2) */
                 l = 0;
             }
         } else {
