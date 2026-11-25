@@ -425,7 +425,10 @@ told:
         msg (lb);
         sayf ("  The rest you can't make out, but it speaks of some place %s.", lies[(K.land & 15) % 6]);
     } else {
-        if (g == G_BADLY && here) {
+        if (g == G_BADLY && (id & CLUE_HERE)) {   /* (A copy read in its own dungeon too, as the writing read again
+                                                **   after it tells: HOUSE.md's reading and clues, "in its own
+                                                **   dungeon"; a copy's true words, the writing's swapped, till fix3,
+                                                **   2026-11-25: dq0reading's copy game) */
             swapped (id);                       /* (Into lb, its record read there; K again after it) */
             clue_io (id, 0);
             msg (lb);

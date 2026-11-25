@@ -304,6 +304,38 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
     return 0;
 }
 
+/* Its lair's locked doors' keys (part den_doors's door_keys: made with its first denizen's lair, before its kit, filed on
+** it in nothing) put where a creature carries a key, the pouch on its belt, as its kit's made, part outfit's (T1,
+** T5: dq0kit's dids 18 and 20 had an iron key on them, in nothing, till fix3, 2026-11-25); none, they lie at its
+** home, its faction's */
+static void keys_home (void)
+{
+    unsigned i = 0, b = 0, c = 0;
+
+    while ((i = items (i, IN_DEN, 0)) != 0) {
+        if ((ip->owner | ip->hide << 8) == ost.did && ip->kind == KI_BELT) {
+            b = i;                              /* (Its belt: worn, the outfits' own) */
+        }
+    }
+    while (b && (i = items (i, IN_X | IN_ITEM, b)) != 0) {
+        if (ip->kind == KI_POUCH) {
+            c = i;                              /* (The pouch on it) */
+        }
+    }
+    while ((i = items (i, IN_DEN, 0)) != 0) {
+        if (ip->kind == KI_KEY && !(ip->flags & (I_HELD | I_WORN)) && (ip->owner | ip->hide << 8) == ost.did) {
+            ip->owner = ost.fac;                /* (None: at its home, its faction's) */
+            ip->where = IW_SQUARE;
+            if (c) {
+                ip->where = IW_ITEM;            /* (In its pouch: room there for the smallest thing) */
+                ip->x = c;
+                ip->owner = ip->y = ip->sn = 0;
+            }
+            ip->hide = 0;
+        }
+    }
+}
+
 void __fastcall__ s_den_other (const struct msg* m)
 {
     if (I_KIT_DRAW (*m) == KT_TRAPS) {
@@ -356,6 +388,7 @@ void __fastcall__ s_den_other (const struct msg* m)
             kit_off |= 2;                       /* (Given way to a command: its intent left in the ring, wbody.c's) */
             return;
         }
+        keys_home ();
     }
     kit_off = 0;
 }

@@ -302,6 +302,8 @@ unsigned char __fastcall__ o_wq_of (const struct side* s, unsigned char att)
 /* A block's Weapon Damage, weapon against weapon (the book's, Combat 12: the lower quality tested first, the attacker's at a tie, the
 ** other only if that holds; three dice over it, destroyed; fight.c's sides A and D): by a die of its own, so the game's others roll as
 ** they would.  1 the attacker's broken, 2 the defender's, 0 none */
+#pragma code-name (push, "OV6CODE")             /* (Overlay 6's: overlay 3's room, fix3, 2026-11-25) */
+#pragma rodata-name (push, "OV6RODATA")
 static unsigned ws;
 
 static unsigned char __fastcall__ over (unsigned char q)
@@ -317,7 +319,7 @@ static unsigned char __fastcall__ over (unsigned char q)
 
 unsigned char o_w_damage (void)
 {
-    unsigned char a = o_wq_of (&A, 1), d = o_wq_of (&D, 0);
+    unsigned char a = wq_of (&A, 1), d = wq_of (&D, 0);
 
     if (!a || !d || nobreak) {
         return 0;
@@ -327,6 +329,8 @@ unsigned char o_w_damage (void)
     }
     return over (a) ? 1 : over (d) ? 2 : 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Actor k's blow, its things told (fight.c's beast_side: s's aml its kind's own weapon's, s's word its word): the
 ** weapon it holds (none, or let fall: its fists, ten less); and the shield it holds, if it does (its row in s's dslot,
@@ -574,6 +578,13 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
         return HARN_IGNORE;
     }
     for (s = 0; s <= DODGED && used[s] != f; ++s) {
+    }
+    if (s < NTOOLS && !(tflag[s] & T_HELD)) {   /* (A foe met this round by a thing it no longer holds (let fall, put
+                                                **   away): that defence gone, another chosen from what it holds now;
+                                                **   not the thing's skill marked for a bare arm's block, its torch let
+                                                **   fall: Ac3, dq0grapple's "Club", fix3, 2026-11-25) */
+        used[s] = 0;
+        s = DODGED + 1;
     }
     if (s > DODGED) {                           /* (A foe not met yet this round) */
         if (stance == D_OWN && !used[d->aslot]) {
