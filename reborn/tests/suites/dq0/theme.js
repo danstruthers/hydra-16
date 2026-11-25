@@ -7,7 +7,7 @@ const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   xdBytes, saidTheme, PK_PORTCULLIS, DQ0_MAKE, dq0Life, THEMEC, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, O_WAY_OUT, O_NOWHERE, stratumRec,
-  dq0Made, dq0Story, dq0Prose, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Poke
+  dq0Made, dq0Story, dq0Prose, dq0Turns, dq0Ev, dq0Rep, dq0Need, dq0Carried, dq0Here, DQ0_I, dq0Typed, dq0Game, dq0Scene, dq0SceneNow
 } = require('../../lib/dq0.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 const CUT_SEEDS = [271828, 1000003, ...Array.from({ length: 22 }, (_, k) => 70000 + k)];   // (dq0cut's: the clock-sized, the play test's)
@@ -37,9 +37,9 @@ module.exports = {
     {
       name: 'dq0theme', meaning: true, what: 'Dingus Quest Zero\'s themes (theme.h: data, games/dq0/themes, made dq0t.dat), by the theme bank, the world\'s events and the things\' records: the theme picked by the seed (its second byte: seed 259 the second theme, the drowned temple; seed 3 the first, the crypt), kept in the save and the game carried on in it, its strata named by it (the senses\' record\'s stratum, the theme\'s names); the way out shut by its lock; then the crypt\'s puzzle\'s pieces (dq0 -k: the sunstone and the moonstone to hand) combined into the king\'s seal (its rule\'s: the stones gone, the seal carried), the seal used on the way out (it opens: the world\'s way_open), and taken: the game ended (escaped, E_LEFT), and the save marked done (a new game begun in its folder, not carried on) (its words, the theme\'s: the themes\' own data)',
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 259 -c /ram/c.hm -d /ram/t', 'u', 'quit', 'dq0 -d /ram/t',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 259 -c /ram/c.hm -d /ram/t', 'u', 'quit', 'dq0 -d /ram/t',
         'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'u', 'combine the sunstone with the moonstone', 'use the seal on the way out',
-        'u', 'dq0 -p t -c /ram/c.hm -d /ram/q', 'quit', 'echo $status']) },
+        'u', 'dq0 -p t -c /ram/c.hm -d /ram/q', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], theme = t => t.after ? t.after.theme : '?';
@@ -69,8 +69,7 @@ module.exports = {
     {
       name: 'dq0why', near: ['theme', 'save', 'money'], what: "Dingus Quest Zero's why you came (the plan's step 7: themegen's goals.txt why lines, dq0acct's quest.c; DUNGEON.md's why you came, HOUSE.md's), by scenes: themegen's three rumours (-r) the same for the same seed and another for another, each a place and a reason of a goal kind of its own; at seed 70000 (an artifact) the reason told in the story where \"you came down to try\" was (its patron, the theme's why line), the cup to hand (dq0 -k) and walked out solved; carried on, the patron's reward told as it comes into town (the theme's reward line's words and pennies), its standing in the life's record and told after the account, and the three rumours heard in town, the life's seed's, the first followed (the tests' dq0auto): the next dungeon's region and reason the rumour's (quest.txt in its folder, themegen's part-written theme), its patron in its story; the same life again, the second rumour typed: its region and reason; and the two goal kinds only heard of played through, each by a why line given (dq0 -t), its thing to hand and walked out solved: lore (a codex: carried on, its scholar pays) and a scourge (the kobolds' chief's war standard, in the hills given); and each passing the theme checker at seeds 1-3",
       init: 't_rc', cycles: 9000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'themegen -q -r 3 -s 12345 -o /ram/q', 'themegen -q -r 3 -s 12345 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo same $status',
+      machine: { input: dq0Typed(dq0Game({ lines: ['themegen -q -r 3 -s 12345 -o /ram/q', 'themegen -q -r 3 -s 12345 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo same $status',
         'themegen -q -r 3 -s 12346 -o /ram/r', 'cmp /ram/q/rumours.txt /ram/r/rumours.txt', 'echo other $status', 'cat /ram/q/rumours.txt', 'rm -r /ram/q', 'rm -r /ram/r',
         'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\' -d /ram/b', 'u', 'echo =NEXT',
         'dq0 -p t -d /ram/b', 'quit', 'cat /ram/b/d1/theme.txt', 'cat /ram/b/rumours.txt', 'cat /ram/b/d2/quest.txt', 'cat /ram/b/d2/theme.txt', 'xd /ram/b/life.dat', 'rm -r /ram/b',
@@ -82,7 +81,7 @@ module.exports = {
         'echo =SCOURGE', 'dq0 -p t -s 70000 -c /ram/c.hm -t /ram/s.txt -k \'war standard\' -d /ram/s', 'u', 'xd /ram/s/d1/game.dat', 'cat /ram/s/d1/theme.txt', 'rm -r /ram/s',
         ...[1, 2, 3].flatMap(s => ['themegen -q -s ' + s + ' -t /ram/l.txt -o /ram/x', 'echo lore ' + s + ' st $status', 'grep goal /ram/x/theme.txt',
           'themegen -q -s ' + s + ' -t /ram/s.txt -o /ram/x', 'echo scourge ' + s + ' st $status', 'grep goal /ram/x/theme.txt']),
-        'echo done']) },
+        'echo done'] })) },
       expect: ['% echo done'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], words = s => s.replace(/\s+/g, ' ').trim();
@@ -162,8 +161,8 @@ module.exports = {
     {
       name: 'dq0pieces', meaning: true, what: 'Dingus Quest Zero\'s puzzle\'s pieces placed with the plan (theme.h: each one\'s stratum from the seed, its chunk in the stratum\'s halls as its plan is grown, put down as the chunk is made, by the maker\'s stock), by what the character perceives and the things\' records and replies: the crypt\'s stone tablet on the top stratum (dq0 -T -T: the character begins on it), seen at its feet, taken and read (the parser\'s read: a piece of the puzzle found to hand), a dagger not (nothing written on it); then the crown and the throne (dq0 -k), the throne put down and not taken up again (fixed where it stands: refused), the crown put on it: the place ruled, the game ended (the theme\'s ending; its words, the theme\'s data)',
       init: 't_rc', cycles: 800e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T', 'take the tablet', 'read the tablet',
-        'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne', 'take the throne', 'put the crown on the throne', 'u', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -T', 'take the tablet', 'read the tablet',
+        'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne', 'take the throne', 'put the crown on the throne', 'u', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], rep = (l, kind, result, what) => { if (!dq0Rep(T.of(l), 'ireq', { kind, result }).length) f.push(what + ' (' + JSON.stringify(T.of(l).replies.filter(r => r.req === 'ireq').map(r => r.kind + ' ' + r.result)) + ')'); };
@@ -347,12 +346,11 @@ module.exports = {
     {
       name: 'dq0quest', meaning: true, what: 'Dingus Quest Zero\'s goals from a region\'s history played to their ends (Phase 3D: G5, the user\'s: "Each dungeon needs a goal, and it may be to find a specific artifact, clean out the evil denizens, rescue a prisoner, or just find a way through to a distant exit"; themegen\'s goals.txt kinds): at seed 70000 the Cup of Rowon (an artifact): dq0 -T -T begins by the goal\'s own thing, the jade cup lying hidden where the history put it; with it to hand (dq0 -k) and the seeker\'s journal read, the way out shut, the cup held up to it (open), and up it: escaped; at seed 70007 the curse of Yiskeek (an evil): by the bone idol (dq0 -T -T), the silver bell and the old scroll to hand, the scroll read, the bell laid on the idol: the curse broken (ruled, the game ended); at seed 70012 Voven, the kobolds\' prisoner: the shackle key put to the chained woman, the way out open (hers), and up it: escaped; at seed 70008 the Far Door (a way through): dq0 -T -T -T (four strata grown below the top) the goal\'s stratum (the fourth) with a way out of its own, a far exit, and none on the strata between',
       init: 't_rc', cycles: 2200e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 70000 -c /ram/c.hm -T -T', 'quit',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 70000 -c /ram/c.hm -T -T', 'quit',
         'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'', 'read the journal', 'u',
         'dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'', 'read the scroll', 'put the bell on the idol', 'quit',
         'dq0 -p t -s 70012 -c /ram/c.hm -k \'shackle key,chained woman\'', 'drop the woman', 'put the key on the woman', 'u',
-        'dq0 -p t -s 70008 -c /ram/c.hm -T -T -T', 'quit', 'echo $status']) },
+        'dq0 -p t -s 70008 -c /ram/c.hm -T -T -T', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) { dq0Made(this, m); },
       check(m) {
@@ -390,19 +388,19 @@ module.exports = {
     {
       name: 'dq0ends', near: ['theme', 'save'], what: "Dingus Quest Zero's three ends (the between-dungeons plan's steps 1 and 2, the user's Q1 \"Every dungeon\" and Q2 \"No, walk out\"; HOUSE.md's how a dungeon ends), each goal kind and each way out a scene, by the world's events, the words told and game.dat's outcome (xd: Q.done, Q.solved, the save's last bytes but plain): a sky shaft climbed unsolved (the crypt, seed 2, its roof poked in reach, no grating): left, its own words, then a carry-on into a new dungeon; an artifact's way in open: up it once told what that does, again left; the artifact itself to hand (dq0 -k): told it's done, walked out solved at the first asking, in its words; the thing taken up in play told once; the evil's way out shut, the curse broken told and the game going on, kept through a quit and walked out (ruled); the prisoner's way out shut, its other way out on the seed's stratum (dq0 -T -T -T, put by a poke at the foot of that stair) left unsolved; a through goal (a hand-written theme: the checker's way out its far exit) out by its far exit solved, with no asking; and a hard-mode death after solving still solved, in its words",
       init: 't_rc', cycles: 5000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0sky=1', 'dq0hour=12',
-        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/a', 'go to the shaft', 'u', 'xd /ram/a/d1/game.dat', 'dq0 -p t -s 259 -d /ram/a', 'quit', 'rm -r /ram/a',
-        'dq0 -p t -s 70000 -c /ram/c.hm -d /ram/b', 'examine the way out', 'u', 'look', 'u', 'xd /ram/b/d1/game.dat', 'rm -r /ram/b',
-        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup\' -d /ram/c', 'look', 'u', 'xd /ram/c/d1/game.dat', 'rm -r /ram/c', 'cp /ram/c.hm /ram/s.hm', 'echo ml awa 99 >> /ram/s.hm',
-        'dq0 -p t -s 70000 -c /ram/s.hm -T -T', 'search', 'search', 'search', 'search', 'take the cup', 'drop the cup', 'take the cup', 'quit',
-        'dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e', 'drop the idol', 'u', 'examine the way out', 'put the bell on the idol', 'quit', 'dq0 -p t -d /ram/e', 'u', 'xd /ram/e/d1/game.dat', 'rm -r /ram/e',
-        'dq0 -p t -s 70012 -c /ram/c.hm -T -T -T -d /ram/f', 'look', 'u', 'examine the way out', 'u', 'xd /ram/f/d1/game.dat', 'rm -r /ram/f',
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo sky 1 >> /ram/s.sc', 'echo hour 12 >> /ram/s.sc',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/a -S /ram/s.sc', 'go to the shaft', 'u', 'xd /ram/a/d1/game.dat', 'dq0 -p t -s 259 -d /ram/a -S /ram/s.sc', 'quit', 'rm -r /ram/a',
+        'dq0 -p t -s 70000 -c /ram/c.hm -d /ram/b -S /ram/s.sc', 'examine the way out', 'u', 'look', 'u', 'xd /ram/b/d1/game.dat', 'rm -r /ram/b',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup\' -d /ram/c -S /ram/s.sc', 'look', 'u', 'xd /ram/c/d1/game.dat', 'rm -r /ram/c', 'cp /ram/c.hm /ram/s.hm', 'echo ml awa 99 >> /ram/s.hm',
+        'dq0 -p t -s 70000 -c /ram/s.hm -T -T -S /ram/s.sc', 'search', 'search', 'search', 'search', 'take the cup', 'drop the cup', 'take the cup', 'quit',
+        'dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e -S /ram/s.sc', 'drop the idol', 'u', 'examine the way out', 'put the bell on the idol', 'quit', 'dq0 -p t -d /ram/e -S /ram/s.sc', 'u', 'xd /ram/e/d1/game.dat', 'rm -r /ram/e',
+        'dq0 -p t -s 70012 -c /ram/c.hm -T -T -T -d /ram/f -S /ram/s.sc', 'look', 'u', 'examine the way out', 'u', 'xd /ram/f/d1/game.dat', 'rm -r /ram/f',
         'echo \'theme    | the Long Road\' > /ram/t.txt', 'echo \'mission  | escape\' >> /ram/t.txt', 'echo \'stratum  | the Upper Road | b | halls\' >> /ram/t.txt', 'echo \'stratum  | the Lower Road | n\' >> /ram/t.txt',
         'echo \'goal     | through | the Far Door | 1 | -\' >> /ram/t.txt', 'echo \'lock     | It has fallen in.\' >> /ram/t.txt',
         'echo \'ending   | escaped | You come up through the Far Door.\' >> /ram/t.txt', 'echo \'ending   | left | You climb out, the road untried.\' >> /ram/t.txt', 'echo \'ending   | died | The road keeps you.\' >> /ram/t.txt',
-        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -T -T -T -d /ram/g', 'look', 'u', 'xd /ram/g/d1/game.dat', 'rm -r /ram/g',
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -T -T -T -d /ram/g -S /ram/s.sc', 'look', 'u', 'xd /ram/g/d1/game.dat', 'rm -r /ram/g',
         'cp /ram/c.hm /ram/w.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/w.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/w.hm',
-        'dq0 -p t -s 3 -c /ram/w.hm -H -k crown,throne -d /ram/h', 'drop the throne', 'put the crown on the throne', 'wait 10 minutes', 'xd /ram/h/d1/game.dat', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/w.hm -H -k crown,throne -d /ram/h -S /ram/s.sc', 'drop the throne', 'put the crown on the throne', 'wait 10 minutes', 'xd /ram/h/d1/game.dat', 'echo $status'] })) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
         const roof = ft => () => {                       // (The roof of the character's chunk's rooms: a shaft's mouth in reach)
@@ -421,7 +419,7 @@ module.exports = {
           (m.exits = m.exits || []).push(k ? h[L.pcSn] : -1);
           if (k) { h[L.pcX] = k.x & 255; h[L.pcX + 1] = k.x >> 8; h[L.pcY] = k.y & 255; h[L.pcY + 1] = k.y >> 8; }
         };
-        dq0Poke(m, [{ g: 1, line: 'u', n: 1, call: roof(8) }, { g: 8, line: 'look', n: 1, call: toExit }, { g: 9, line: 'look', n: 1, call: toExit }]);
+        dq0Scene(m, [{ g: 1, line: 'u', n: 1, call: roof(8) }, { g: 8, line: 'look', n: 1, call: toExit }, { g: 9, line: 'look', n: 1, call: toExit }]);
       },
       check(m, out) {
         const T = dq0Turns(m), f = [], st = dq0Prose(out), G = st.split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
@@ -438,8 +436,8 @@ module.exports = {
         ok(1, /Your character carries on/, 'left, not said to carry on');
         no(1, /You have escaped|grating/, 'the old words of a shaft');
         eq(q('xd /ram/a/d1/game.dat'), [LEFT, 0], 'left by the shaft');
-        dq0Need(f, T.of('dq0 -p t -s 259 -d /ram/a'), 'E_ARRIVE', { how: 'A_START' }, 'no new dungeon after leaving');
-        const g2 = T.of('dq0 -p t -s 259 -d /ram/a');
+        dq0Need(f, T.of('dq0 -p t -s 259 -d /ram/a -S /ram/s.sc'), 'E_ARRIVE', { how: 'A_START' }, 'no new dungeon after leaving');
+        const g2 = T.of('dq0 -p t -s 259 -d /ram/a -S /ram/s.sc');
         if (!g2.after || g2.after.theme !== 'the Drowned Temple') f.push('the carry-on not in its new theme: ' + (g2.after && g2.after.theme));
         // The artifact's way in: open, asked once
         ok(3, /The way up stands open: go up to leave\./, 'the way in not told open');
@@ -456,7 +454,7 @@ module.exports = {
         if ((G[5] || '').split("That's what you came to do").length !== 2) f.push('the artifact taken up in play not told once: ' + ((G[5] || '').split("That's what you came to do").length - 1));
         // The evil: shut, then told, kept, walked out
         ok(6, /The way out is shut fast\. The curse holds it till the curse is broken; if there's another way up, it's somewhere below\./, 'the curse\'s lock not told');
-        dq0Need(f, T.after(T.of('dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e'), 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the curse\'s way out not shut');
+        dq0Need(f, T.after(T.of('dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e -S /ram/s.sc'), 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the curse\'s way out not shut');
         ok(6, /You lay the Bell of [A-Za-z]+ upon the idol of [A-Za-z]+\.[^]*That's what you came to do\./, 'the curse broken not told done');
         ok(6, /You climb out into the daylight, and behind you the dead of [^.]* sleep at last\./, 'its ruled words not told, kept through a quit');
         eq(q('xd /ram/e/d1/game.dat'), [RULED, RULED], 'solved by the curse broken');
@@ -480,12 +478,12 @@ module.exports = {
     {
       name: 'dq0night', near: ['theme', 'time'], what: "Dingus Quest Zero's words by the light outside (the theme format's {day/night/dawn/dusk}: theme.c's words_at, time.c's light_words, by the true hour as the sky shows it; GAME-CRITIQUE.md's 5.6, the play test's \"Above, it's dark: it's night.\", then the crypt's ending \"You climb the stair into the light of day\"): the crypt (seed 3) at ten at night (dq0hour=22), its seal made whole and used on the way out: its door grinding open on the stair up to the night sky, the way out looked at the same, and up it into the dark of night, the light of day not said; at six in the morning the grey of dawn, and the grey light of dawn",
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...['22', '6'].flatMap(h => ['dq0hour=' + h,
-        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out',
-        'examine the way out', 'u']), 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: [...['22', '6'].flatMap(h => ['echo hour ' + h + ' > /ram/s.sc',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -S /ram/s.sc', 'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out',
+        'examine the way out', 'u']), 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], s = dq0Prose(out), at = s.indexOf('dq0hour=6'), g = [s.slice(0, at < 0 ? s.length : at), at < 0 ? '' : s.slice(at)];
+        const f = [], s = dq0Prose(out), at = s.indexOf('echo hour 6 > /ram/s.sc'), g = [s.slice(0, at < 0 ? s.length : at), at < 0 ? '' : s.slice(at)];
         const has = (k, w, what) => { if (!g[k].includes(w)) f.push(what + ': ' + JSON.stringify(w) + ' not said'); };
         has(0, 'and the door grinds open on the stair up to the night sky.', 'at night, the door opened');
         has(0, 'The black door stands open on the stair up to the night sky: go up to leave.', 'at night, the way out looked at');
@@ -500,10 +498,9 @@ module.exports = {
     {
       name: 'dq0handtheme', meaning: true, what: 'Dingus Quest Zero\'s hand-written theme (dq0 -t FILE: games/dq0/themes/1crypt.txt\'s format, its history\'s groups): a theme giving its name, its region and its two strata, made into a game\'s own by themegen (its seed\'s history filling the rest: the head\'s mission and story made, line by line; the eras, the inhabitants, the goal and its puzzle), written into the save\'s folder and compiled (theme.txt, theme.dat), even at a small seed (5: a stand-in\'s, but for -t); the game in it: the theme\'s name, its top stratum the one given',
       init: 't_rc', cycles: 900e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'echo \'theme    | the Pit of Echoes\' > /ram/t.txt', 'echo \'region   | the Grey Fells | hills | granite | springs | cold\' >> /ram/t.txt',
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo \'theme    | the Pit of Echoes\' > /ram/t.txt', 'echo \'region   | the Grey Fells | hills | granite | springs | cold\' >> /ram/t.txt',
         'echo \'stratum  | the Upper Pit | bx | keep\' >> /ram/t.txt', 'echo \'stratum  | the Echoing Deep | n\' >> /ram/t.txt',
-        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/d1/theme.txt', 'echo done']) },
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/d1/theme.txt', 'echo done'] })) },
       expect: ['% echo done\ndone\n'],
       check(m, out) {
         const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/d1/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
@@ -524,11 +521,10 @@ module.exports = {
     {
       name: 'dq0styles', near: ['theme'], meaning: true, what: 'Dingus Quest Zero\'s styles\' proportions in sets (games/dq0/styles.txt, the build\'s lib/dq0/styles.dat; the user\'s, 2026-11-12): a theme naming another set gets that set\'s proportions.  The same hand-written theme (dq0 -t FILE: its name and one built stratum of halls) twice at seed 5, once as it is (the first set, the house\'s: a built stratum\'s every way out a door) and once with "styles | open" (the open set: every way out a doorway); its styles line kept through themegen (theme.txt) and compiled by themec into the record\'s mission (TM_STYLES: the set\'s number, 1); the maker\'s chunks of the top stratum in the hub\'s cache as each game quits: doors (and portcullises, a door\'s) in the first, none in the second (each way out a doorway: its square T_DOOR, but no portal)',
       init: 't_rc', cycles: 2000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'echo \'theme    | the Open Halls\' > /ram/t.txt', 'echo \'stratum  | the Halls | b | halls\' >> /ram/t.txt',
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo \'theme    | the Open Halls\' > /ram/t.txt', 'echo \'stratum  | the Halls | b | halls\' >> /ram/t.txt',
         'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/a', 'look', 'quit',
         'echo \'styles   | open\' >> /ram/t.txt', 'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/b', 'look', 'quit',
-        'cat /ram/b/d1/theme.txt', 'echo done']) },
+        'cat /ram/b/d1/theme.txt', 'echo done'] })) },
       expect: ['% echo done\ndone\n'],
       start(m) { dq0Made(this, m); },
       check(m, out) {

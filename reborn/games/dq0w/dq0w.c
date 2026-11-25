@@ -6588,6 +6588,7 @@ unsigned char pc_waited;                        /* (A wait's end, its eyes and t
                                                 **   knockout's too, wfight.c's) */
 
 void __fastcall__ ways_first (unsigned char d);  /* (Part ways's: a climb's ways worked out first) */
+void scene (void);                              /* (Part scene's: a test's scene, the world's part: wscene.c) */
 
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part intent_few's (intent_few: slice 4.2's, the main RAM's room); the rest part intent_more's (intent_more) */
@@ -7424,8 +7425,9 @@ static void clock_run (void)
     unsigned t = hy_ticks (), d = t - last;
 
     last = t;
-    if (HUB->paused || HUB->hold || !HUB->tpr) {
-        return;
+    if (HUB->paused || HUB->hold || !HUB->tpr || ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d)) {
+        return;                                 /* (And a test's scene a line waits for: no time for it, as it's put in
+                                                **   place) */
     }
     while (d) {                                 /* (64 ticks at a time: in 16 bits, cc65's longs slow, and this
                                                 **   each time round) */
@@ -7573,6 +7575,11 @@ unsigned char ui_long (void)
 static unsigned char dj;                        /* (The early jobs walked: the denizens' intents main's job, main's) */
 unsigned char den_held (void)
 {
+    hub_map (0);
+    if (HUB->scene != HUB->scene_d) {
+        return 0;                               /* (A test's scene to put in place: the minds' intents carried out, their
+                                                **   settle let end, so they come round to theirs; the UI's line waits) */
+    }
     if (!dj) {
         return ui_first ();                     /* (Not main's job: a turn's wait, the populations' (wkept.c's) as
                                                 **   before, the command in hand alone) */
@@ -7812,6 +7819,10 @@ int main (int argc, char* argv[])
     }
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
+        }
+        if (HUB->scene != HUB->scene_w) {
+            scene ();                           /* (A test's scene, its part done here, no intent's body in hand:
+                                                **   part scene's, wscene.c) */
         }
         if (!(HUB->ui_keys | HUB->ui_cmd)) {
             kcut = kmore = 0;                   /* (Nothing in hand: all begun again) */

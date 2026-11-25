@@ -5,7 +5,7 @@
 const { typed } = require('../../lib/common.js');
 const fs = require('fs');
 const path = require('path');
-const { dq0StatusRows, dq0Typed, DQ0_MAKE, dq0Story, dq0Prose } = require('../../lib/dq0.js');
+const { dq0StatusRows, dq0Typed, dq0Game, DQ0_MAKE, dq0Story, dq0Prose } = require('../../lib/dq0.js');
 // (dq0played's lines: the play test's first game, 2026-11-16, review/play's g1.json, as typed, but its three "break the
 // door" with the lantern named, the tool the game chose for it till then: a bare "break the door" punches since the things
 // branch's nothing battered with a light, 2026-11-17, and the weak scribe's fists put it in shock before the door gives, the
@@ -18,8 +18,7 @@ module.exports = {
     {
       name: 'dq0clock', near: ['screen'], what: "Dingus Quest Zero's status line and the hour (the user's, 2026-11-03, DECISIONS.md's the round after HOUSE.md's check: \"Hide the minutes\"; HOUSE.md's the time of day believed): no minutes gone on the status line, by the screen's rows as the clock goes; dq0 -m, the tests' and debugging's, puts them back",
       init: 't_rc', cycles: 900e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 2 minutes', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -m', 'wait 2 minutes', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 2 minutes', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -m', 'wait 2 minutes', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], at = out.indexOf('-T -m');
@@ -153,8 +152,8 @@ module.exports = {
     {
       name: 'dq0help', near: ['screen'], what: "Dingus Quest Zero's help (help.c's o_help, games/dq0/help.txt; GAME-CRITIQUE.md's 5.6: three lines past help.c's 400-byte buffer were said as two paragraphs, two cut mid-word, \"the w\" \"ell\"): each of help.txt's lines said as one paragraph, whole, wrapped as the story wraps one (term.c's say: a word on the next line only where it won't fit the 80 columns), the long ones read in parts and said on at a space (games/dq0/make.js's helpParts, the build's check of every line); the first steps saying l is left, not look (the user's, 2026-11-17)",
       init: 't_rc', cycles: 500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'help', 'quit',
-        'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'help', 'quit',
+        'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], parts = DQ0_MAKE().helpParts(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'games', 'dq0', 'help.txt'), 'latin1'));
@@ -186,9 +185,9 @@ module.exports = {
     {
       name: 'dq0pitwords', near: ['screen'], outfit: true, what: "Dingus Quest Zero's refusals and measures in words (2026-11-17, the play test's): a thing let fall down a shaft with none near (the world's wwell2.c, IR_NONE: its words none, so the UI said the things' text as it was left, \"drop the candle stubs in the pit\" an inventory before it, cut short), said why, \"There's no well or shaft here for the torch to fall down.\", the inventory before it not said again, nor at the pit; a weapon's look (the soak's cleric's dagger, light: its item's size its version, WV_*, read as its measure, \"1 feet long\") without a measure",
       init: 't_rc', cycles: 900e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'i',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'i',
         'drop the torch down the shaft', 'i', 'drop the torch into the pit', 'quit', 'hmchar -q -s 1 -o /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'examine the dagger', 'quit',
-        'echo $status']) },
+        'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out), turn = (a, b) => { const i = s.indexOf('> ' + a), j = s.indexOf('> ' + b, i + 1); return i < 0 ? '' : s.slice(i, j < 0 ? undefined : j); };
@@ -204,8 +203,8 @@ module.exports = {
     {
       name: 'dq0played', near: ['screen'], outfit: true, fit: true, reach: true, bearings: true, initiative: true, hours: true, what: "Dingus Quest Zero's play test's first game replayed (2026-11-16, GAME-CRITIQUE.md's: a weak scribe, seed 271828's generated dungeon, its 118 lines as typed, the door broken with the lantern named, as the game broke it then): a thing too far to make out told as one, whatever it is (\"On the floor ahead to your right lies (F) something small.\": a plural kind's candle stubs through a window, \"lie\" till 2026-11-17: seen.c's verb by its words); the candle stubs dropped in the pit, the inventory taken between, its words never said again (\"You reach for your backpack.\" and the inventory before it, cut short, till 2026-11-17)",
       init: 't_rc', cycles: 1600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 77 -u feudal -c scribe -o /ram/c.hm', 'dq0 -p t -s 271828 -c /ram/c.hm',
-        ...PLAYED, 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 77 -u feudal -c scribe -o /ram/c.hm', lines: ['dq0 -p t -s 271828 -c /ram/c.hm',
+        ...PLAYED, 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Prose(out), far = s.match(/ (lie|lies) \([A-Z]\) something (small|large)/g) || [];

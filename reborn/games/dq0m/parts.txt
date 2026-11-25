@@ -8,3 +8,4 @@
 map        6      The map (map.c)
 seen_save  10     The seen maps' save (changes.c; overlay 2's since 2026-10-31: 6's room for the diagonal ways' map); the start, a well's water (overlay 9's, 2026-11-06; 10's, 2026-11-17: 9 and 5 full)
 sconces    6      The rooms' sconces (sconce.c)
+scene      -      A test's scene, the maker's part (dq0m.c: the tests' harness's, scene1, 2026-11-24)

@@ -7,7 +7,7 @@ const path = require('path');
 const { card, typed } = require('../../lib/common.js');
 const {
   CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N, CSLOT_AT, liveChunks, stratumRec, chunkDiff, dq0Story, dq0Prose, inTurn, dq0Turns,
-  dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Rec, dq0Alone, dq0Poke, dq0Timer, DQ0_PLAYED
+  dq0Ev, dq0Rep, dq0Evs, dq0Need, dq0Never, dq0Thing, DQ0_I, dq0Typed, dq0Game, dq0Rec, dq0Alone, dq0Scene, dq0SceneNow, dq0Timer, DQ0_PLAYED
 } = require('../../lib/dq0.js');
 const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
@@ -73,7 +73,7 @@ function dq0JobsTest() {
       this.timer = dq0Timer(m);
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
       const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
-      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burn_job'), flush = at('_tr_flush');
+      const burn = at('_burn_job'), flush = at('_tr_flush');
       const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), ran = this.ran = { burn: 0, trace: 0, burnWant: 0, traceWant: 0 }, read = a.read;
       let qlen = -1, k = -1, fire = 0, job = null, world = -1, held = 0, typed = '';
       a.read = (r, t) => {                      // (Each game its jobs again, its world's: as its dq0 line's entered)
@@ -94,14 +94,17 @@ function dq0JobsTest() {
           }
         }
         if (world >= 0) {
-          const r = m.taskRam[world];
+          // (Each made due by a scene, the world's own between its intents: SO_DUE, OPEN.md's X1, burn_due's poke lost when
+          // a minute was under way; the journal held empty the same, not while a scene's on its way: the next one's)
           if (fire && cpu.cyc >= fire) {
-            if (job.j !== 'trace') { r[due] = r[due + 1] = r[due + 2] = r[due + 3] = 0; ran.burnWant++; }
-            if (job.j !== 'burn') { r[trn] = 24; ran.traceWant++; }
+            const j = job.j;
+            dq0SceneNow(m, (h, L, K, at, named, sc) => { if (j !== 'trace') sc.due('burn'); if (j !== 'burn') sc.due('trace'); }, null, 'dq0jobs\'s ' + j + ' ' + job.d + ' before');
+            if (j !== 'trace') ran.burnWant++;
+            if (j !== 'burn') ran.traceWant++;
             fire = 0;
-          } else if (fire && job.j !== 'burn' && cpu.cyc - held > 400000) {
+          } else if (fire && job.j !== 'burn' && cpu.cyc - held > 400000 && !(m.dq0Scenes && (m.dq0Scenes.cur || m.dq0Scenes.queue.length))) {
             held = cpu.cyc;
-            r[trn] = 0;                         // (Its journal filling till then)
+            dq0SceneNow(m, (h, L, K, at, named, sc) => sc.due('hold'), null, 'dq0jobs\'s journal held');   // (Its journal filling till then)
           }
           if (m.T === world) {
             if (cpu.PC === burn) ran.burn++;
@@ -158,7 +161,7 @@ function dq0HoldTest() {
       this.timer = dq0Timer(m);
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
       const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
-      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burn_job'), flush = at('_tr_flush');
+      const burn = at('_burn_job'), flush = at('_tr_flush');
       const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), read = a.read, R = this.R = {};
       // (The background's own work, each run's cycle at the normal pace: a mind deciding, the senses answering a mind's ask,
       // the denizens' intents carried out, by their first addresses in their tasks: dq0d, dq0p, the world)
@@ -192,8 +195,8 @@ function dq0HoldTest() {
       cpu.step = v => {
         const c = cpu.cyc;
         if (plan.length && c >= plan[0].at && (plan[0].name === 'letgo' || m.dq0.bank(0)[m.dq0.layout().L.uiKeys])) {   // (Its keys seen by the UI, as they may not be yet: a status line being drawn)
-          const p = plan.shift(), r = m.taskRam[world];
-          if (p.what === 'burn') r[due] = r[due + 1] = r[due + 2] = r[due + 3] = 0; else r[trn] = 24;
+          const p = plan.shift();               // (Made due by a scene, the world's own: SO_DUE, OPEN.md's X1)
+          dq0SceneNow(m, (h, L, K, at, named, sc) => sc.due(p.what), null, 'dq0hold\'s ' + p.name);
           R[p.name] = { made: c, ran: 0, keys: m.dq0.bank(0)[m.dq0.layout().L.uiKeys] };
           wants[p.what] = p.name;
         }
@@ -262,9 +265,8 @@ module.exports = {
     {
       name: 'dq0hunger', asks: true, near: ['time'], what: 'Dingus Quest Zero\'s hunger and thirst (slice 4.9: HOUSE.md\'s water, hunger and thirst, the user\'s of 2026-10-21, DECISIONS.md\'s; the referee\'s, rswant.h), by the words told: at seed 3 in the kitchen, nothing near, its torch put out: "eat the rations" at once refused, not hungry; "wait 9 hours", the want\'s first levels told as they come ("You\'re getting thirsty.", "You\'re getting hungry.") and the status line\'s "thirsty"; over to the kitchen\'s well first ("look into the well"), its torch lit again after the wait, "drink" its fill there; "eat the rations" a meal (a day\'s ration begun, five minutes), again refused; "fill the waterskin" at the well (the old kit\'s, empty); its torch put out, "wait 17 hours", "You\'re very thirsty."; "drink from the waterskin" its pints',
       init: 't_rc', cycles: 3000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm', 'eat the rations', 'look into the well', 'douse the torch', 'wait 9 hours', 'light the torch', 'drink', 'eat the rations',
-        'eat the rations', 'fill the waterskin', 'douse the torch', 'wait 17 hours', 'drink from the waterskin', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm', 'eat the rations', 'look into the well', 'douse the torch', 'wait 9 hours', 'light the torch', 'drink', 'eat the rations',
+        'eat the rations', 'fill the waterskin', 'douse the torch', 'wait 17 hours', 'drink from the waterskin', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
@@ -291,11 +293,11 @@ module.exports = {
     {
       name: 'dq0longwait', asks: true, what: 'Dingus Quest Zero\'s long waits (the user\'s, 2026-10-28: "waits should be able to last a full night\'s sleep, so 8 hours at least.  Some spells may take longer than that to cast, so 16-bit minutes would be better."; DECISIONS.md\'s, HOUSE.md\'s long waits), by the world\'s events and the clock: at seed 3 in the kitchen (nothing near), its torch put out, "wait 8 hours" waited whole (its intent in minutes, I_WAIT\'s WA_MIN: the clock 288,000 tenths on, the long task 480 minutes, mins), told "You wait eight hours.", the status after; "wait 3 hours 20 minutes" (200 minutes, its spans added up) and "wait 3 hours and 20 minutes" (one duration, not two commands) told so; "rest" a night\'s sleep (LT_SLEEP, "You settle down to rest for eight hours."), "sleep 8 hours" the same; each in the cycles a bearable wait takes (the coarser ticks while nothing\'s near: ten-minute slices); at the normal pace the same wait as quick (run as the turns pace runs it); at seed 21 below, by the giant rats, a long wait asked about at a sound ("Keep waiting?") and answered no: broken off, hours short of its eight; and with the hand-written theme\'s hostile rats a sleep broken off hard by a bite (dq0tasks\' long tasks)',
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+      machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'status', 'wait 3 hours 20 minutes', 'wait 3 hours and 20 minutes', 'rest', 'sleep 8 hours', 'quit',
         'dq0 -p n -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'quit',
         'dq0 -p t -s 21 -c /ram/c.hm -T', 'd', 'wait 8 hours', 'no', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 1', 'sleep 8 hours', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 1', 'sleep 8 hours', 'quit', 'echo $status'] })) },
       // (The bitten sleep -R 1, felled1's, 2026-11-21: a sleeping character struck as a sleeper is, no defence (RS_ASLEEP, one
       // path), and a felled one's rolls a round each: at -R 0 the first bite knocked it senseless, in shock after, its rest
       // the night; a search of -R 1-12 found all but 9)
@@ -404,10 +406,10 @@ module.exports = {
       name: 'dq0skykin', near: ['time', 'senses'], what: "Dingus Quest Zero's sky's kin (2026-11-03: HOUSE.md's what shows the sky, daylight falling in, kin; dq0sky's the rest), by the senses' replies, the words and the chunks, every room's skylight and window and a shaft the environment's dq0sky=1: a denizen's sight in daylight: a cave adder (sees 30 feet by light, 10 with none, hears 15; held where it is, dq0Poke's) 30 feet from the character, its torch out, by a skylight's daylight at noon: seen (dsense's SN_SEEN); the same at ten at night: not; the drip under a shaft: seed 2's shaft's square, nothing but water trickling heard, and the same square with no sky (dq0sky=0), no water; a save and a load: quit and carried on (dq0 -d) under the shaft, the same words, daylight falling, its chunk the same as it was kept; and a chunk read out of the cache and read in again (the character down the ladder, the chunk's slot let go, as a full cache's evicting it; dq0pure's kind): the same bytes, the shaft and its daylight as before",
       init: 't_rc', cycles: 3000e6,
       machine: { input: (() => {
-        const adder = d => ['dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/' + d, 'douse the torch', ...Array(6).fill('wait 1 minute'), 'look', 'quit'];
-        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/n', 'cp /ram/g/theme.txt /ram/n/theme.txt', 'dq0sky=1', 'dq0hour=12',
-          ...adder('g'), 'dq0hour=22', ...adder('n'), 'dq0hour=12', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', 'go to the shaft', 'listen', 'look', 'quit', 'dq0 -d /ram/s', 'look', 'quit',
-          'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'u', 'look', 'go to the shaft', 'look', 'quit', 'dq0sky=0', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'look', 'listen', 'quit', 'echo $status']);
+        const adder = d => ['dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/' + d + ' -S /ram/s.sc', 'douse the torch', ...Array(6).fill('wait 1 minute'), 'look', 'quit'];
+        return dq0Typed(dq0Game({ lines: ['mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/n', 'cp /ram/g/theme.txt /ram/n/theme.txt', 'echo sky 1 >> /ram/s.sc', 'echo hour 12 >> /ram/s.sc',
+          ...adder('g'), 'echo hour 22 >> /ram/s.sc', ...adder('n'), 'echo hour 12 >> /ram/s.sc', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -S /ram/s.sc', 'go to the shaft', 'listen', 'look', 'quit', 'dq0 -d /ram/s -S /ram/s.sc', 'look', 'quit',
+          'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'd', 'u', 'look', 'go to the shaft', 'look', 'quit', 'echo sky 0 >> /ram/s.sc', 'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'look', 'listen', 'quit', 'echo $status'] }));
       })() },
       start(m) {
         const scene = (h, L, K) => {
@@ -437,7 +439,7 @@ module.exports = {
         p.push({ g: 5, line: 'look', n: 1, call: () => { m.after = liveChunks(m, 0)[shaft().key]; } });
         p.push({ g: 6, line: 'look', n: 1, call: (h, L) => { const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8; }; w16(L.pcX, m.sq.x); w16(L.pcY, m.sq.y); } });
         p.push({ g: 3, line: 'listen', n: 1, call: (h, L) => { m.sq = { x: h[L.pcX] | h[L.pcX + 1] << 8, y: h[L.pcY] | h[L.pcY + 1] << 8 }; } });
-        dq0Poke(m, p);
+        dq0Scene(m, p);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -465,7 +467,7 @@ module.exports = {
     {
       name: 'dq0gamehour', hours: true, near: ['time'], what: "Dingus Quest Zero's hour by the game (the user's, 2026-11-03: \"vary by game\": HOUSE.md's the hour): seeds 5 and 14 walked into, the world's and the denizens' hour each the seed modulo 24, not dusk; dq0 -E dusk, 18; the environment's dq0hour above both",
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T -E', 'inventory', 'quit', 'dq0hour=3', 'dq0 -p t -s 14 -c /ram/c.hm -T', 'inventory', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 5 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T -E', 'inventory', 'quit', 'echo hour 3 >> /ram/s.sc', 'dq0 -p t -s 14 -c /ram/c.hm -T -S /ram/s.sc', 'inventory', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], w = T.filter(t => t.line === 'inventory').map(t => t.after && t.after.pc && t.after.pc.tb && t.after.pc.tb.hour0);
@@ -560,8 +562,8 @@ module.exports = {
     {
       name: 'dq0startwork', near: ['time'], what: 'Dingus Quest Zero\'s start\'s own work done before its first prompt (the user\'s, 2026-11-20: "The start\'s work finishes before the first prompt, so the first command is answered on time; the start takes a little longer"; built/2026-11-20-start1.md), at seed 5 by its way down (-T: dq0fightcmd\'s, whose "d" waited on it) at the turns pace and as played, and at seed 3 at the normal pace: as the first command\'s typed at the first prompt, no chunk the maker stocked is left with its things not put down (the world bank\'s cslot table: none CS_FRESH), and at the real paces the lights\' first minute has been reckoned (the hub\'s pc_left, the light\'s words on the status line, said; at the turns pace it\'s the first command\'s pass\'s, its test\'s dice where they always were)',
       init: 't_rc', cycles: 1300e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'quit',
-        DQ0_PLAYED + 'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', 'quit', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'quit',
+        DQ0_PLAYED + 'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', 'quit', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'quit', 'echo $status'] })) },
       start(m) {
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), CSLOT = H.off('wrec', 'cslot'), CSZ = H.size('cslot'),
           LEFT = H.off('hub', 'pc_left'), a = m.acia, read = a.read, self = this;
@@ -608,8 +610,8 @@ module.exports = {
       // things, the chest's number one that locks again, the picking's scene as it was)
       name: 'dq0timed', meaning: true, what: 'Dingus Quest Zero\'s timed work (the user\'s playtest, 2026-10-22: "It would be better if the first half (for example "You study the mechanism a while") comes out first, followed by, as the task timer expires, the second part"; HOUSE.md\'s long tasks): whatever spends time and whose outcome is a test a long task of its own, its first words at once (E_TASK TE_BEGUN, the clock where the command found it), its test made and its outcome told as its time\'s done (the clock its time on), stopped first, nothing: at seed 7 a thief (Lockcraft 95) finds a dart trap on a door (three searches), sets to making out its mechanism and is stopped at once (TE_STOPPED, no outcome: nothing made out), makes it out (LT_STUDY, TO_ASSESSED its minute on), disarms it (LT_DISARM, TO_DISARMED its minute on), the door opened and nothing set off; at seed 16 a door forced (LT_FORCE, its outcome its ten seconds on, the walk up to it with them); at seed 3 a track read (LT_TRACK, the reading, V_TRACED, its minute on), and another stopped at once (none read); at seed 17 a found chest walked over to and its lock picked (the things\' own: a long task of the UI\'s, LT_PICK, a minute, the things asked as it\'s begun and as it\'s done), a dagger hidden (LT_HIDE, a minute, hidden at its end); the words in order, each first half before its second',
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 1 -u feudal -c thief -o /ram/t.hm',
-        'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search', 'search', 'face south', 'disarm']) + 'stop\r' +
+      machine: { input: dq0Typed(dq0Game({ lines: ['hmchar -q -s 1 -u feudal -c thief -o /ram/t.hm',
+        'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search', 'search', 'face south', 'disarm'] })) + 'stop\r' +
         dq0Typed(['disarm', 'disarm', 'open', 'quit', 'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'track',
         'track']) + 'stop tracking\r' + dq0Typed(['quit', 'dq0 -p t -s 17 -c /ram/c.hm -T -k lockpicks,chalk,candle', 'wait', 'wait', 'wait', 'open the chest',
         'pick the lock of the chest', 'hide the dagger', 'quit', 'echo $status']) },
@@ -664,10 +666,9 @@ module.exports = {
     {
       name: 'dq0lowasleep', near: ['time'], what: "Dingus Quest Zero's light burning low not told in its sleep (2026-11-04: a review's fault, HOUSE.md's): a torch with twelve minutes left: awake, 'wait 5 minutes' tells it burning low; the next game, the same torch, 'sleep 5 minutes' doesn't",
       init: 't_rc', cycles: 2000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'look', 'wait 5 minutes', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'look', 'sleep 5 minutes', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'look', 'wait 5 minutes', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'look', 'sleep 5 minutes', 'quit', 'echo $status'] })) },
       start(m) {
-        dq0Poke(m, [{ g: 1, line: 'look', n: 1, fuel: { torch: 12 } }, { g: 2, line: 'look', n: 1, fuel: { torch: 12 } }]);
+        dq0Scene(m, [{ g: 1, line: 'look', n: 1, fuel: { torch: 12 } }, { g: 2, line: 'look', n: 1, fuel: { torch: 12 } }]);
       },
       sdcard: true,
       expect: ['% echo $status'],
@@ -682,9 +683,8 @@ module.exports = {
     {
       name: 'dq0restdark', near: ['time', 'gear'], what: "Dingus Quest Zero's rest puts a burning light out first (the user's, 2026-11-17: DECISIONS.md's \"The one-path plan and phase A's questions: the user's answers\", \"A rest puts a burning light out first (for every actor)\"; dq0w.c's rest_dark, the world's as the wait begins asleep, WA_SLEEP; its words E_BEAT's WB_DOUSE), by the words and the item store: at seed 3 (dq0 -T) \"rest\": \"You put out your torch.\" before \"You settle down to rest for eight hours.\", the torch not lit after, the hub's light none; a second game, a lantern lit as well (dq0 -k lantern), \"sleep 1 hour\": both put out first; a third, \"wait 10 minutes\" awake: the torch still lit",
       init: 't_rc', cycles: 2600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'rest', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'sleep 1 hour', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 10 minutes', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'rest', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'sleep 1 hour', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 10 minutes', 'quit', 'echo $status'] })) },
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
@@ -706,9 +706,8 @@ module.exports = {
     {
       name: 'dq0restnear', near: ['time', 'gear'], what: "Dingus Quest Zero's rest puts out every burning light within reach (the user's, 2026-11-18: DECISIONS.md's \"The merged branches' questions\", L6: \"A rest puts out every burning light within reach, not only those carried\"; dq0w.c's rest_dark: on its square or beside it, on a thing or in one there, E_BEAT's WB_DOUSE_NEAR), by the words and the item store: at seed 3 (dq0 -T, a lantern more) the lantern lit and set down at its feet: \"sleep 5 minutes\": \"You put out your torch.\" and \"You put out the lantern.\" before \"You settle down to sleep\", neither lit after; a second game the torch dropped lit and the character gone to the room's far side: the torch out of reach, still lit after the sleep, nothing put out",
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'drop the lantern', 'sleep 5 minutes', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop the torch', 'go to the far side', 'sleep 5 minutes', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'drop the lantern', 'sleep 5 minutes', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop the torch', 'go to the far side', 'sleep 5 minutes', 'quit', 'echo $status'] })) },
       sdcard: true,
       expect: ['% echo $status'],
       check(m, out) {
@@ -727,11 +726,11 @@ module.exports = {
     {
       name: 'dq0passes', near: ['time', 'gear'], what: "Dingus Quest Zero's minute's lighter passes at a real pace (2026-11-04: seen to in the world's main loop, part 27 not copied for them, the swap study's; the same work as when they were part 27's): at the normal pace, idle, not in a long wait: a torch burning in a sconce, its last minute poked, goes out at the minute's look and the sconce's own pass after it takes its room's light away (BA_SCONCES); the character's own torch burns a minute down for each minute gone; a wait's end asks the time it believes (TS_ASK): it's reckoned by then (its next due ahead of the clock, its minute this one)",
       init: 't_rc', cycles: 2400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 535 -c /ram/c.hm -T -T -T', 'light the torch in the sconce', 'wait 5 seconds',
-        '\u0100'.repeat(160) + 'look', 'wait 1 minute', String.fromCharCode(0x100).repeat(8) + 'inventory', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p n -s 535 -c /ram/c.hm -T -T -T', 'light the torch in the sconce', 'wait 5 seconds',
+        '\u0100'.repeat(160) + 'look', 'wait 1 minute', String.fromCharCode(0x100).repeat(8) + 'inventory', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {                                  // (Its last minute, as the wait's typed: the sconce's own torch, the one lit in it)
-        dq0Poke(m, [{ g: 1, line: 'wait 5 seconds', n: 1, call: () => {
+        dq0Scene(m, [{ g: 1, line: 'wait 5 seconds', n: 1, call: () => {
           const { L } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize), cat = m.dq0.bank(L.catBank), name = k => { let s = ''; for (let c = k * L.kindSize; cat[c]; c++) s += String.fromCharCode(cat[c]); return s; };
           const rec = i => { const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize; return { b, o }; };
           for (let i = 0; i < L.nitems; i++) {
@@ -769,15 +768,15 @@ module.exports = {
     {
       name: 'dq0time', near: ['time', 'senses'], what: "Dingus Quest Zero's time of day believed (2026-10-31: DUNGEON.md's the time of day believed, HOUSE.md's, for review; the user's: fuzzy unless the sky's seen, arbitrary after a sleep, set by the sun when north is known or by watching it): the character's belief (the hub's tb: its error from the true clock and its doubt, the world's part 76) and its words: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start: dq0daily's, out of earshot), the game begun at 8 o'clock (the environment's dq0hour), \"time\" told plainly (\"It's eight in the morning.\"); its torch put out (so its burning out breaks no long wait), two hours waited (the hours' tests: a doubt, \"about\" or \"some time around\" the hour, not plainly); three hours slept (TG_SLEEP, its doubt an eighth of the sleep more at the least); an hour more waited, then a sky in sight poked (tb.sky's SKY_OPEN, as a far exit's open sky: the afternoon's sun) as the sun's watched (\"watch the sun\", a quarter hour's wait): first read by the north it believes in (\"You see the sun in the sky\"), then watched ten minutes (\"You watch the sun a while\": the time to a quarter of an hour, its error none); the sky gone, then poked in sight again with its north believed a quarter of a turn off (pc_skew 2, unknown to it): the sun read six hours wrong (its error 360 minutes, its doubt half an hour); \"wait until night\" lasting till night as it believes the time (21 o'clock by its belief: the wait's minutes and the believed minute meet there); quit and carried on (dq0 -d), the belief as it was (world.dat's); and a character with absolute timesense (its file's \"timesense\" line, hmchar's rare trait): two hours slept, its time known still, told plainly",
       init: 't_rc', cycles: 5000e6,   // (4454M, 2026-10-31: the garrison's day as it waits; 4903M, 2026-11-02: a room search's bytes and moving's at each start)
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'echo timesense >> /ram/k.hm', 'dq0hour=8', 'mkdir /ram/s', "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt", 'mkdir /ram/g', 'cp /ram/s/theme.txt /ram/g/theme.txt',
-        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'time', 'douse the torch', 'wait 2 hours', 'time', 'sleep 3 hours', 'time', 'wait 1 hour',
+      machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/k.hm', 'echo timesense >> /ram/k.hm', 'echo hour 8 >> /ram/s.sc', 'mkdir /ram/s', "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt", 'mkdir /ram/g', 'cp /ram/s/theme.txt /ram/g/theme.txt',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', 'time', 'douse the torch', 'wait 2 hours', 'time', 'sleep 3 hours', 'time', 'wait 1 hour',
         'watch the sun', 'time', 'wait 10 minutes', 'wait 1 minute', 'time', 'wait until night', 'time', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'look', 'quit',
-        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/h', 'douse the torch', 'sleep 2 hours', 'time', 'quit', 'echo $status']) },
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', 'look', 'quit',
+        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/h -S /ram/s.sc', 'douse the torch', 'sleep 2 hours', 'time', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
         const due = { tbDue: 0, tbDue1: 0, tbDue2: 0, tbDue3: 0 };
-        dq0Poke(m, [{ g: 1, line: 'watch the sun', n: 1, hub: Object.assign({ tbSky: 2 }, due) },   // (The open sky in sight: SKY_OPEN)
+        dq0Scene(m, [{ g: 1, line: 'watch the sun', n: 1, hub: Object.assign({ tbSky: 2 }, due) },   // (The open sky in sight: SKY_OPEN)
           { g: 1, line: 'wait 10 minutes', n: 1, hub: Object.assign({ tbSky: 0 }, due) },          // (Gone from sight)
           { g: 1, line: 'wait 1 minute', n: 1, hub: Object.assign({ tbSky: 2, pcSkew: 2, pcLost: 0 }, due) },   // (Its north a quarter off)
           { g: 1, line: 'wait until night', n: 1, hub: Object.assign({ tbSky: 0 }, due) }]);
@@ -815,14 +814,13 @@ module.exports = {
     {
       name: 'dq0sky', near: ['time', 'senses'], what: "Dingus Quest Zero's sky (2026-11-03, the user's \"All three together\": HOUSE.md's what shows the sky, for review): by the seed a shaft open to the sky in a stratum's links (seed 7's, choked below; seed 1 none), the rest by the environment's dq0sky (every top-stratum room a skylight and a window on the surface, a shaft beside the first way down, going on down): a skylight and a window told and on the map, the sun read from beside them, watched, the stars; daylight lighting the squares by day, none by night; a window's sky seen through it, its shutters shut not, never climbed through; a shaft too high to reach, barred at the top, climbed down by the ledge's rules to its foot on the stratum below, its light alone there; a thing dropped down it found at its foot; a shaft a way out only with the way out open",
       init: 't_rc', cycles: 5000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 1 -c /ram/c.hm', 'quit', 'dq0 -p t -s 7 -c /ram/c.hm', 'look', 'd', 'quit',
-        'dq0sky=1', 'dq0hour=12',
-        'dq0 -p t -s 1 -c /ram/c.hm', 'look east', 'examine the window', 'climb through the window', 'douse the torch', 'look', 'map', 'wait 5 hours', 'wait 4 hours', 'look', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm', 'look southwest', 'open the window', 'look southwest', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'u', 'go to the shaft', 'drop the flask', 'd', 'look', 'u', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'go to the shaft', 'u',
-        'dq0hour=22', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'go to the shaft', 'douse the torch', 'look', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 1 -c /ram/c.hm', 'quit', 'dq0 -p t -s 7 -c /ram/c.hm', 'look', 'd', 'quit',
+        'echo sky 1 >> /ram/s.sc', 'echo hour 12 >> /ram/s.sc',
+        'dq0 -p t -s 1 -c /ram/c.hm -S /ram/s.sc', 'look east', 'examine the window', 'climb through the window', 'douse the torch', 'look', 'map', 'wait 5 hours', 'wait 4 hours', 'look', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -S /ram/s.sc', 'look southwest', 'open the window', 'look southwest', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'u', 'go to the shaft', 'drop the flask', 'd', 'look', 'u', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'go to the shaft', 'u',
+        'echo hour 22 >> /ram/s.sc', 'dq0 -p t -s 2 -c /ram/c.hm -T -S /ram/s.sc', 'go to the shaft', 'douse the torch', 'look', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
         const roof = ft => () => {                       // (The roof of the character's chunk's rooms: a shaft's mouth in reach)
@@ -841,7 +839,7 @@ module.exports = {
           const h = m.dq0.bank(0), { L } = m.dq0.layout(), k = stratumRec(m, 0).links.find(l => l.kind === 6 && l.dug === 2);
           if (k) { h[L.pcX] = k.x & 255; h[L.pcX + 1] = k.x >> 8; h[L.pcY] = k.y & 255; h[L.pcY + 1] = k.y >> 8; }
         };
-        dq0Poke(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 6, line: 'u', n: 1, call: roof(8) }]);
+        dq0Scene(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../../../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 6, line: 'u', n: 1, call: roof(8) }]);
       },
       check(m, out) {
         const f = [], G = dq0Prose(out).replace(/\([A-Z]{1,2}\) /g, '').split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
@@ -886,9 +884,9 @@ module.exports = {
     {
       name: 'dq0pace', meaning: true, what: 'Dingus Quest Zero\'s pace and watchfulness (the user\'s, 2026-10-16: DUNGEON.md, moving), by the world\'s state of them (the hub\'s gait and watch: the UI\'s requests, WQ_SET): a walk to begin with; a jog set, then searching for traps as it goes, listening too, each stopped, mapping as it goes and stopped; a sprint set, a slow walk; "run north" setting the run as it goes (the move the command\'s), "run south" going on at it; a creep, listening as it goes; kept (dq0 -d: the world\'s world.dat) and the game carried on at them (its words: dq0wordsthings; the sheet\'s pace line, the referee\'s: dq0harm)',
       init: 't_rc', cycles: 1000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/p', 'status', 'jog',
+      machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -d /ram/p', 'status', 'jog',
         'search for traps as I go', 'listen as I go', 'stop searching', 'stop listening', 'map as I go', 'stop mapping', 'set pace to sprint',
-        'walk slowly', 'run north', 'run south', 'creep', 'listen as I go', 'quit', 'dq0 -p t -d /ram/p', 'status', 'quit', 'echo $status']) },
+        'walk slowly', 'run north', 'run south', 'creep', 'listen as I go', 'quit', 'dq0 -p t -d /ram/p', 'status', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
         // (rs.h's GA_CREEP 0 ... GA_SPRINT 5; hub.h's WA_TRAPS 1, WA_LISTEN 2, WA_MAP 4)
@@ -919,7 +917,7 @@ module.exports = {
       start(m) {   // (2026-11-08, one line of sight: seed 3's rats sent off as the digs begin, dq0Alone's: one in the passage
         // below, out of the character's sight now as the character's out of its, wanders in and out of view, its stirring
         // stopping the spell short)
-        dq0Poke(m, [1, 2].map(n => ({ g: 1, line: 'dig down', n, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, -1) })));
+        dq0Scene(m, [1, 2].map(n => ({ g: 1, line: 'dig down', n, call: (h, L, K, at) => dq0Alone(m, h, L, K, at, -1) })));
       },
       expect: ['% echo $status'],
       check(m) {

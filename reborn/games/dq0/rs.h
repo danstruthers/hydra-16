@@ -509,13 +509,28 @@ enum {
                                                 **   name (its outfit's section), then a line each its open skills'
                                                 **   names, the highest first (each its section's: weapons, tools);
                                                 **   result 0, or 0xFF none (the kit as it was) */
-    RS_ROUSE                                    /* A senseless one (actor: 0 the character, else its entry plus 1),
+    RS_ROUSE,                                   /* A senseless one (actor: 0 the character, else its entry plus 1),
                                                 **   its time out come: its shock rolls due by now rolled, a round each
                                                 **   as the game's time passes (the user's, 2026-11-21) -> w2 the tenths
                                                 **   it's senseless still (its next roll's), 0 come round (a referee
                                                 **   with no such rolls: 0, the world's w2 as it asked; dead as it
                                                 **   lay, 0xFFFF: it never comes round) */
+    RS_SCENE                                    /* (A test's: hub.h's scene, the world's SO_RS) An actor's sheet set as
+                                                **   the scene says (a: SCN_*), in the ruleset's own terms -> result 0;
+                                                **   0xFF one it hasn't (the null referee's all but SCN_OUT) */
 };
-#define RD_DEITY        5                       /* (RS_DESCRIBE's b: the deity the character worships, its name) */
+#define SCN_OUT         1                       /* (RS_SCENE's a: senseless till x[4-7], the clock's tenths (a creature
+                                                **   out; the character out and come round in shock as its rolls fall); */
+#define SCN_WELL        2                       /*   unhurt: awake, no blood lost, no wound; */
+#define SCN_HURT        3                       /*   a minor wound of b levels, every test the worse; */
+#define SCN_LAME        4                       /*   lamed: a serious wound, its agility 1 (its getting up a test failed); */
+#define SCN_ATT         5                       /*   its attribute c (the ruleset's order) b; */
+#define SCN_TIRE        6                       /*   its body's fatigue: b levels, w1 its exertion, x[4-7] when last
+                                                **   reckoned; */
+#define SCN_RAM         7                       /*   (any actor's) the referee's own main RAM at w1, c bytes of x[4-7]
+                                                **   (4 at most); */
+#define SCN_HUB         8                       /*   (any actor's) the hub's header's bytes the referee writes, at w1:
+                                                **   its summary, pcsum ...) */
+#define RD_DEITY        5                      /* (RS_DESCRIBE's b: the deity the character worships, its name) */
 
 #endif

@@ -66,6 +66,7 @@
 #include "../dq0w/world.h"
 #include "lore.h"
 #include "pop.h"
+#include "den.h"
 #include "../dq0/rp.h"
 #include "../dq0/lnzp.h"
 
@@ -283,7 +284,6 @@ typedef char dkind_fits[sizeof (struct dkind) == 40 ? 1 : -1];     /* (make.js's
 /* The factions (factions.txt's: a stand-in theme's, after the kinds in the data file, the first none): each one's
 ** tongue, its attitude to the character as it first meets it, how it stands with each other one (AT_HOSTILE,
 ** AT_WARY, AT_INDIFFERENT, AT_FRIENDLY), copied out into the main RAM as it starts */
-#define NFACT           8
 struct faction {
     char            name[12];
     char            tongue[9];                  /* ("": none; 8 letters, 2026-10-29: "sindarin") */
@@ -296,86 +296,10 @@ static unsigned char nfacts;
 static char ftongue[NFACT][9];
 static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
 
-/* ---- The records: the lairs and the denizens, in a bank of their own (a cache: its records' places free, kind 0,
-** or a region's that's in it) */
-
-#define NLAIRS          64
-#define NDENS           224                     /* (240 till their want, 2026-10-31: two bytes each more) */
-struct lair {
-    unsigned char   sn, kind, n;                /* Its stratum, its kind, its denizens */
-    unsigned char   flags;                      /* L_* */
-    unsigned char   link;                       /* The stratum's link it's by, or 0xFF (a room of its chunk) */
-    unsigned        id;                         /* Its number (1 on: the order the lairs were decided in) */
-    unsigned        cx, cy;                     /* Its chunk (from the stratum's x0, y0) */
-    unsigned        hx, hy;                     /* Its home square (placed) */
-    unsigned char   rx, ry;                     /* Its region (its chunk's first square's, the frame's) */
-};
-#define L_PLACED        0x01                    /* Its denizens placed */
-#define L_LEADER        0x02                    /* Its faction's leader with them (a theme's home: popgen's, 2026-10-29), its
-                                                **   faction the high bits (L_FAC) */
-#define L_FAC(f)        (((f) >> 4) & 7)
-struct den {
-    unsigned char   kind;
-    unsigned char   flags;                      /* D_* */
-    unsigned char   sn, face;
-    unsigned        id, lid;                    /* Its number (1 on), its lair's */
-    unsigned        x, y;                       /* Its square (placed) */
-    unsigned long   ready;                      /* When it can act again */
-    unsigned char   attitude;                   /* To the character (hub.h's AT_*) */
-    unsigned char   order;                      /* An ally's request (hub.h's OR_*) */
-    unsigned char   lsn, lrx, lry;              /* Its lair's stratum, and its region (its own, not placed yet: the
-                                                **   lair's rx, ry) */
-    unsigned        hx, hy;                     /* Its lair's home square (placed) */
-    unsigned char   fac;                        /* Its faction (its kind's, the stand-in's; or the theme's) */
-    unsigned char   serve;                      /* The weeks it had served its leaders as the game began (a leader's,
-                                                **   it had led: its band's age), */
-    unsigned char   contact;                    /*   and how much it's with them, 0-255 (part morale's: its bonds' growth) */
-    unsigned char   ate, drank;                 /* The clock (NOW_U's) it last ate, and drank (its want: 2026-10-31) */
-};
-#define D_OUT           0x01                    /* On a square of its own */
-#define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
-#define D_DEAD          0x04                    /* Dead (its body left where it fell: an item) */
-#define D_MET           0x08                    /* Met (made an actor once: its personal things made, I_KIT's KT_PURSE,
-                                                **   the outfits' phase 3, 2026-10-27) */
-#define D_LOST          0x10                    /* It knows a leader of its is lost (dead): no bond to a dead one after
-                                                **   (part morale's; one it doesn't know of holds), and of the one after it */
-#define D_RANK(f)       ((f) >> 5 & 3)          /* A successor's rank, its post's (RK_*: its kind's the less; part morale's
-                                                **   succession, 2026-10-30), */
-#define D_PROM          0x80                    /*   a successor: its serve the week it took its post (its tenure) */
+/* ---- The records (den.h's): their head kept in the main RAM, the regions' table */
 #define NOW_U           ((unsigned char) ((unsigned*) &now)[1])    /* (The want's clock: their bodies', below) */
-#define NNAMES          8
-#define NDREG           32
 static struct gw gmind;                         /* (The minds' give-way, the library's: held's) */
-#define DN_MAGIC        0x4E44                  /* "DN": dens.dat's */
-struct head {
-    unsigned        magic;
-    unsigned char   nlairs, ndens;              /* The records' places used, up to the last in use */
-    unsigned char   fatt[NFACT];                /* Each faction's attitude to the character now (its newcomers') */
-    unsigned char   deeds[NFACT];               /* Each faction's regard: the points of the deeds it knows of, towards
-                                                **   its next step (slice 4.8's reputation: regard) */
-    struct { unsigned id; char name[12]; } names[NNAMES];    /* The names the character's given (a denizen's
-                                                **   number; 0: none) */
-    unsigned        ids, lids;                  /* The denizens' and the lairs' numbers given */
-    unsigned char   done[32];                   /* Each stratum's populations decided (a bit each: DONE) */
-    struct {
-        unsigned char sn, rx, ry;
-        unsigned    stamp;
-    }               reg[NDREG];                 /* The regions whose records are in the cache (sn its stratum plus 1:
-                                                **   0 the entry free) */
-    unsigned        rstamp;
-};
 #define DONE(n)         (hd.done[(n) >> 3] & 1 << ((n) & 7))
-struct pop {
-    struct head     h;
-    struct lair     lair[NLAIRS];
-    struct den      den[NDENS];
-    unsigned char   nowork[32];                 /* (A lair's number's, its low bits: the clock's high byte plus 1 when
-                                                **   its diggers last found no dig to do, part day's target: not asked
-                                                **   again till it moves, near enough two hours: part tunnel_work's a dearer
-                                                **   swap than a record's move) */
-};
-#define POP             ((struct pop*) 0x8000)
-typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
 
 static unsigned char kb, pb;                    /* Its banks: the kinds', the records' */
 static unsigned char knose[SND_KINDS];          /* Each kind's nose (kinds.txt's, dq0d.dat's end: the traces'), and the
@@ -792,6 +716,7 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
 
 static struct msg im;                           /* (Its intents: below) */
 static void __fastcall__ post (unsigned char kind, unsigned char who);
+void scene (void);                              /* (Part scene's: a test's scene, the minds' part) */
 static void trodden (void);
 static void kitted (void);
 
@@ -3380,7 +3305,8 @@ static unsigned char __fastcall__ route (unsigned char k)
 static unsigned char held (void)
 {
     hub_map (0);
-    return gw_held (&gmind, 0);
+    return HUB->scene != HUB->scene_d || gw_held (&gmind, 0);   /* (A test's scene to put in place: its pass broken off,
+                                                **   round to it at the top: part scene's) */
 }
 
 /* ---- The denizens away from the character (out, but not actors): moved coarsely, a while at a time, each to a
@@ -4965,6 +4891,10 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {
         while (hy_sem_try (HUB->sem[T_DENIZENS]) == 0) {
         }
+        if (HUB->scene_m != HUB->scene_d) {
+            scene ();                           /* (A test's scene, the minds' part after the world's, no actor's
+                                                **   copy in hand: part scene's) */
+        }
         settle ();                              /* (Its intents the world's, as it goes on) */
         if (hub_posted (&HUB->dsave)) {         /* (The UI's asked for a save) */
             keep (0);
@@ -6008,7 +5938,7 @@ next:                                           /* (Post r, left by x: its facti
 ** (roam's: a sleeper's due as it wakes, a meal's as it ends, so none's looked at meanwhile), an actor as it decides
 ** (decide's, as it's free and about nothing else); one made an actor asleep comes asleep (s_enlist's).  The day's
 ** hour the clock's and the hour the game began at (hour0: the house's, the character goes down at dusk; a test's
-** scene the environment's dq0hour, or a poke, the label's: 0x80 and more, no day, every one about as ever).  And the actors' coarse moves and a cornered
+** scene's hour (dq0 -S, the hub's sc_hour): 0x80 and more, no day, every one about as ever).  And the actors' coarse moves and a cornered
 ** one's dart (the main RAM's room) */
 
 #define DAY_START       18                      /* The hour the game begins (the house's: at dusk) */
@@ -6264,29 +6194,59 @@ static void __fastcall__ meal (unsigned char k)
     }
 }
 
-/* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
+/* The hour the game began at (hour0), as the day's first asked (sched's): a test's scene's (dq0 -S, the hub's sc_hour),
 ** else by the game's seed (the user's, 2026-11-03: "vary by game"), dq0 -E's dusk, the tests'.  Part placing's (part day's room,
 ** and 10's) */
 #pragma code-name (push, "SW_placing_CODE")
 #pragma rodata-name (push, "SW_placing_RODATA")
 void s_hour (void)
 {
-    static struct hy_regs r;
-    static char b[4];
-    char* p;
-
     hset = 1;
-    hour0 = HUB->pc_lump & PL_DUSK ? DAY_START : (unsigned) HUB->seed % 24;
-    r.a = 0xFF;
-    r.r[0] = (unsigned) "dq0hour";
-    r.r[1] = (unsigned) b;
-    r.r[2] = 3;                                 /* (r.r[3] 0: BSS) */
-    if (!hy_call (HY_ENV_GET, &r)) {
-        for (hour0 = 0, p = b; *p >= '0' && *p <= '9'; ++p) {
-            hour0 = hour0 * 10 + *p - '0';
+    hour0 = HUB->sc_said & SC_HOUR ? HUB->sc_hour : HUB->pc_lump & PL_DUSK ? DAY_START : (unsigned) HUB->seed % 24;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part scene: a test's scene, the minds' part of it (../dq0/hub.h's scene: phase C's scene builder, scene1,
+** 2026-11-24), after the world's and the maker's (scene_m), at the top of the main loop (no actor's copy in hand): the hub's bytes that
+** are the minds' (SO_DHUB: an actor's mind's fields), their own records' (SO_REC: den.h's struct pop, in pb), an intent
+** posted as a mind would (SO_INTENT); then scene_d, the scene in place */
+#pragma code-name (push, "SW_scene_CODE")
+#pragma rodata-name (push, "SW_scene_RODATA")
+#pragma bss-name (push, "SW_scene_RODATA")
+void s_scene (void)
+{
+    static unsigned at;
+    static unsigned char s, k, n;
+    static unsigned char b[80];                 /* (An op's payload, copied out of CMD_BANK) */
+
+    hub_map (0);
+    s = HUB->scene_m;
+    for (at = SCENE_AT; at < SCENE_AT + SCENE_SIZE - 2; at += 2 + n) {
+        hub_map (CMD_BANK);
+        k = HUB_WINDOW[at];
+        n = HUB_WINDOW[at + 1];
+        if (k == SO_END || n > sizeof b) {
+            break;
+        }
+        memcpy (b, HUB_WINDOW + at + 2, n);
+        if (k == SO_DHUB) {                     /* (Its bank, its offset, the bytes) */
+            hub_map (b[0]);
+            memcpy (HUB_WINDOW + (b[1] | b[2] << 8), b + 3, n - 3);
+        } else if (k == SO_REC) {               /* (The records' offset, the bytes) */
+            hy_bank (pb);
+            memcpy ((char*) 0x8000 + (b[0] | b[1] << 8), b + 2, n - 2);
+        } else if (k == SO_INTENT) {
+            memcpy (&im, b, sizeof im);
+            post (im.kind, im.who);
+        } else if (k == SO_DRAM) {              /* (Its own main RAM: the address, the bytes) */
+            memcpy ((char*) (b[0] | b[1] << 8), b + 2, n - 2);
         }
     }
+    hub_map (0);
+    HUB->scene_d = s;
 }
+#pragma bss-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 

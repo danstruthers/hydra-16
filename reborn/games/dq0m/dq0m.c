@@ -22,6 +22,8 @@
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
 const char* libpath;                            /* (The game's lib folder: its bank programs', stratagen's) */
+unsigned char sc_said, sc_sky, sc_air, sc_furn;    /* (A test's start, dq0 -S's: the hub's, copied as it starts, for the
+                                                **   overlays: grow.h's) */
 /* Its overlays (OVLS, the build's, dq0m.cfg's count): built.c, pass.c, caves.c, plan.c, fixtures.c; the
                                                 **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
                                                 **   uses.c; the great caverns (caves.c's cavern); what shows the sky
@@ -274,6 +276,42 @@ unsigned char s_way_next (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 unsigned char way_next (void);                  /* (Its stub: bank.s's) */
+void scene (void);                              /* (Part scene's: a test's scene, the maker's part) */
+
+/* ==== Part scene: a test's scene, the maker's part of it (../dq0/hub.h's scene: phase C's scene builder, scene1,
+** 2026-11-24), after the world's (scene_w), at the top of the main loop (no chunk being made): a chunk's own bytes in the
+** cache (SO_MHUB); then scene_m, and the minds rung, theirs next */
+#pragma code-name (push, "SW_scene_CODE")
+#pragma rodata-name (push, "SW_scene_RODATA")
+#pragma bss-name (push, "SW_scene_RODATA")
+void s_scene (void)
+{
+    static unsigned at;
+    static unsigned char s, k, n;
+    static unsigned char b[80];                 /* (An op's payload, copied out of CMD_BANK) */
+
+    hub_map (0);
+    s = HUB->scene_w;
+    for (at = SCENE_AT; at < SCENE_AT + SCENE_SIZE - 2; at += 2 + n) {
+        hub_map (CMD_BANK);
+        k = HUB_WINDOW[at];
+        n = HUB_WINDOW[at + 1];
+        if (k == SO_END || n > sizeof b) {
+            break;
+        }
+        if (k == SO_MHUB) {                     /* (Its bank, its offset, the bytes) */
+            memcpy (b, HUB_WINDOW + at + 2, n);
+            hub_map (b[0]);
+            memcpy (HUB_WINDOW + (b[1] | b[2] << 8), b + 3, n - 3);
+        }
+    }
+    hub_map (0);
+    HUB->scene_m = s;
+    hub_ring (T_DENIZENS);
+}
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 int main (int argc, char* argv[])
 {
@@ -283,6 +321,11 @@ int main (int argc, char* argv[])
         return 1;
     }
     libpath = argv[3];
+    hub_map (0);
+    sc_said = HUB->sc_said;
+    sc_sky = HUB->sc_sky;
+    sc_air = HUB->sc_air;
+    sc_furn = HUB->sc_furn;
     changes_init ();
     ahead_init ();                              /* (Its own banks for the chunks it makes ahead) */
     hub_set (THEME_BANK, THEME_PLACE, 0xFF, NPIECES * sizeof (struct tplace));     /* (No piece placed yet) */
@@ -290,6 +333,9 @@ int main (int argc, char* argv[])
         hub_map (0);                            /* (The hub's header: its own banks may be in the window) */
         if (HUB->quit) {
             break;
+        }
+        if (HUB->scene_w != HUB->scene_m) {
+            scene ();                           /* (A test's scene, the maker's part: part scene's) */
         }
         if (!(w = asked ())) {                  /* (Nothing asked: a chunk made ahead, or asleep on its doorbell, woken
                                                 **   by a request's ring) */

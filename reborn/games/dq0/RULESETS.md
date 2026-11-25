@@ -38,7 +38,11 @@ ten no one made, RS_DROP_ACTOR, RS_TEST_MANY, RS_REST, RS_INITIATIVE, RS_EXPERIE
 RS_RESTORE and RS_QUIT, and the neutral character, struct rs_neutral, deleted 2026-11-11: ENGINE-CRITIQUE.md's section 8).
 RS_DICE is the referee's unit tests' alone (tests/ram/t_rules: the
 next dice's faces fixed, the dice rolled since said back; dq0harn answers it, a ruleset needn't); one it doesn't know
-it answers with result 0xFF.
+it answers with result 0xFF.  RS_SCENE is the tests' too (hub.h's scene, the world's SO_RS, scene1, 2026-11-24): an
+actor's sheet set as a test's scene says, in the ruleset's own terms (a: rs.h's SCN_OUT senseless till x[4-7], SCN_WELL,
+SCN_HURT b levels, SCN_LAME, SCN_ATT c to b, SCN_TIRE; SCN_RAM and SCN_HUB, raw bytes of its own RAM or of the hub's
+header it writes); a ruleset answers what it has (dq0harn all, dq0null SCN_OUT for the character and the raw two), 0xFF
+the rest.
 
 | Request | Asked by | The game reads |
 |---------|----------|----------------|
