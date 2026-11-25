@@ -138,10 +138,6 @@ unsigned char __fastcall__ o_defended (unsigned char r)
 ** way), listed with the stock (put_down's), if the list keeps room for what's to come after it (the theme's pieces,
 ** the portals' parts, the sconces) */
 extern unsigned sx0, sy0;                       /* (stock.c's: the chunk's first square) */
-static unsigned char fenv;                      /* (The environment's dq0furn: 0 not read yet; 1 none said; 2 "0",
-                                                **   none placed, a test's scene's, as sky.c's dq0sky) */
-static struct hy_regs far_;
-static char fnm[8], fval[4];                    /* (In the main RAM: the name, its value) */
 static const unsigned char furn[NUSES][4] = {
     { 0 }, { KI_CABINET, KI_SHELVES }, { 0 }, { KI_CASE, KI_CASE }, { 0 }, { 0 }, { 0 },   /* (chamber, hall, cell,
                                                 **   vault, crypt, gallery, cave) */
@@ -156,16 +152,7 @@ static void __fastcall__ o_put_furn (unsigned char i)
     const struct room* r = &L->room[i];
     unsigned char n, d, lx, ly, k;
 
-    if (!fenv) {
-        strcpy (fnm, "dq0furn");
-        far_.a = 0xFF;
-        far_.r[0] = (unsigned) fnm;
-        far_.r[1] = (unsigned) fval;
-        far_.r[2] = 3;
-        far_.r[3] = 0;
-        fenv = !hy_call (HY_ENV_GET, &far_) && fval[0] == '0' ? 2 : 1;
-    }
-    if (fenv == 2 || r->kind >= NUSES || !(k = furn[r->kind][dr (4)]) || sk.n + 12 > NSTOCK) {
+    if (((sc_said & SC_FURN) && !sc_furn) ||    /* (A test's start's: none placed, dq0 -S's, as sky.c's sky) */ r->kind >= NUSES || !(k = furn[r->kind][dr (4)]) || sk.n + 12 > NSTOCK) {
         return;
     }
     for (n = 0; n < 8; ++n) {

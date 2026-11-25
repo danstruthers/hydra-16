@@ -351,3 +351,4 @@ RS_WIELD        b thing; x[0-1] held[]  -> result which  # (At a thing; the kind
 RS_OUTFIT       -  -> result none; a level; w1 money; w2 seed; x[0-1] tags[]; x[2] heft; x[3] bears
                 # (0xFF none; its wealth; farthings; its draw's seed; its tags' bits (the ruleset's); its weapons' version; quarter pounds)
 RS_ROUSE        -  -> w2 out                # (Its shock rolls due by now: the tenths it's senseless still, 0 come round, 0xFFFF dead)
+RS_SCENE        a what@SCN_OUT; b level; c which; w1 ex; x[4-7] till  # (A test's scene, the world's SO_RS: rs.h's SCN_*)

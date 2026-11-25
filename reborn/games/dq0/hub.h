@@ -1773,6 +1773,14 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_grip;                    /* The actor the character holds, plus 1 (0 none), | GH_PIN pinned (the
                                                 **   world's grip, as its grapple leaves it: the minds' to know one held
                                                 **   is helpless to a robbery, the user's, 2026-11-23) */
+    unsigned char   scene;                      /* A test's scene posted (SCENE_AT's: the tests' harness writes it, its
+                                                **   number here), */
+    unsigned char   scene_w;                    /*   the world's part of it carried out (that number then), */
+    unsigned char   scene_d;                    /*   and the minds' after it: the scene in place */
+    unsigned char   sc_said;                    /* A test's start (dq0 -S FILE: SC_* each fact its file says), */
+    unsigned char   sc_hour, sc_sky, sc_air, sc_well, sc_furn;   /*   each one's number (the UI's, as it makes the hub) */
+    unsigned char   scene_m;                    /* A test's scene: the maker's part carried out, after the world's (the
+                                                **   world's to set, a scene with none of the maker's) */
 };
 #define AL_REACH        0x1F
 #define AL_NOFIRE       0x40
@@ -2283,8 +2291,57 @@ struct wsave {
 **   own wrec.inuse[ASK_DENIZENS] denizens
 **   own wrec.inuse[ASK_SENSES] senses
 **   own wrec.inuse[ASK_UI] ui
+**   own hub.scene none                                         (A test's scene: the harness's, no task's)
+**   own hub.scene_w world                                      (Its parts carried out, each by its owner)
+**   own hub.scene_d denizens
+**   own hub.sc_said ui                                         (A test's start: dq0 -S's)
+**   own hub.sc_hour ui
+**   own hub.sc_sky ui
+**   own hub.sc_air ui
+**   own hub.sc_well ui
+**   own hub.sc_furn ui
+**   own bank(CMD_BANK,HUB_WINDOW+SCENE_AT,HUB_WINDOW+SCENE_AT+SCENE_SIZE) none   (A scene's ops: the harness's)
+**   own hub.scene_m maker +world                               (The maker's part, or the world's word it has none)
 **   own.
 */
+
+/* ---- A test's scene (phase C's scene builder, scene1, 2026-11-24): what a test sets up, said to the game and done by
+** each fact's owner to its own state, between its intents, so no copy of another task's writes it back (the tests'
+** pokes it replaces lost their writes so: OPEN.md's G18 and X1).  The tests' harness (tests/lib/dq0.js's dq0Scene)
+** writes the ops at SCENE_AT in CMD_BANK, then hub.scene, the scene's number; the world, at the top of its loop (no body
+** of an intent's in hand), does its own (SO_HUB, SO_DUE) and asks the referee its (SO_RS: rs.h's RS_SCENE), then sets
+** scene_w; the maker, at the top of its loop, its own (SO_MHUB: a chunk's own bytes, the cache's), and sets scene_m (the
+** world sets it, a scene with none); then the minds theirs at the top of their loop (SO_DHUB, SO_REC, SO_INTENT), and
+** set scene_d.  A
+** line typed waits for that before it's posted to the parser (the UI's cq_post): the scene's in place as its command's
+** carried out.  An op: its kind, its payload's length, the payload; SO_END after the last.  Each task's code for it is
+** in a swapped part of its own (scene), swapped in only for a scene */
+#define SCENE_AT        0x1800                  /* (In CMD_BANK, past the command's reply) */
+#define SCENE_SIZE      0x0800
+enum {
+    SO_END,
+    SO_HUB,                                     /* The world's: bank, offset (2), then the bytes (the hub's, those the
+                                                **   table above gives the world to write) */
+    SO_DHUB,                                    /* The minds': the same (an actor's mind's fields, the denizens') */
+    SO_REC,                                     /* The minds': their records' bank (den.h's struct pop at $8000), the
+                                                **   offset (2), then the bytes */
+    SO_INTENT,                                  /* The minds': an intent posted as a mind would (struct msg's bytes) */
+    SO_RS,                                      /* The world's to ask the referee: RS_SCENE's actor, a, b, c, w1 (2) and
+                                                **   x[4-7] (4) */
+    SO_DUE,                                     /* The world's: a job of its made due at once (DU_*) */
+    SO_MHUB                                     /* The maker's: as SO_HUB (a chunk's own, the maker's alone) */
+};
+#define DU_BURN         1                       /* (SO_DUE's: the lights' minute, */
+#define DU_TRACE        2                       /*   the traces' journal taken in, */
+#define DU_HOLD         3                       /*   or the journal held, none of it to take in yet) */
+#define SC_HOUR         0x01                    /* (sc_said's, a test's start: the hour the game begins (0x80 and more,
+                                                **   no day), */
+#define SC_SKY          0x02                    /*   the sky (0 none at all; else every room both, a shaft always), */
+#define SC_AIR          0x04                    /*   the air (0 no bad air; KS, every chunk a pocket of kind K, rs.h's
+                                                **   AQ_*, strength S), */
+#define SC_WELL         0x08                    /*   a well's foot (0 a sump, 1 a cistern, 2 a sump with a way on, 3 a
+                                                **   cistern with one), */
+#define SC_FURN         0x10                    /*   the rooms' furniture (0 none placed)) */
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 #define DSLOT   ((struct req*) HUB->dslot)

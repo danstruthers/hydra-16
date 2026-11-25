@@ -85,6 +85,8 @@ static unsigned char took;                      /*   and the fight it was in sto
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
+static unsigned char scn[6];                    /* (A test's start, dq0 -S FILE's: the hub's sc_said, sc_hour ... in order) */
+void scene_wait (void);                         /* (Part scene's: a line waits for a test's scene) */
 static unsigned char clock_on;                  /* (dq0 -m: the minutes gone on the status line, for the tests and debugging) */
 static unsigned char rolls;                     /* (dq0 -R n: the dice's offset, the tests', 0-252) */
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
@@ -696,6 +698,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
     HUB->starting = 1;
     HUB->seed = seed;
     HUB->test_start = test_start;
+    memcpy ((void*) &HUB->sc_said, scn, sizeof scn);   /* (A test's start: dq0 -S's scene) */
     HUB->dice = rolls;
     HUB->small = small;
     HUB->gear = gear;
@@ -2902,6 +2905,45 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
     return 1;
 }
 
+/* A test's scene file (dq0 -S FILE: hub.h's sc_said and its numbers): a line a fact, its word and its number, "hour 128",
+** "sky 0", "air 21", "well 2", "furn 0" (a word known by its first letter), into scn, the hub's as it's made */
+static void __fastcall__ scene_file (const char* f)
+{
+#pragma bss-name (push, "SW_game_args_RODATA")  /* (The part's own while it's in) */
+    static char b[96];
+#pragma bss-name (pop)
+    static const char keys[] = "hsawf";
+    const char* k;
+    char* p;
+    char* e;
+    int fd, n;
+
+    if ((fd = open (f, O_RDONLY)) < 0) {
+        hy_exits ("dq0: no scene file");
+    }
+    n = read (fd, b, sizeof b - 1);
+    e = b + (n > 0 ? n : 0);
+    close (fd);
+    *e = 0;
+    for (p = b; p < e; ++p) {
+        if (*p && (k = strchr (keys, *p)) != 0) {
+            while (*p > ' ') {
+                ++p;
+            }
+            while (*p == ' ') {
+                ++p;
+            }
+            scn[0] |= 1 << (k - keys);
+            for (scn[1 + (k - keys)] = 0; *p >= '0' && *p <= '9'; ++p) {
+                scn[1 + (k - keys)] = scn[1 + (k - keys)] * 10 + *p - '0';
+            }
+        }
+        while (p < e && *p != '\n') {
+            ++p;
+        }
+    }
+}
+
 unsigned char __fastcall__ s_args (int argc, char* argv[])
 {
     unsigned char i, given = 0;
@@ -2952,6 +2994,8 @@ unsigned char __fastcall__ s_args (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {
             rolls = dnum (argv[++i]);           /* (For the tests: the dice's own offset, 0-252: the same dungeon, other
                                                 **   rolls) */
+        } else if (!strcmp (argv[i], "-S") && i + 1 < argc) {
+            scene_file (argv[++i]);             /* (For the tests: a scene file, its start's facts) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
                                                 **   the theme's first piece; three times, four strata down) */
@@ -3100,6 +3144,9 @@ int main (int argc, char* argv[])
             }
         }
         if (t_next () && (!busy || !held)) {
+            if (HUB->scene != HUB->scene_d) {
+                scene_wait ();                  /* (A test's scene posted as it was typed: in place first, part scene's) */
+            }
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
             owed = 0;
@@ -3452,5 +3499,29 @@ void __fastcall__ s_bg_words (unsigned char what)
     outcome_words (&c);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part scene: a line typed as a test's scene was posted (hub.h's scene, the tests' harness's: phase C's scene
+** builder, scene1, 2026-11-24) waits for it to be in place, each part of it done by its owner, the world's then the
+** minds' (scene_d), so its command's carried out in the scene; the world, the maker and the minds rung to it, a nap a
+** time, 65,535 at most (the harness tells it not in place: a chunk being made ahead finished first, 13M cycles).  Nothing in hand meanwhile (ui_keys let go, ui_cmd not yet), so the
+** maker serves what it's asked; the minds give way to the scene itself, their pass broken off (held's), and the world
+** carries out their intents posted (den_held's) */
+#pragma code-name (push, "SW_scene_CODE")
+#pragma rodata-name (push, "SW_scene_RODATA")
+void s_scene_wait (void)
+{
+    unsigned n = 0;
+
+    hub_map (0);
+    HUB->ui_keys = 0;
+    while (hub_map (0), HUB->scene != HUB->scene_d && !HUB->quit && ++n) {
+        hub_ring (T_WORLD);
+        hub_ring (T_MAKER);
+        hub_ring (T_DENIZENS);
+        hub_nap (1);
+    }
+}
 #pragma code-name (pop)
 #pragma rodata-name (pop)

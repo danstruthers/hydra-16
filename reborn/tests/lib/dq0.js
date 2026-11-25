@@ -391,9 +391,15 @@ function dq0Lost(name, m) {
   const lost = [...o.matchAll(/^rc: ([a-z0-9]+): not found/gm)].map(x => x[1]).filter(w => !/^(?:dq0|hmchar|quit)$/.test(w));   // (A last quit: nothing lost by it)
   return lost.length ? ['lines typed to rc, the game over before them: ' + lost.slice(0, 6).join(', ')] : [];
 }
+// The scenes posted (dq0Scene's, dq0SceneNow's) not put in place: each one's name and why
+function dq0ScenesLost(m) {
+  const e = m.dq0Scenes;
+  return !e ? [] : [...e.lost, ...[e.cur, ...e.queue].filter(Boolean).map(x => x.why + ': not in place by the test\'s end')];
+}
 function dq0Check(name, m) {
   return [...dq0Repeats(name, m.out).map(r => 'told ' + r.n + ' times in one answer (> ' + r.cmd + '): ' + JSON.stringify(r.sentence)),
     ...dq0Doubled(m).map(s => 'a chunk\'s fixtures doubled: ' + s), ...dq0Lost(name, m),
+    ...dq0ScenesLost(m).map(s => 'a scene not in place: ' + s),
     ];
 }
 
@@ -475,7 +481,36 @@ const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light
 
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0TypedAsk = lines => lines.map(l => '\u0101' + l + '\r').join('');
-const dq0Typed = lines => dq0TypedAsk(lines.some(l => /^dq0 .*-d /.test(l)) ? ['dq0auto=1', ...lines] : lines);
+// (And every dq0 line after a scene's start written, echo K N > /ram/s.sc, given -S /ram/s.sc: dq0 -S's, the environment's
+// dq0hour ... till 2026-11-24; a line given it already as it is)
+const dq0Scened = lines => { let on = false; return lines.map(l => { if (/^echo [a-z]+ \d+ >>? \/ram\/s\.sc$/.test(l)) on = true; return on && /^dq0( |$)/.test(l) && !/ -S /.test(l) ? l + ' -S /ram/s.sc' : l; }); };
+const dq0Typed = lines => dq0TypedAsk(dq0Scened(lines.some(l => /^dq0 .*-d /.test(l)) ? ['dq0auto=1', ...lines] : lines));
+// A dq0 test's shell lines, the prelude every test types written once (the tests' scan: 381 copies of it): the card's
+// games bound, the character made (char: its hmchar line, the usual hunter's by default; false none), the test's own
+// shell lines (pre: its skills, its folders), a theme (theme: its text, or [folder, its text]: the folder made, its
+// theme.txt written; /ram/g by default), a scene's start (scene: { hour, sky, air, well, furn }, games/dq0/hub.h's
+// sc_*: its file /ram/s.sc written, and every dq0 line given -S /ram/s.sc), the game's line (game: its text, or
+// { seed, pace, T, kit, flags }: dq0 -p PACE -s SEED -c /ram/c.hm ...), then its lines (lines, and every dq0 line
+// among them given the scene's -S too), and the end (end: false none; else quit and echo $status)
+const DQ0_CHAR = 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm';
+function dq0Game(o = {}) {
+  const out = ['bind -a /sd/0/games /bin'], S = ' -S /ram/s.sc';
+  if (o.char !== false) out.push(o.char || DQ0_CHAR);
+  out.push(...(o.pre || []));
+  if (o.theme) {
+    const [dir, text] = Array.isArray(o.theme) ? o.theme : ['/ram/g', o.theme];
+    out.push('mkdir ' + dir, "echo '" + text + "' > " + dir + '/theme.txt');
+  }
+  const sc = Object.entries(o.scene || {});
+  sc.forEach(([k, v], i) => out.push('echo ' + k + ' ' + v + (i ? ' >> ' : ' > ') + '/ram/s.sc'));
+  const g = o.game === undefined ? null : typeof o.game === 'string' ? o.game : 'dq0 -p ' + (o.game.pace || 't') + ' -s ' + (o.game.seed === undefined ? 3 : o.game.seed) +
+    ' -c /ram/c.hm' + (o.game.T === false ? '' : ' -T') + (o.game.kit ? ' -k ' + (/[ ,]/.test(o.game.kit) ? "'" + o.game.kit + "'" : o.game.kit) : '') + (o.game.flags ? ' ' + o.game.flags : '');
+  const withS = l => sc.length && /^dq0( |$)/.test(l) ? l + S : l;
+  if (g) out.push(withS(g));
+  out.push(...(o.lines || []).map(withS));
+  if (o.end !== false && g) out.push('quit', 'echo $status');
+  return out;
+}
 
 // A door's (or any portal's) record in the chunks' cache, square x, y of stratum sn (its chunk cached): { b its bank,
 // q its offset there, state its state's offset, kind its kind } or null; the offsets world.h's, by cc65 (hubown's
@@ -508,14 +543,43 @@ function dq0Portal(m, sn, x, y) {
   return null;
 }
 
+// ---- The scene builder (phase C, scene1, 2026-11-24: games/dq0/hub.h's scene, in place of the pokes): what a test sets up
+// said to the game as ops, each fact done by its owner between its intents, so no copy of another task's writes it back
+// (OPEN.md's G18, X1).  A scene's built by a test's own code as the pokes were, on copies: the hub's banks (m.dq0.bank,
+// m.sharedBanks: each one read is a copy while it's built) and the minds' records (dq0Rec's mem); then each byte changed
+// is an op, its owner's by the hub's table of writers (hub.h's own lines, sim/lib/hubown.js's map): the world's SO_HUB,
+// the minds' SO_DHUB, the records' SO_REC; the referee's (a sheet, a body, the character out) and an intent posted, said
+// by name (sc.out, sc.hurt ... sc.intent, sc.due).  Posted at SCENE_AT in CMD_BANK and the hub's scene; in place as the
+// minds set scene_d (the UI's line waits for that); then what's to be read after it (m.hearts, the line's snapshot,
+// m.dq0's at, taken again).  Every offset the build's (games/dq0/hubgen.js's layout, den.h's records)
+let SCN = null;
+function sceneLayout() {
+  if (SCN) return SCN;
+  const H = dq0Hub(), C = H.C, M = require('../../sim/lib/hubown.js').map();
+  return (SCN = { H, C, M, world: H.tasks.indexOf('world'), dens: H.tasks.indexOf('denizens'), maker: H.tasks.indexOf('maker'), referee: H.tasks.indexOf('referee'),
+    scene: H.off('hub', 'scene'), sceneW: H.off('hub', 'scene_w'), sceneD: H.off('hub', 'scene_d'), task: H.off('hub', 'task'),
+    popDen: H.off('pop', 'den'), denSize: H.size('den') });
+}
+let SCTX = null;                                // (A scene being built: its copies and its ops by name)
+
+// The minds' records (dq0d's: den.h's struct pop at $8000 of its bank pb, the label's), each denizen's by its number (the
+// hub's actor's den): { mem, at(i), and its fields' offsets by name, den.h's }; a scene's copy as one's built
 let dq0RecPb = 0;
 function dq0Rec(m) {
-  const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
-  const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
-  return { mem, at: i => 330 + 64 * 17 + 30 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27, ATE: 28, DRANK: 29 };
+  const S = sceneLayout(), h = m.dq0.bank(0), t = h[S.task + S.dens], lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+  const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16));
+  let mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
+  if (SCTX) {                                   // (A scene's: its copy, the bytes changed its ops)
+    if (!SCTX.rec) SCTX.rec = { live: mem, copy: Uint8Array.from(mem) };
+    mem = SCTX.rec.copy;
+  }
+  const F = f => S.H.off('den', f);
+  return { mem, at: i => S.popDen + S.denSize * i, FLAGS: F('flags'), SN: F('sn'), ID: F('id'), X: F('x'), Y: F('y'), ATTITUDE: F('attitude'),
+    SERVE: F('serve'), CONTACT: F('contact'), ATE: F('ate'), DRANK: F('drank') };
 }
 
-// Every denizen near but actor keep (or those of a list) sent far off, friendly, and not free again for some five minutes: a scene with one foe in it (a dq0Poke's call)
+// Every denizen near but actor keep (or those of a list) sent far off, friendly, and not free again for some five minutes: a
+// scene's (its call's)
 function dq0Alone(m, h, L, K, at, keep) {
   const R = dq0Rec(m), far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16), ks = [].concat(keep);
   let n = 0;
@@ -530,154 +594,167 @@ function dq0Alone(m, h, L, K, at, keep) {
   h[L.denSeq] = h[L.denSeq] + 1 & 255;
 }
 
-// An intent posted for actor k, as its mind would (the hub's di ring, at its head: a dq0Poke's call, the minds quiet
-// then): kind (K.I_*), its fields { a, b, w1, w2, t, x: [4] } as struct msg lays them out (16 bytes: kind, who, a, b,
-// w1, w2, t, x[4]); I_DEN's doing and face (x[0], x[1]) 0xFF unless given.  The one-path plan's stage 2, things, 2026-11-23
+// An intent posted for actor k, as its mind would (a scene's: the minds post it, SO_INTENT): kind (K.I_*), its fields { a,
+// b, w1, w2, t, x: [4] } as struct msg lays them out; I_DEN's doing and face (x[0], x[1]) 0xFF unless given.  The one-path
+// plan's stage 2, things, 2026-11-23
 function dq0Intent(h, L, kind, k, f = {}) {
-  const head = h[L.diHead], o = L.diAt + head * L.msgSize, x = f.x || [0xFF, 0xFF, 0, 0];
-  const b = [kind, k + 1, f.a || 0, f.b || 0, (f.w1 || 0) & 255, (f.w1 || 0) >> 8 & 255, (f.w2 || 0) & 255, (f.w2 || 0) >> 8 & 255,
-    ...[0, 8, 16, 24].map(i => (f.t || 0) >>> i & 255), ...x];
-  for (let i = 0; i < 16; i++) h[o + i] = b[i];
-  h[L.diHead] = (head + 1) % L.diSize;
+  if (!SCTX) throw new Error('dq0Intent: only in a scene (dq0Scene\'s call)');
+  const x = f.x || [0xFF, 0xFF, 0, 0], b = new Array(L.msgSize).fill(0), w = (o, v, n) => { for (let i = 0; i < n; i++) b[o + i] = v >>> (8 * i) & 255; };
+  b[L.mKind] = kind; b[L.mWho] = k + 1; b[L.mA] = f.a || 0; b[L.mB] = f.b || 0;
+  w(L.mW1, f.w1 || 0, 2); w(L.mW2, f.w2 || 0, 2); w(L.mT, f.t || 0, 4); x.forEach((v, i) => { b[L.mX + i] = v; });
+  SCTX.ops.push([sceneLayout().C.SO_INTENT, ...b]);
 }
 
-function dq0Poke(m, pokes) {
+// A scene built (fn (sc): the test's own code, its writes to the copies; sc its ops by name) and its ops: [[kind, ...payload]]
+function sceneBuild(m, fn) {
+  const S = sceneLayout(), C = S.C, rbank = m.dq0.bank, rshared = m.sharedBanks, live = rshared(), copies = new Map();
+  const made = new Set(), cp = b => { if (!b || !(b instanceof Uint8Array) || made.has(b)) return b; let c = copies.get(b); if (!c) { copies.set(b, c = Uint8Array.from(b)); made.add(c); } return c; };
+  const ctx = SCTX = { ops: [], rec: null };
+  const rs = (k, what, o = {}) => ctx.ops.push([C.SO_RS, k, what, o.level || 0, o.which || 0, (o.ex || 0) & 255, (o.ex || 0) >> 8 & 255,
+    ...[0, 8, 16, 24].map(i => (o.till || 0) >>> i & 255)]);
+  // (The referee's ops by name, by the actor's entry, k (0 on; -1 the character): rs.h's SCN_*)
+  const sc = {
+    rs, out: (k, till) => rs(k + 1, C.SCN_OUT, { till }), well: k => rs(k + 1, C.SCN_WELL), hurt: (k, level) => rs(k + 1, C.SCN_HURT, { level }),
+    lame: k => rs(k + 1, C.SCN_LAME), att: (k, which, level) => rs(k + 1, C.SCN_ATT, { which, level }),
+    tire: (k, o) => rs(k + 1, C.SCN_TIRE, { level: o.lv, ex: o.ex, till: o.at }),
+    due: what => ctx.ops.push([C.SO_DUE, { burn: C.DU_BURN, trace: C.DU_TRACE, hold: C.DU_HOLD }[what]]),
+  };
+  m.dq0.bank = i => cp(rbank.call(m.dq0, i));
+  m.sharedBanks = () => new Proxy(live, { get: (t, p) => typeof p === 'string' && /^\d+$/.test(p) ? cp(t[p]) : t[p] });
+  try { fn(sc); } finally { m.dq0.bank = rbank; m.sharedBanks = rshared; SCTX = null; }
+  // (The bytes changed, in runs of one owner each, 64 bytes at most)
+  const hub = new Map(), w = [], d = [];
+  for (let i = 0; i < C.HUB_BANKS; i++) { const b = rbank.call(m.dq0, i); if (b) hub.set(b, i); }
+  const runs = (a, c, route, put) => {
+    for (let o = 0; o < a.length;) {
+      if (a[o] === c[o]) { o++; continue; }
+      const r = route(o), run = [], o0 = o;
+      while (o < a.length && a[o] !== c[o] && run.length < 64 && route(o) === r) run.push(c[o++]);
+      put(r, o0, run);
+    }
+  };
+  for (const [b, c] of copies) {
+    const bi = hub.get(b);
+    if (bi === undefined) { if (b.some((v, o) => v !== c[o])) throw new Error('dq0Scene: a bank written that isn\'t the hub\'s'); continue; }
+    runs(b, c, o => {
+      const g = S.M.regions[S.M.at[bi][o]];
+      if (g.allowed & 1 << S.world) return 'w';
+      if (g.allowed & 1 << S.dens) return 'd';
+      if (g.allowed & 1 << S.maker) return 'm';
+      throw new Error('dq0Scene: the hub\'s ' + g.name + ' (bank ' + bi + ', ' + o + ') written, its owner ' + (S.H.tasks[g.owner] || 'none') + ': not the world\'s, the maker\'s nor the minds\'');
+    }, (r, o, run) => (r === 'd' ? d : w).push([{ w: C.SO_HUB, d: C.SO_DHUB, m: C.SO_MHUB }[r], bi, o & 255, o >> 8, ...run]));
+  }
+  if (ctx.rec) runs(ctx.rec.live, ctx.rec.copy, () => 'r', (r, o, run) => d.push([C.SO_REC, o & 255, o >> 8, ...run]));
+  return [...w, ...ctx.ops.filter(o => o[0] === C.SO_RS || o[0] === C.SO_DUE), ...d, ...ctx.ops.filter(o => o[0] === C.SO_INTENT)];
+}
+
+// The machine's scenes: posted one at a time, the next when the last's in place (its after () then)
+function sceneOf(m) {
+  if (m.dq0Scenes) return m.dq0Scenes;
+  const e = m.dq0Scenes = { cur: null, queue: [], lost: [], sent: 0 };
+  return e;
+}
+function sceneDone(m, e) {
+  const cur = e.cur;
+  if (cur.cr !== undefined) (m.dq0SceneAt || (m.dq0SceneAt = new Map())).set(cur.cr, m.cpu.cyc);   // (Its line's Enter's: dq0Timer's from then)
+  if (process.env.DQ0SCENE) console.log('scene ' + cur.seq + ' in place at ' + m.cpu.cyc + ' (' + (m.cpu.cyc - cur.at) + ' after): ' + cur.why);
+  e.cur = null;
+  if (cur.after) cur.after();
+  if (e.queue.length) sceneSend(m, e, e.queue.shift());
+}
+function sceneSend(m, e, item) {
+  const S = sceneLayout(), h = m.dq0.bank(0), cmd = m.dq0.bank(S.C.CMD_BANK);
+  if (!h || !cmd) { e.lost.push(item.why + ': no game'); return; }
+  let o = S.C.SCENE_AT;
+  for (const op of item.ops) {
+    if (o + op.length + 1 > S.C.SCENE_AT + S.C.SCENE_SIZE - 2) throw new Error('dq0Scene: ' + item.why + ': its ops past SCENE_SIZE');
+    cmd[o] = op[0]; cmd[o + 1] = op.length - 1; cmd.set(op.slice(1), o + 2); o += op.length + 1;
+  }
+  cmd[o] = cmd[o + 1] = 0;
+  const r = m.dq0;                              // (In place as the minds set scene_d: the recorder's hook sees the write, before it's made)
+  if (r && r.hook && !r.dq0SceneHook) {
+    const h0 = r.hook, k0 = () => { const b = m.sharedBanks(), b0 = m.dq0.bank(0); return Object.keys(b).map(Number).find(k => b[k] === b0); };
+    r.hook = (k, off, v) => {
+      h0(k, off, v);
+      const s = m.dq0Scenes;
+      if (process.env.DQ0SCENE && s && s.cur && off === S.sceneW && k === k0()) console.log('scene ' + v + ': the world\'s part at ' + m.cpu.cyc + ' (' + (m.cpu.cyc - s.cur.at) + ' after)');
+      if (s && s.cur && off === S.sceneD && v === s.cur.seq && k === k0()) sceneDone(m, s);
+    };
+    r.dq0SceneHook = true;
+  }
+  item.seq = (h[S.scene] + 1) & 255;
+  item.at = m.cpu.cyc;
+  if (process.env.DQ0SCENE) console.log('scene ' + item.seq + ' posted at ' + item.at + ': ' + item.why + ' ' + JSON.stringify(item.ops));
+  e.cur = item;
+  e.sent++;
+  if (process.env.DQ0SCENE_PROF) require(process.env.DQ0SCENE_PROF)(m, S.task, +process.env.DQ0SCENE_ROLE, process.env.DQ0SCENE_PROG, path.join(TESTS, '..'));   // (Debugging: a role's PCs as it's pending)
+  h[S.scene] = item.seq;
+}
+// A scene posted now: fn (h, L, K, at, named, sc), the test's own setting of it (h the hub's header's copy); after (), what's
+// read once it's in place.  why: its name, for a scene lost
+function dq0SceneNow(m, fn, after, why = 'a scene', enter = false) {
+  const e = sceneOf(m), h = m.dq0 && m.dq0.bank(0);
+  if (!h) return;
+  const { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize;
+  const ops = sceneBuild(m, sc => {
+    const c = m.dq0.bank(0), named = k => { let n = ''; for (let i = 0; c[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(c[at(k) + L.aName + i]); return n; };
+    fn(c, L, K, at, named, sc);
+  });
+  if (!ops.length) { if (after) after(); return; }
+  const item = { ops, after, why, cr: enter ? m.acia.rxAt : undefined };   // (A line's: its Enter's)
+  if (e.cur) e.queue.push(item); else sceneSend(m, e, item);
+}
+
+// A test's scene set as lines are typed (each p: g its game, 1 on; line, n: its nth time typed in it), the pokes' specs:
+// hub { NAME: v } the hub's bytes by the layout's names; fuel, wear { KIND: v }, item { KIND: { clear, or, hide, size,
+// quality, qty } } the first thing of that kind in the store; traps { hide, plates }; call (h, L, K, at, named, sc), a
+// scene of its own; and actor k (or name, the first so named): set { FIELD: v }, beside (a heading, or 'face'), engage,
+// senseless (tenths), hurt (levels), lame, rec { or, serve, contact }.  Each line's scene posted at its Enter; then (in
+// place) the actors' moods and doings, m.hearts, and the line's own snapshot (m.dq0's) taken again
+function dq0Scene(m, pokes) {
   const a = m.acia, read = a.read;
   let typed = '', g = 0, seen = {};
   m.hearts = [];
   a.read = (r, t) => {
     if (r === 0 && a.rdrf) {
-      const c = a.rx;
+      const c = a.rx, e = sceneOf(m);
+      if (process.env.DQ0SCENE && e.cur && m.dq0 && m.dq0.bank(0)) { const h = m.dq0.bank(0), S = sceneLayout(); console.log('scene bytes at ' + m.cpu.cyc + ': ' + [h[S.scene], h[S.sceneW], h[S.H.off('hub', 'scene_m')], h[S.sceneD]]); }
+      if (e.cur && m.dq0 && m.dq0.bank(0) && m.dq0.bank(0)[sceneLayout().sceneD] === e.cur.seq) sceneDone(m, e);   // (In place, unseen: HUBOWN=0's hook)
       if (c === 13) {
         if (/^dq0 /.test(typed)) {
           ++g;
           seen = {};
+          if (e.cur || e.queue.length) e.lost.push(...[e.cur, ...e.queue].filter(Boolean).map(x => x.why + ': its game over before it was in place'));
+          e.cur = null; e.queue = [];
         }
         const line = m.dq0Orig && m.dq0Orig.length && m.dq0Orig[0].to === typed ? m.dq0Orig[0].from : typed;   // (A played game's
                                                 //   line in its own letters, dq0PlayLetters': the test's line, its scene the same)
         seen[line] = (seen[line] || 0) + 1;
         const h = m.dq0 && m.dq0.bank(0);
-        if (h) {
-          const { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
-          const off = f => L['a' + f[0].toUpperCase() + f.slice(1)];   // (An actor's field by its name: dq0meaning's layout)
-          const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
-          for (const p of pokes) if (p.g === g && p.line === line && p.n === seen[line]) {
-            for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
-            for (const [kn, v] of Object.entries(p.fuel || {})) {   // (A thing's fuel left, minutes, by its kind's name: the
-              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   first in the store, 2026-10-31)
-              for (let i = 0; cat && i < L.nitems; i++) {
-                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
-                if (!b || !b[o + L.iKind]) continue;
-                let n = '';
-                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iFuel] = v & 255; b[o + L.iFuel + 1] = v >> 8 & 255; break; }
+        if (h && g) {
+          const ln = line, gn = g, nn = seen[line], rec = m.dq0, game = rec.games && rec.games[rec.games.length - 1], snapAt = rec.lines ? rec.lines.length + 1 : 0;
+          const mine = pokes.filter(p => p.g === gn && p.line === ln && p.n === nn);
+          const hearts = () => {
+            const h = m.dq0.bank(0), { L } = m.dq0.layout(), at = k => L.actor + k * L.actorSize, acts = [], R = dq0Rec(m);
+            for (let k = 0; k < L.nactors; k++) {
+              let n = '';
+              for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+              if (n) {
+                const o = R.at(h[at(k) + L.aDen]);
+                acts.push({ k, name: n, heart: (h[at(k) + L.aHeart] << 24) >> 24, lead: h[at(k) + L.aLead], power: h[at(k) + L.aPower], mood: h[at(k) + L.aMood], bonds: h[at(k) + L.aBonds], doing: h[at(k) + L.aDoing],
+                  rank: R.mem[o + R.FLAGS] >> 5 & 3, prom: !!(R.mem[o + R.FLAGS] & 0x80) });
               }
             }
-            for (const [kn, v] of Object.entries(p.wear || {})) {   // (A thing's wear, by its kind's name: the first in the store, 2026-11-02)
-              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
-              for (let i = 0; cat && i < L.nitems; i++) {
-                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
-                if (!b || !b[o + L.iKind]) continue;
-                let n = '';
-                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iWear] = v; break; }
-              }
-            }
-            for (const [kn, v] of Object.entries(p.item || {})) {   // (A thing, by its kind's name: the first in the store, its flags and
-              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   its hiding set, a scene's, 2026-11-02)
-              for (let i = 0; cat && i < L.nitems; i++) {
-                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
-                if (!b || !b[o + L.iKind]) continue;
-                let n = '';
-                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; if (v.quality !== undefined) b[o + L.iQuality] = v.quality; if (v.qty !== undefined) b[o + L.iQty] = v.qty; break; }
-              }
-            }
-            if (p.traps) {                      // (The cached chunks' hidden traps' hiding set, a scene's, 2026-11-02; and on its own
-              const w = m.dq0.bank(WORLD_BANK_N);   //   chunk's room's stops (a room searched whole's, but its own) a plate of an alarm, hidden,
-                                                    //   and its doors made secret)
-              for (let c = 0; c < 24; c++) {
-                const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3));
-                if (!w[sl] || !b) continue;
-                const o = (c % 3) * 0xAA0;
-                if (p.traps.hide !== undefined) for (let i = 0; i < b[o + CH_NTRAPS] && i < 6; i++) if (b[o + CH_TRAP + i * TR_SIZE + TR_STATE] & 0x20) b[o + CH_TRAP + i * TR_SIZE + TR_HIDE] = p.traps.hide;
-                const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, st = stratumRec(m, h[L.pcSn]), ox = px - (st ? st.x0 : 0), oy = py - (st ? st.y0 : 0);
-                if (p.traps.plates && w[sl + 1] === h[L.pcSn] && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) {
-                  const lx = ox & 31, ly = oy & 31;
-                  for (let r = 0; r < b[o + 5]; r++) {
-                    const a = o + 8 + r * 8, rx = b[a], ry = b[a + 1], rw = b[a + 2], rh = b[a + 3];
-                    if (lx < rx || ly < ry || lx >= rx + rw || ly >= ry + rh) continue;
-                    for (let j = 0; j < rh; j += 3) for (let i = 0; i < rw; i += 3) {
-                      const n = b[o + CH_NTRAPS], q = o + CH_TRAP + n * TR_SIZE;
-                      if (n >= 6 || (lx - rx >> 0) - i >= 0 && lx - rx - i < 3 && ly - ry - j >= 0 && ly - ry - j < 3) continue;
-                      b[q] = rx + i + 1; b[q + 1] = ry + j + 1; b[q + 2] = K.TK_ALARM; b[q + 3] = K.TT_PLATE; b[q + 4] = 0x20; b[q + 5] = p.traps.hide || 0; b[q + 6] = 1; for (let z = 7; z < TR_SIZE; z++) b[q + z] = 0;
-                      b[o + CH_NTRAPS] = n + 1;
-                    }
-                  }
-                  for (let i = 0; i < b[o + 218]; i++) b[o + 219 + i * 14 + 3] |= 0x20;
-                }
-              }
-            }
-            if (p.call) p.call(h, L, K, at, named);   // (A scene of its own, 2026-11-03)
-            const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
-            if (k === undefined) continue;
-            for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
-            if (p.beside !== undefined || p.engage) {   // (Put beside the character, engaged: the hub's and its record's)
-              const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]), r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
-              if (p.beside !== undefined) {
-                const d = p.beside === 'face' ? h[L.pcFace] : p.beside, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d & 7],
-                  y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d & 7];
-                w16(at(k) + L.aX, x);
-                w16(at(k) + L.aY, y);
-                h[at(k) + L.aSn] = h[L.pcSn];
-                h[at(k) + L.aPos] = K.POS_STANDING;
-                r16(R.X, x);
-                r16(R.Y, y);
-                R.mem[o + R.SN] = h[L.pcSn];
-              }
-              if (p.engage) {
-                h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
-                h[at(k) + L.aDoing] = K.DO_FIGHT;
-              }
-              h[L.denSeq] = h[L.denSeq] + 1 & 255;
-            }
-            if (p.senseless) {                  // (Senseless, for the tenths given, as the referee has it and the world: down, prone, 2026-11-03)
-              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aDen]), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + p.senseless) >>> 0, rd = L.actor + k * L.actorSize + L.aReady;
-              S.mem[o + S.STATE] = S.mem[o + S.STATE] & ~3 | 1;
-              for (let i = 0; i < 4; i++) S.mem[o + S.OUT + i] = h[rd + i] = till >>> (8 * i) & 255;
-              h[at(k) + L.aDoing] = K.DO_DOWN;
-              h[at(k) + L.aPos] = K.POS_PRONE;
-            }
-            if (p.hurt) {                       // (Hurt, as the referee has it: a minor injury of the levels given, every test of its the worse by five points a level: its Dodge within reach of a blow, its courage shaken, 2026-11-04)
-              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aDen]);
-              S.mem[o + 9] = 1;                 // (Its ninj, its inj[0] at 10: a location, an aspect, HARN_MINOR, its level)
-              S.mem.set([0, 0, 1, p.hurt, 0, 0], o + 10);
-            }
-            if (p.lame) {                       // (Prone, seriously wounded and Agility 1, as the referee has it: its Rise an Agility test failed, 2026-11-03)
-              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aDen]);
-              S.mem[o + 4] = 1;                 // (struct beast's att[3])
-              S.mem[o + 9] = 1;                 // (Its ninj, its inj[0] at 10: a location, an aspect, HARN_SERIOUS, its level 2)
-              S.mem.set([0, 0, 2, 2, 0, 0], o + 10);
-              h[at(k) + L.aPos] = K.POS_PRONE;
-            }
-            if (p.rec) {
-              const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]);
-              if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
-              if (p.rec.serve !== undefined) R.mem[o + R.SERVE] = p.rec.serve;
-              if (p.rec.contact !== undefined) R.mem[o + R.CONTACT] = p.rec.contact;
-            }
-          }
-          const acts = [];
-          for (let k = 0; k < L.nactors; k++) {
-            let n = '';
-            for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
-            if (n) {
-              const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]);
-              acts.push({ k, name: n, heart: (h[at(k) + L.aHeart] << 24) >> 24, lead: h[at(k) + L.aLead], power: h[at(k) + L.aPower], mood: h[at(k) + L.aMood], bonds: h[at(k) + L.aBonds], doing: h[at(k) + L.aDoing],
-                rank: R.mem[o + R.FLAGS] >> 5 & 3, prom: !!(R.mem[o + R.FLAGS] & 0x80) });
-            }
-          }
-          m.hearts.push({ g, line, n: seen[line], acts });
+            m.hearts.push({ g: gn, line: ln, n: nn, acts });
+          };
+          const resnap = () => {                // (The line's snapshot as its command finds it: the scene in place)
+            if (!game || !rec.final) return;
+            const i = game.snaps.findIndex(s => s.line === snapAt);
+            if (i >= 0) { const s = rec.final(); if (s) { s.line = snapAt; game.snaps[i] = s; } }
+          };
+          if (!mine.length) hearts();
+          else dq0SceneNow(m, (h, L, K, at, named, sc) => { for (const p of mine) scenePoke(m, p, h, L, K, at, named, sc); }, () => { hearts(); resnap(); },
+            'game ' + gn + '\'s "' + ln + '" #' + nn, true);
         }
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
@@ -685,43 +762,131 @@ function dq0Poke(m, pokes) {
     return read(r, t);
   };
 }
+// A thing's place in the store, the first of its kind's name (the catalogue's): its bank and offset, or null
+function sceneThing(m, L, kn) {
+  const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
+  for (let i = 0; cat && i < L.nitems; i++) {
+    const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+    if (!b || !b[o + L.iKind]) continue;
+    let n = '';
+    for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+    if (n === kn) return { b, o };
+  }
+  return null;
+}
+// One spec of dq0Scene's set, on the scene's copies
+function scenePoke(m, p, h, L, K, at, named, sc) {
+  const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; }, off = f => L['a' + f[0].toUpperCase() + f.slice(1)];   // (An actor's field by its name)
+  for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
+  for (const [kn, v] of Object.entries(p.fuel || {})) { const t = sceneThing(m, L, kn); if (t) { t.b[t.o + L.iFuel] = v & 255; t.b[t.o + L.iFuel + 1] = v >> 8 & 255; } }
+  for (const [kn, v] of Object.entries(p.wear || {})) { const t = sceneThing(m, L, kn); if (t) t.b[t.o + L.iWear] = v; }
+  for (const [kn, v] of Object.entries(p.item || {})) {
+    const t = sceneThing(m, L, kn);
+    if (!t) continue;
+    const { b, o } = t;
+    b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0);
+    if (v.hide !== undefined) b[o + L.iHide] = v.hide;
+    if (v.size !== undefined) b[o + L.iSize] = v.size;
+    if (v.quality !== undefined) b[o + L.iQuality] = v.quality;
+    if (v.qty !== undefined) b[o + L.iQty] = v.qty;
+  }
+  if (p.traps) sceneTraps(m, p.traps, h, L, K);
+  if (p.call) p.call(h, L, K, at, named, sc);   // (A scene of its own, 2026-11-03)
+  const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
+  if (k === undefined) return;
+  for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
+  if (p.beside !== undefined || p.engage) {     // (Put beside the character, engaged: the hub's and its record's)
+    const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]), r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+    if (p.beside !== undefined) {
+      const d = p.beside === 'face' ? h[L.pcFace] : p.beside, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d & 7],
+        y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d & 7];
+      w16(at(k) + L.aX, x);
+      w16(at(k) + L.aY, y);
+      h[at(k) + L.aSn] = h[L.pcSn];
+      h[at(k) + L.aPos] = K.POS_STANDING;
+      r16(R.X, x);
+      r16(R.Y, y);
+      R.mem[o + R.SN] = h[L.pcSn];
+    }
+    if (p.engage) {
+      h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
+      h[at(k) + L.aDoing] = K.DO_FIGHT;
+    }
+    h[L.denSeq] = h[L.denSeq] + 1 & 255;
+  }
+  if (p.senseless) {                            // (Senseless, for the tenths given, as the referee has it and the world: down, prone, 2026-11-03)
+    const now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + p.senseless) >>> 0;
+    sc.out(k, till);
+    for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = till >>> (8 * i) & 255;
+    h[at(k) + L.aDoing] = K.DO_DOWN;
+    h[at(k) + L.aPos] = K.POS_PRONE;
+  }
+  if (p.hurt) sc.hurt(k, p.hurt);               // (Hurt, as the referee has it: a minor injury of the levels given, every test of its the worse by five points a level, 2026-11-04)
+  if (p.lame) {                                 // (Prone, seriously wounded and Agility 1, as the referee has it: its Rise an Agility test failed, 2026-11-03)
+    sc.lame(k);
+    h[at(k) + L.aPos] = K.POS_PRONE;
+  }
+  if (p.rec) {
+    const R = dq0Rec(m), o = R.at(h[at(k) + L.aDen]);
+    if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
+    if (p.rec.serve !== undefined) R.mem[o + R.SERVE] = p.rec.serve;
+    if (p.rec.contact !== undefined) R.mem[o + R.CONTACT] = p.rec.contact;
+  }
+}
+// The cached chunks' hidden traps' hiding set (hide), a scene's, 2026-11-02; and (plates) on the character's own chunk's room's
+// stops (a room searched whole's, but its own) a plate of an alarm, hidden, and its doors made secret: on the scene's copies,
+// struct chunk's and struct trap's offsets the build's
+function sceneTraps(m, T, h, L, K) {
+  const H = dq0Hub(), C = H.C, w = m.dq0.bank(C.WORLD_BANK), slot0 = H.off('wrec', 'cslot'), ss = H.size('cslot');
+  const [NT, TR, TS, TST, THD, NP, PO, PS, PST] = [H.off('chunk', 'ntraps'), H.off('chunk', 'trap'), H.size('trap'), H.off('trap', 'state'), H.off('trap', 'hide'),
+    H.off('chunk', 'nportals'), H.off('chunk', 'portal'), H.size('portal'), H.off('portal', 'state')];
+  const ntr = C.NTRAPS, rm = H.off('chunk', 'room'), rs = H.size('room');
+  for (let c = 0; c < C.NCSLOTS; c++) {
+    const sl = slot0 + c * ss, b = m.dq0.bank(C['CACHE_BANK (0)'] + Math.floor(c / 3));
+    if (!w[sl + H.off('cslot', 'used')] || !b) continue;
+    const o = (c % 3) * C.CHUNK_SIZE, r16 = q => w[sl + q] | w[sl + q + 1] << 8;
+    if (T.hide !== undefined) for (let i = 0; i < b[o + NT] && i < ntr; i++) if (b[o + TR + i * TS + TST] & C.TS_HIDDEN) b[o + TR + i * TS + THD] = T.hide;
+    const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, st = stratumRec(m, h[L.pcSn]), ox = px - (st ? st.x0 : 0), oy = py - (st ? st.y0 : 0);
+    if (T.plates && w[sl + H.off('cslot', 'sn')] === h[L.pcSn] && r16(H.off('cslot', 'cx')) === ox >> 5 && r16(H.off('cslot', 'cy')) === oy >> 5) {
+      const lx = ox & 31, ly = oy & 31;
+      for (let r = 0; r < b[o + H.off('chunk', 'nrooms')]; r++) {
+        const a = o + rm + r * rs, rx = b[a + H.off('room', 'x')], ry = b[a + H.off('room', 'y')], rw = b[a + H.off('room', 'w')], rh = b[a + H.off('room', 'h')];
+        if (lx < rx || ly < ry || lx >= rx + rw || ly >= ry + rh) continue;
+        for (let j = 0; j < rh; j += 3) for (let i = 0; i < rw; i += 3) {
+          const n = b[o + NT], q = o + TR + n * TS, f = x => H.off('trap', x);
+          if (n >= ntr || (lx - rx >> 0) - i >= 0 && lx - rx - i < 3 && ly - ry - j >= 0 && ly - ry - j < 3) continue;
+          for (let z = 0; z < TS; z++) b[q + z] = 0;
+          b[q + f('x')] = rx + i + 1; b[q + f('y')] = ry + j + 1; b[q + f('kind')] = K.TK_ALARM; b[q + f('trigger')] = K.TT_PLATE; b[q + f('state')] = C.TS_HIDDEN;
+          b[q + f('hide')] = T.hide || 0; b[q + f('power')] = 1;
+          b[o + NT] = n + 1;
+        }
+      }
+      for (let i = 0; i < b[o + NP]; i++) b[o + PO + i * PS + PST] |= C.PS_HIDDEN;
+    }
+  }
+}
 
 // The creatures' bodies in the referee's bank (dq0harn's fb: tire.c's struct bbody, 8 bytes by the sheet's number, a
-// denizen's record's: 2026-10-31, every actor's tiring): { mem, at(n) }, its levels at 0, wfl at 1, ex at 2, at (the clock)
-// at 4
+// denizen's record's: 2026-10-31, every actor's tiring), to read: { mem, at(n) }, its levels at 0, wfl at 1, ex at 2, at
+// (the clock) at 4.  (A scene sets one by sc.tire)
 let dq0BodyFb = 0;
 function dq0Body(m) {
-  const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
+  const S = sceneLayout(), h = m.dq0.bank(0), t = h[S.task + S.referee], lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
   const fb = dq0BodyFb || (dq0BodyFb = parseInt(/^al ([0-9A-F]+) \._fb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][fb]) || new Uint8Array(0x2000);
   return { mem, at: n => 8 * n };
 }
-// The creatures' sheets in the referee's bank (dq0harn's sb: dq0harn.h's struct beast, 32 bytes by the sheet's number): { mem, at(n) }, its
-// state at 7, its out (senseless till then, the clock's tenths, 4 bytes) at 28.  (A scene's: one senseless as the referee has it)
-let dq0SheetSb = 0;
-function dq0Sheet(m) {
-  const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
-  const sb = dq0SheetSb || (dq0SheetSb = parseInt(/^al ([0-9A-F]+) ._sb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][sb]) || new Uint8Array(0x2000);
-  return { mem, at: n => 32 * n, STATE: 7, OUT: 28 };
-}
-// The character senseless for the tenths given and come round in shock (a scene's, the referee's pc and pc_out: harn.h's struct harn_char,
-// dq0harn's own): its shock rolls the book's dice, in shock or not as they fall (2026-11-03).  RULES=null: the null referee's pc_out, and the
-// world's pc_out and pc_ready as a blow's knockout sets them (no shock: up as its time's come)
+// The character senseless for the tenths given and come round in shock (a scene's: the referee's, RS_SCENE's SCN_OUT for
+// the character, its shock rolls the book's dice, in shock or not as they fall, 2026-11-03).  RULES=null: the null
+// referee's out, and the world's pc_out and pc_ready as a blow's knockout sets them (no shock: up as its time's come)
 function dq0PcShock(m, tenths) {
-  const h = m.dq0.bank(0), { L } = m.dq0.layout(), ram = m.taskRam[h[12 + 3]], root = path.join(TESTS, '..');
+  if (!SCTX) throw new Error('dq0PcShock: only in a scene (dq0Scene\'s call)');
+  const h = m.dq0.bank(0), { L } = m.dq0.layout(), C = sceneLayout().C;
+  const till = ((h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24) + tenths) >>> 0;
+  SCTX.ops.push([C.SO_RS, 0, C.SCN_OUT, 0, 0, 0, 0, ...[0, 8, 16, 24].map(i => till >>> i & 255)]);
   if (process.env.RULES === 'null') {
-    const nl = fs.readFileSync(path.join(root, 'obj', 'games', 'dq0null', 'dq0null.lbl'), 'latin1'), at = parseInt(/^al ([0-9A-F]+) ._pc_out$/m.exec(nl)[1], 16);
-    const till = ((h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24) + tenths) >>> 0;
-    for (let i = 0; i < 4; i++) ram[at + i] = till >>> (8 * i) & 255;
-    h[L.pcOut] = 1;                            // (And the world's, as a blow's knockout leaves it: wfight.c's, its busy time's end)
+    h[L.pcOut] = 1;                             // (And the world's, as a blow's knockout leaves it: wfight.c's, its busy time's end)
     for (let i = 0; i < 4; i++) h[L.pcReady + i] = till >>> (8 * i) & 255;
-    return;
   }
-  const lbl = fs.readFileSync(path.join(root, 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1'), ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl)[1], 16);
-  const H = fs.readFileSync(path.join(root, 'sdk', 'c', 'include', 'harn.h'), 'latin1'), def = n => +new RegExp('#define\\s+' + n + '\\s+(\\d+)').exec(H)[1];
-  const STATE = 2 * 24 + 10 + def('HARN_MEDMAX') + 2 * def('HARN_PSYMAX') + 1 + def('HARN_MAXSKILLS') + 3, now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + tenths) >>> 0;
-  ram[ad('pc') + STATE] = 2;                    // (HARN_SHOCK)
-  ram[ad('pc') + STATE + 1] = 5;                // (Its shockhr, as the library's)
-  for (let i = 0; i < 4; i++) ram[ad('pc_out') + i] = till >>> (8 * i) & 255;
 }
 
 // Each skill's growth in the referee's bank (skills.c's: past the bodies, fb; 2026-11-03), at each line's Enter (m.grow: { g, line,
@@ -759,15 +924,9 @@ function dq0Aware(m, line, actor, after) {
       const c = a.rx;
       if (c === 13) {
         if (!seen && typed === after) seen = true;
-        else if (seen && !done && typed === line && m.dq0) {
-          const { L } = m.dq0.layout(), h = m.dq0.bank(0);
-          for (let k = 0; h && k < L.nactors; k++) {
-            const o = L.actor + k * L.actorSize;
-            let n = '';
-            for (let i = 0; h[o + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[o + L.aName + i]);
-            if (n === actor) { h[o + L.aDoing] = 1; done = true; }
-          }
-        }
+        else if (seen && !done && typed === line && m.dq0) dq0SceneNow(m, (h, L, K, at, named) => {   // (A scene's: the world's, its doing)
+          for (let k = 0; k < L.nactors; k++) if (named(k) === actor) { h[at(k) + L.aDoing] = K.DO_WATCH; done = true; }
+        }, null, 'dq0Aware\'s "' + line + '"', true);
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
     }
@@ -942,7 +1101,9 @@ function dq0Timer(m) {
       }
       if (pause === null && own >= w) pause = 0;
     }
-    return { line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t, pause, pauseAt, busy: e.busy };
+    const t = Math.max(e.t, (m.dq0SceneAt && m.dq0SceneAt.get(e.t)) || 0);   // (From the scene in place, a test's set as it was typed:
+                                                //   the UI's line waits for it, the test's own setting up, not the game's work)
+    return { line: c.line, first: w < 0 ? null : at[idx[w]] - t, whole: w < 0 || last < w ? null : at[idx[last]] - t, pause, pauseAt, busy: e.busy };
   }
 }
 
@@ -1282,8 +1443,8 @@ module.exports = {
   PK_PORTCULLIS, T_DOOR, T_STEPS, xdBytes, saidTheme, DQ0_MAKE, dq0Life, THEMEC, builtChunks, CHUNK_BYTES, CHUNK_KEPT, WORLD_BANK_N,
   CSLOT_AT, liveChunks, O_WAY_OUT, O_NOWHERE, stratumRec, dq0Made, chunkDiff, dq0StatusRows, dq0Story, dq0Prose, inTurn,
   DQ0_REPEATS, dq0Answers, dq0Repeats, dq0Doubled, dq0Lost, dq0Check, dq0Turns, dq0Ev, dq0Rep, dq0Evs, dq0Need,
-  dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0Root, dq0Intent, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed,
-  dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Poke, dq0BodyFb, dq0Body, dq0SheetSb, dq0Sheet, dq0PcShock,
+  dq0Never, dq0Carried, dq0Here, dq0Named, dq0Thing, dq0Holder, dq0Root, dq0Intent, dq0View, DQ0_I, passings, dq0TypedAsk, dq0Typed, dq0Game, DQ0_CHAR,
+  dq0PortalOff, dq0Portal, dq0RecPb, dq0Rec, dq0Alone, dq0Scene, dq0SceneNow, dq0BodyFb, dq0Body, dq0PcShock,
   dq0Grow, dq0Aware, dq0PortalAt, dq0OnWords, dq0Timer, dq0Median, dq0Worst, dq0Waits, dq0Held, DQ0_ANSWERS, dq0AnswerTest, WORN,
   DQ0_PLAYED, dq0Paces, dq0Own, dq0Asks, dq0HeldPaces, dq0LetterKeys, dq0PlayLetters, dq0WhenFree, dq0FightPause, PLAYER_PAUSE,
 };

@@ -287,25 +287,13 @@ void __fastcall__ s_sky_seen (unsigned char kind)
     }
 }
 
-/* The hour the game began (a new game's first look): the environment's dq0hour, as the denizens' (a test's scene),
+/* The hour the game began (a new game's first look): a test's scene's (dq0 -S, the hub's sc_hour: the denizens' too),
 ** else by the game's seed, dq0 -E's dusk: as the denizens' too; come round from a fall, a black-out's guess to make */
 static void begun (void)
 {
-    struct hy_regs r;
-    char b[4];
     char* p;
-    unsigned char h = HUB->pc_lump & PL_DUSK ? TB_START : (unsigned) HUB->seed % 24;
+    unsigned char h = HUB->sc_said & SC_HOUR ? HUB->sc_hour : HUB->pc_lump & PL_DUSK ? TB_START : (unsigned) HUB->seed % 24;
 
-    r.a = 0xFF;
-    r.r[0] = (unsigned) "dq0hour";
-    r.r[1] = (unsigned) b;
-    r.r[2] = 3;
-    r.r[3] = 0;
-    if (!hy_call (HY_ENV_GET, &r)) {
-        for (h = 0, p = b; *p >= '0' && *p <= '9'; ++p) {
-            h = h * 10 + *p - '0';
-        }
-    }
     hub_map (THEME_BANK);
     p = (char*) (THEME->mission & TM_FELL);
     hub_map (0);

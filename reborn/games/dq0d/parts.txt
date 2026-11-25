@@ -31,3 +31,4 @@ bodies_rare   4      Their bodies' rarer: a lair's home room, a robber's way, a 
 start         2      The task's start (the kinds read in, popgen loaded: part records's till 2026-11-04)
 stub slant enlist_near
 minds_swayed  7      The minds swayed by words to them all, a sleeper woken, one goaded (the verbs plan's B3, 2026-11-10: part sway's room)
+scene         -      A test's scene, the minds' part (the tests' harness's, scene1, 2026-11-24)

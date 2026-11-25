@@ -922,13 +922,14 @@ void __fastcall__ s_quiet_test (struct req* r)
 
 /* A request answered (the skeleton's rf_answer, ../dq0/referee.h's: tp and tend at its text, its result 0; the
 ** creatures' sheets read back before a creature's asked for, written after the character's, the skeleton's) */
+void __fastcall__ scene_rs (struct req* r);   /* (Part scene's: hscene.c) */
 void __fastcall__ rf_answer (struct req* r)
 {
     unsigned char k, m, t;
     signed char g;
 
     stress_lv = 0;                              /* (A skill's use here routine, but as it's found below: skills.c's) */
-    if (pc.state == HARN_UNCONSCIOUS && r->kind != RS_DICE) {
+    if (pc.state == HARN_UNCONSCIOUS && r->kind != RS_DICE && r->kind != RS_SCENE) {
         tnow = HUB->now;
         rouse (&pc, &pc_out, 0);                /* (The character senseless: its shock rolls due by now first, whatever's
                                                 **   asked, as its time comes; its time out the next's, 2026-11-21) */
@@ -1086,6 +1087,9 @@ parted:
         break;
     case RS_DICE:                               /* (A test's: its dice fixed) */
         dice_set (r);
+        break;
+    case RS_SCENE:                              /* (A test's scene: an actor's sheet set, part scene's: hscene.c) */
+        scene_rs (r);
         break;
     case RS_OUTFIT:                             /* (Its outfit's makings: overlay 1's, outfit.c, in a copy) */
         memcpy (rq, r, sizeof rq);

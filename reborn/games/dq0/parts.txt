@@ -34,3 +34,4 @@ clue           21     its clue made, a reading's other words
 self_verbs     25     Prayer, fasting, swimming, following (hself.c, hmove.c: the verbs plan's B5, B6, 2026-11-10)
 minds          26     Words said, a knock, the minds swayed (minds.c: the verbs plan's B2 and B3, 2026-11-10)
 thing_verbs    19     The things' verbs: use, push, pull, touch, taste (hthings.c: 2026-11-10, the verbs plan's B4; part commands full)
+scene          -      A line's wait for a test's scene (main.c: the tests' harness's, scene1, 2026-11-24)

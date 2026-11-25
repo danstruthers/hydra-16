@@ -19,7 +19,7 @@
 ** sill the portal's number.  None past NOPEN - 1 openings: one kept for a shaft dug.  A window anywhere else looks on a
 ** passage (fixtures.c's), and shows no sky.
 **
-** A test's scene (the environment's dq0sky, rc's): every room both, and a shaft always, beside the stratum's first
+** A test's start's sky (dq0 -S, the hub's sc_sky): every room both, and a shaft always, beside the stratum's first
 ** way down, going on down.
 **
 ** Its locals in the grower's stack's room (sy: idle now, built.c's), the code the less.
@@ -37,8 +37,6 @@
 
 extern unsigned char sy[];
 struct sk {
-    struct hy_regs  ar;
-    char            val[4];
     struct stratum* s;
     struct link*    l;
     struct room*    p;
@@ -49,15 +47,10 @@ struct sk {
 };
 #define Y   (*(struct sk*) sy)
 
-/* The environment's dq0sky said: 1 (a test's scene, all of them), 2 ("0": none at all), 0 not said */
+/* A test's start's sky (dq0 -S, the hub's sc_sky): 1 (all of them), 2 (0: none at all), 0 not said */
 static unsigned char forced (void)
 {
-    Y.ar.a = 0xFF;
-    Y.ar.r[0] = (unsigned) "dq0sky";
-    Y.ar.r[1] = (unsigned) Y.val;
-    Y.ar.r[2] = 3;
-    Y.ar.r[3] = 0;
-    return hy_call (HY_ENV_GET, &Y.ar) ? 0 : Y.val[0] == '0' ? 2 : 1;
+    return !(sc_said & SC_SKY) ? 0 : sc_sky ? 1 : 2;
 }
 
 /* Its dice: a little generator, from Y.h */

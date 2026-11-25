@@ -840,29 +840,17 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
 ** middle, its reach the room's half and a square: firedamp where the rock's poor (shale at its middle: the coal
 ** measures' gas) one chunk in four; blackdamp (stale air pooled where nothing stirs it) 100 feet down or more, one
 ** chunk in eight, 200 feet one in four; strength 1, 2 from 200 feet, a step more one time in four; none where there's
-** a way between strata in the chunk (the air moves there).  A test's scene (the environment's dq0air, rc's, read
-** once: "0" no bad air; "KS" every chunk a pocket of kind K, rs.h's AQ_*, strength S, from end to end) */
-static unsigned char tair = 0xFF;               /* (The environment's: 0x80 | kind times 16 | strength; 0 none said) */
+** a way between strata in the chunk (the air moves there).  A test's start (dq0 -S, the hub's sc_air:
+** 0 no bad air; KS every chunk a pocket of kind K, rs.h's AQ_*, strength S, from end to end) */
 
 void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
 {
-#define AR  (*(struct hy_regs*) sy)            /* (The built grower's stack's room, idle: built.c's) */
-#define b   ((char*) sy + sizeof (struct hy_regs))
     unsigned h, s;
     unsigned char k;
     struct room* p;
+    unsigned char tair = sc_said & SC_AIR ? 0x80 | (sc_air / 10 & 3) << 4 | (sc_air % 10 & 3) : 0;   /* (0x80 | kind times 16
+                                                **   | strength; 0 none said) */
 
-    if (tair == 0xFF) {
-        tair = 0;
-        AR.a = 0xFF;
-        AR.r[0] = (unsigned) "dq0air";
-        AR.r[1] = (unsigned) b;
-        AR.r[2] = 3;
-        AR.r[3] = 0;                            /* (From the value's start: the scratch room isn't cleared) */
-        if (!hy_call (HY_ENV_GET, &AR)) {
-            tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
-        }
-    }
     h = dhash (DH_AIR, 0, c->cx, c->cy, c->sn);
     if (!c->nrooms || tair == 0x80) {
         return;
@@ -888,8 +876,6 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
     c->ay = p->y + (p->h >> 1);
     c->ar = tair ? 100 : ((p->w > p->h ? p->w : p->h) >> 1) + 1;     /* (A test's: the whole chunk) */
 }
-#undef AR
-#undef b
 
 #pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
 #pragma rodata-name (push, "OV6RODATA")

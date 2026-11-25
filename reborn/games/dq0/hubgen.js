@@ -1,6 +1,7 @@
 // hubgen.js - the hub's numbers for the other languages, made by the build from the C headers as the compiler sees
 // them (ENGINE-CRITIQUE.md's §2, step 3's first stage: nothing written twice).  The headers (hub.h and those it
-// includes: rs.h, level.h, ../dq0w/world.h, items.h, theme.h; and dq0.h, the UI's, and life.h, for the command tools)
+// includes: rs.h, level.h, ../dq0w/world.h, items.h, theme.h; and dq0.h, the UI's, and life.h, for the command tools;
+// and ../dq0d/den.h, the minds' records, for the tests' scenes)
 // are the one place a number is stated; build.js calls generate() before it builds the games (hubNumbers), and
 // everything else reads what it writes:
 //   - obj/gen/actions.h: the actions' enum (VB_NONE, the catalogue's actions in its order, NACTIONS), from
@@ -35,7 +36,7 @@ const GEN = path.join(ROOT, 'obj', 'gen');
 const JSON_OUT = path.join(GEN, 'dq0hub.json');
 const MSG_H = path.join(GEN, 'dq0msg.h'), MSGS = path.join(DQ0, 'msgs.def');
 const REC_H = path.join(GEN, 'dq0rec.h'), RECORDS = path.join(DQ0, 'records.def');
-const HEADERS = ['hub.h', 'rs.h', 'level.h', path.join('..', 'dq0w', 'world.h'), 'items.h', 'theme.h', 'dq0.h', 'life.h'];
+const HEADERS = ['hub.h', 'rs.h', 'level.h', path.join('..', 'dq0w', 'world.h'), 'items.h', 'theme.h', 'dq0.h', 'life.h', path.join('..', 'dq0d', 'den.h')];
 const EXTRA = ['ITEM_BANK (0)', 'CACHE_BANK (0)', 'CHANGE_BANK (0)'];   // (Function-like macros' values the others want)
 
 // Each assembly file's names: NAME: what it is, a header's name (its value), STRUCT.PATH (a field's offset), sizeof
@@ -260,8 +261,8 @@ function ownSpans(lines, V, C) {
 // of left out.  OUT: [value or undefined]
 function evaluate(exprs, cc65) {
   const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'hubgen-'));
-  const head = '#include <stddef.h>\n#include "dq0.h"\n#include "hub.h"\n#include "dq0rec.h"\n', skip = new Set();   // (main.c's order;
-                                                                                                    //   the records')
+  const head = '#include <stddef.h>\n#include "dq0.h"\n#include "hub.h"\n#include "dq0rec.h"\n#include "../dq0d/den.h"\n', skip = new Set();   // (main.c's order;
+                                                                                                    //   the records', the minds')
   try {
     const c = path.join(dir, 'hub.c'), s = path.join(dir, 'hub.s');
     for (let pass = 0; ; pass++) {
@@ -272,8 +273,8 @@ function evaluate(exprs, cc65) {
         break;
       } catch (e) {
         const text = ((e.stderr || '') + (e.stdout || '')).toString(), bad = [];
-        for (const m of text.matchAll(/hub\.c[:(](\d+)\)?:\s*Error/g)) bad.push(+m[1] - 5);   // (The file's line: its
-        if (!bad.length || pass > 100) {                                                       //   expression's, after four)
+        for (const m of text.matchAll(/hub\.c[:(](\d+)\)?:\s*Error/g)) bad.push(+m[1] - 6);   // (The file's line: its
+        if (!bad.length || pass > 100) {                                                       //   expression's, after five)
           fs.copyFileSync(c, path.join(GEN, 'dq0hub_failed.c'));
           throw new Error('hubgen: cc65 (obj/gen/dq0hub_failed.c):\n' + text.trim().split('\n').slice(0, 20).join('\n'));
         }
@@ -522,7 +523,7 @@ function msgsMake(forms, named, defs, names) {
 const SAVED = {
   layout: ['save', 'quest', 'wsave', 'stratum', 'item', 'change', 'vfh', 'kept', 'tname', 'talias', 'clue', 'uirec:low-cap'],
   counts: ['TNAMES', 'NITEMS', 'ITEM_BANKS', 'MAXSTRATA', 'NLET'],
-  source: [['dq0d/dq0d.c', 'den'], ['dq0d/dq0d.c', 'lair'], ['dq0m/changes.c', 'seen'], ['dq0w/outfit.h', 'kitrec'],
+  source: [['dq0d/den.h', 'den'], ['dq0d/den.h', 'lair'], ['dq0m/changes.c', 'seen'], ['dq0w/outfit.h', 'kitrec'],
     ['dq0w/things.h', 'igroup'], ['dq0w/things.h', 'ires'], ['dq0w/tstore.h', 'trace'], ['dq0w/tstore.h', 'tgroup']],
 };
 const VER_H = path.join(GEN, 'dq0ver.h'), VERSIONS = ['HUB_VERSION', 'SAVE_VER', 'SAVE_FORMAT'];

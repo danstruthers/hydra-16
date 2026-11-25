@@ -134,3 +134,4 @@ tsearch        33     A search, the character's, an actor's (wtsrch.c: wtrap.c's
 build          33     Building, every actor's: a door hung, a way walled up (wbuild.c: the user's, 2026-11-23, build2)
 stub start dungeon_begin
 stub begin dungeon_begin
+scene          -      A test's scene, the world's part (wscene.c: the tests' harness's, scene1, 2026-11-24)

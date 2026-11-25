@@ -79,6 +79,8 @@ extern struct ustate us;
 unsigned char __fastcall__ layer_at (unsigned char sn, unsigned cx, unsigned cy);  /* Which of stratum sn's layers
                                                 **   chunk (cx, cy) is now (SG_*: stratagen's; uses.c's, a stub) */
 extern const char* libpath;                     /* (The game's lib folder: dq0m.c's, its third argument) */
+extern unsigned char sc_said, sc_sky, sc_air, sc_furn;     /* (A test's start, dq0 -S's: the hub's SC_* and its numbers,
+                                                **   dq0m.c's copy, the main RAM's for the overlays) */
 
 extern struct chunk* L;
 extern const struct edges* E;

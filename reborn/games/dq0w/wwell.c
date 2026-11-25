@@ -152,21 +152,17 @@ static unsigned char __fastcall__ wl_way (signed char* z)
     return 0;
 }
 
-/* A test's scene, the environment's dq0well (rc's): its numbers' first, h, as it says ("0" a sump, "1" a cistern, "2" a sump
-** with a way on, "3" a cistern with one: wsaid 1); none wsaid, h as it was */
+/* A test's scene, its start's well (dq0 -S, the hub's sc_well): its numbers' first, h, as it says (0 a sump, 1 a cistern, 2 a
+** sump with a way on, 3 a cistern with one: wsaid 1); none wsaid, h as it was */
 static unsigned char wsaid;
 static unsigned char __fastcall__ scene (unsigned char h)
 {
-    static struct hy_regs ar;
-    static char v[4];
+    unsigned char v;
 
-    ar.a = 0xFF;
-    ar.r[0] = (unsigned) "dq0well";
-    ar.r[1] = (unsigned) v;
-    ar.r[2] = 3;
-    ar.r[3] = 0;
-    if ((wsaid = !hy_call (HY_ENV_GET, &ar)) != 0) {
-        h = (h & 0xC7) | (v[0] & 1 ? 0x18 : 0) | (v[0] & 2 ? 0x20 : 0);
+    hub_map (0);
+    v = HUB->sc_well;
+    if ((wsaid = HUB->sc_said & SC_WELL) != 0) {
+        h = (h & 0xC7) | (v & 1 ? 0x18 : 0) | (v & 2 ? 0x20 : 0);
     }
     return h;
 }

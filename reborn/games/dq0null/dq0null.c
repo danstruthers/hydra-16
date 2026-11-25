@@ -952,6 +952,14 @@ void __fastcall__ rf_answer (struct req* r)
             status ();
         }
         break;
+    case RS_SCENE:                              /* (A test's scene: the character out till then, the null's one state;
+                                                **   a creature's none: 0xFF) */
+        if (r->actor || RS_SCENE_WHAT (*r) != SCN_OUT) {
+            r->result = 0xFF;
+            break;
+        }
+        pc_out = RS_SCENE_TILL (*r);
+        break;
     default:
         r->result = 0xFF;                       /* (Not yet) */
         *tp = 0;
