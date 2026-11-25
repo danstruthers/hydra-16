@@ -1126,6 +1126,36 @@ struct req {
 };
 enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 
+/* The referee's keyed dice's keeping (dice.inc's, phase C, dice2, 2026-11-24): the moment the counts are for (its low
+** 16 bits), each tag's count of requests at it (n: no two requests one roll), the lanes as the game's seed and dice
+** offset leave them (base: 0 not yet), and own: 1 a test's own stream (RS_DICE's
+** seed, t_rules), no keys; 2 the last request rigged (below) */
+struct dkey {
+    unsigned        t;
+    unsigned char   base[4];
+    unsigned char   n[8];
+    unsigned char   own;
+};
+
+/* A test's rigged dice (phase C, dice2, 2026-11-24: the referee's, set by a test's scene, tests/lib/dq0.js's sc.rig; a
+** referee that has them: dq0harn, ../dq0/dice.inc's): a request that matches an entry has its first dice show the
+** entry's faces, the rest falling as its key has them.  The first entry that matches has it: its kind (rs.h's RS_*: 0
+** the table's end), its a (a test's purpose, a blow's aim: RIG_ANY any), its actor (0 the character, an actor's entry
+** plus 1: RIG_ANY any), while its uses last (RIG_ANY every time; used, the referee's count, 0 as the test sets it),
+** its faces (0 none more; none at all, the dice as they fall: an entry that keeps a request from those after it).
+** In no game but a test's */
+#define RIG_N           8
+#define RIG_ANY         0xFF
+#define RIG_WORLD       0xFE                    /* (An entry's kind: the world's own rolls, dq0w/wdice.c's wroll: a its WD_*'s top
+                                                **   four bits, its faces the rolls' values plus 1, every time) */
+struct rig_e {
+    unsigned char   kind, a, actor, uses, used;
+    unsigned char   face[4];
+};
+struct rig {
+    struct rig_e    e[RIG_N];
+};
+
 /* An actor: a denizen near the character, a mind and a body; and the character, actor 0, whose body is a struct actor
 ** too, the first in the hub's table of bodies (bodies[], by who: ONE-PATH.md's stage 1), its mind the UI's (the
 ** player's).  A denizen's mind is the denizens' task's (dq0d: its records
@@ -1785,6 +1815,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   sc_hour, sc_sky, sc_air, sc_well, sc_furn;   /*   each one's number (the UI's, as it makes the hub) */
     unsigned char   scene_m;                    /* A test's scene: the maker's part carried out, after the world's (the
                                                 **   world's to set, a scene with none of the maker's) */
+    struct dkey     dkey;                       /* The referee's keyed dice's keeping (struct dkey's) */
+    struct rig      rig;                        /* A test's rigged dice (the referee's: struct rig's) */
 };
 #define AL_REACH        0x1F
 #define AL_NOFIRE       0x40
@@ -2306,6 +2338,8 @@ struct wsave {
 **   own hub.sc_furn ui
 **   own bank(CMD_BANK,HUB_WINDOW+SCENE_AT,HUB_WINDOW+SCENE_AT+SCENE_SIZE) none   (A scene's ops: the harness's)
 **   own hub.scene_m maker +world                               (The maker's part, or the world's word it has none)
+**   own hub.dkey referee                                       (The keyed dice's keeping: dice2)
+**   own hub.rig referee                                        (A test's rigged dice: its scene's SCN_HUB, dice2)
 **   own.
 */
 

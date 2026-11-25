@@ -85,7 +85,9 @@ void bdice (void);
 /* ---- Moving quietly's own dice (rs.h's P_STEALTH, the character's and a creature's: HOUSE.md's sound, the air and
 ** moving quietly): the game's dice as they stand, mixed (QUIET_MIX: a step of another generator, a linear congruential
 ** one's, so not the next roll's own bits), for the test; the game's put back after (QUIET_IN, QUIET_OUT about it), so
-** its other tests roll as they did whether anyone creeps or stalks; nothing kept (the referees' main RAM's room) */
+** its other tests roll as they did whether anyone creeps or stalks; nothing kept (the referees' main RAM's room).  Since
+** the keyed dice (dice.inc's, dice2, 2026-11-24) every request's dice are its own anyway, the game's state its key's:
+** these matter only to a test's own stream (RS_DICE's seed, t_rules) */
 extern unsigned long xs_seed;
 #define QUIET_MIX(t)    ((t) * 1103515245UL + 12345UL | 1)
 #define QUIET_IN        { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (qt_);

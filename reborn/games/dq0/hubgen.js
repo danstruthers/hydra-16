@@ -91,6 +91,14 @@ const ASM = {
     HUBO_CQ: 'hub.cq', RQ_SEQ: 'rqh.seq', GW_CMD: 'GW_CMD', GW_KEYS: 'GW_KEYS', GW_PACE: 'GW_PACE', GW_NOKEYS: 'GW_NOKEYS',
     GW_LOOK: 'GW_LOOK', GW_ALL: 'GW_ALL', GW_REST: 'GW_REST', HUBO_WWST: 'hub.way_want.st', HUBO_ENTER: 'hub.ui_enter',
   },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
+  dice: {                                                       // games/dq0/dice.inc: the referees' keyed dice
+    HUB_WINDOW: 'HUB_WINDOW', HUBO_NOW: 'hub.now', HUBO_DICE: 'hub.dice', HUBO_SEED: 'hub.seed', HUBO_SLOT: 'hub.slot',
+    HUBO_DSLOT: 'hub.dslot', REQ_SIZE: 'sizeof req', RQ_KIND: 'rqh.kind', RQ_ACTOR: 'req.actor', RQ_OTHER: 'req.other',
+    RQ_A: 'req.a', RQ_B: 'req.b', RQ_W1: 'req.w1', RQ_X: 'req.x', NSLOTS: 'NSLOTS', RS_ATTACK: 'RS_ATTACK',
+    RS_NEW_ACTOR: 'RS_NEW_ACTOR', HUBO_RIG: 'hub.rig', RIG_N: 'RIG_N', RIG_ANY: 'RIG_ANY', RIG_E: 'rig.e',
+    RE_SIZE: 'sizeof rig_e', RE_KIND: 'rig_e.kind', RE_A: 'rig_e.a', RE_ACTOR: 'rig_e.actor', RE_USES: 'rig_e.uses', RE_USED: 'rig_e.used',
+    RE_FACE: 'rig_e.face', HUBO_DKEY: 'hub.dkey', DK_T: 'dkey.t', DK_N: 'dkey.n', DK_OWN: 'dkey.own', DK_BASE: 'dkey.base',
+  },
 };
 
 // ---- The headers read: their text less comments, a backslash's line joined to the next

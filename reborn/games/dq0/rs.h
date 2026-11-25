@@ -239,7 +239,9 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_OWN, D_NONE };
                                                 **   where it lies; else the blow held: the minds', by its nature) */
 #define RS_ASKER        0xFE                    /* (RS_TEST's other, moving quietly's and a creature's: by the asker's own
                                                 **   dice, moved on: not moving quietly's, the same till the game's move:
-                                                **   a look at one hidden, each look its own, HOUSE.md's hiding oneself) */
+                                                **   a look at one hidden, each look its own, HOUSE.md's hiding oneself.
+                                                **   Since the keyed dice, dice2's, each request's own either way: no
+                                                **   two the same roll but the same act at the same moment) */
 #define RS_ASLEEP       0x80                    /* (RS_ATTACK's w2: the defender, a creature, asleep: it ignores the
                                                 **   blow, the book's Ignore (Combat 9: one unaware); 2026-11-02) */
 #define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,

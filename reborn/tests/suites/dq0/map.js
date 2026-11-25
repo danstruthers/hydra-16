@@ -909,7 +909,7 @@ module.exports = {
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'drop the torch', 'hold the chisel', 'hold the hammer', 'dig north', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
-        'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
+        'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g',
         'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status'] })) },
       start(m) {
         dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }, { g: 4, line: 'dig north', n: 1, words: 'You dig with your chisel', text: 'stop\r' }]);   // (Typed as it's told; the chisel's first spell enough)
@@ -1038,6 +1038,8 @@ module.exports = {
         };
         const K_HUNG = (cat, L) => { for (let k = 1; k < 206; k++) { let n = ''; for (let j = 0; j < 14 && cat[k * L.kindSize + j]; j++) n += String.fromCharCode(cat[k * L.kindSize + j]); if (n === 'hanging rope') return k; } return -1; };
         dq0Scene(m, [{ g: 1, line: 'tie the rope', n: 2, call: drop(15) }, { g: 2, line: 'tie the rope to the chest', n: 1, call: drop(0, 1) },
+          { g: 1, line: 'u', n: 1, rig: [{ kind: 'TEST', a: 'P_CLIMB', actor: -1, grade: 'pass' }] },   // (The climb back up made, dice2: no fall
+          //   from it, the rope untied at its top)
           { g: 3, line: 'look', n: 1, fuel: { 'hanging rope': 0x0B04 } }, { g: 3, line: 'u', n: 2, fuel: { 'hanging rope': 0x0B04 } }, { g: 4, line: 'u', n: 1, fuel: { 'hanging rope': 0x0B84 } },
           { g: 6, line: 'u', n: 1, call: () => {          // (Its end twenty feet up: a shorter rope's, out of reach from the floor)
             const { L } = m.dq0.layout(), cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
@@ -1151,7 +1153,8 @@ module.exports = {
           for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if (tile(dx, dy) === T_FLOOR) return [{ dx, dy, ft: 15 }];
           return [];
         };
-        dq0Scene(m, [{ g: 1, line: 'tie the rope to the pillar', n: 2, call: poke(pillar) }, { g: 2, line: 'tie the rope to the window', n: 1, call: poke(beside) }]);
+        dq0Scene(m, [{ g: 1, line: 'tie the rope to the pillar', n: 2, call: poke(pillar) }, { g: 2, line: 'tie the rope to the window', n: 1, call: poke(beside) },
+          { g: 1, line: 'd', n: 1, rig: [{ kind: 'TEST', a: 'P_CLIMB', actor: -1, grade: 'pass' }] }]);   // (The climb down made, dice2: no fall)
       },
       check(m, out) {
         const f = [], s = dq0Story(out).replace(/\([A-Z]{1,2}\) /g, '').replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ');
@@ -1382,11 +1385,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0rockname', near: ['map'], what: "Dingus Quest Zero's rock named (the user's, 2026-11-03: \"Naming the rock\": HOUSE.md's told as it's come to): a middling miner (Mining 40, dq0 -R 2's dice) at seed 3 digs a shaft down: into the rock, a spell that fails tells only its looks, and the first good spell after it names it, though it's no first spell",
+      name: 'dq0rockname', near: ['map'], what: "Dingus Quest Zero's rock named (the user's, 2026-11-03: \"Naming the rock\": HOUSE.md's told as it's come to): a middling miner (Mining 40, its dice rigged) at seed 3 digs a shaft down: into the rock, a spell that fails tells only its looks, and the first good spell after it names it, though it's no first spell",
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml min 40 >> /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick -a -R 2', 'dig down', 'stop', 'quit', 'echo $status'] })) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick -a', 'dig down', 'stop', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
+      start(m) {   // (Its digs' tests rigged, dice2 (-R 2 till then): the dig's query and its first spell, through the floor, as
+        // they fall, the second, into the rock, a marginal failure, the third a marginal success)
+        dq0Scene(m, [{ g: 1, line: 'dig down', n: 1, rig: [{ kind: 'TEST', a: 'P_DIG', actor: -1, uses: 2, faces: [] },
+          { kind: 'TEST', a: 'P_DIG', actor: -1, uses: 1, grade: 'fail' }, { kind: 'TEST', a: 'P_DIG', actor: -1, uses: 1, grade: 'pass' }] }]);
+      },
       check(m, out) {
         const f = [], s = dq0Prose(out), told = [...s.matchAll(/You're into ([a-z -]+?) rock(: [a-z ]+)?\./g)];
         this.notes = [told.map(x => x[0]).join(' ')];
@@ -1487,6 +1495,8 @@ module.exports = {
       start(m) {
         let n = 0, r = 0;
         this.poked = [];
+        dq0Scene(m, [{ g: 1, line: 'raise the portcullis', n: 2, rig: [{ kind: 'TEST', a: 'P_LIFT', actor: -1, grade: 'pass' }] }]);   // (The heave
+        //   from the far side made, dice2: its Strength's test a marginal success)
         dq0Where(this, m, l => {   // (The portcullis's square: north of where the character stands to close it; let down
           // (its state poked) as the character walks back to it from the far side, and before "raise" there)
           const w = this.where[this.where.length - 1];
@@ -1671,6 +1681,13 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -d /ram/f', 'go through the door to the east', ...passings(3), 'turn around', 'f', 'go through the door to the east', ...passings(8), 'turn around', 'f', 'go through the door to the east', 'quit',
         'echo $status'] })) },
       expect: ['% echo $status'],
+      start(m) {   // (The grades the walks east follow rigged, dice2: the first a marginal failure, the fourth a critical one (its
+        // d100 99, 100), each failure's d8 a 1 (its drift the one way, its north an eighth, a quarter, the more clockwise);
+        // the second and third as they fall, the kept game's a marginal failure again; the others' tests as they fall)
+        const east = 'go through the door to the east', bear = faces => [{ kind: 'TEST', a: 'P_BEARING', actor: -1, uses: 1, faces }];
+        dq0Scene(m, [{ g: 1, line: east, n: 1, rig: bear([99, 1]) }, { g: 1, line: east, n: 2, rig: [] }, { g: 1, line: east, n: 4, rig: bear([100, 1]) },
+          { g: 2, line: east, n: 1, rig: bear([99, 1]) }]);
+      },
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
         const tests = t => t.replies.filter(q => q.req === 'slot0' && q.kind === K.RS_TEST && q.a === K.P_BEARING && q.steps < 64);   // (Not the time kept's: its steps from rs.h's TIME_STEPS on, 2026-10-31)
@@ -1838,6 +1855,11 @@ module.exports = {
         'force', 'force', 'e', 'e', 'quit', 'hmchar -q -s 1 -u feudal -c thief -o /ram/t.hm', 'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search',
         'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
+      start(m) {   // (Its traps' dice rigged, dice2: the door's blade dodged, the plate's not; the third search finding the darts)
+        const dodge = grade => [{ kind: 'TEST', a: 'P_DODGE_HAZARD', actor: -1, grade }];
+        dq0Scene(m, [{ g: 1, line: 'force', n: 1, rig: dodge('pass') }, { g: 1, line: 'e', n: 3, rig: dodge('fail') },
+          { g: 2, line: 'search', n: 3, rig: [{ kind: 'TEST', a: 'P_SEARCH', actor: -1, grade: 'pass' }] }]);
+      },
       check(m) {
         const T = dq0Turns(m), f = [], fo = T.of('force');
         dq0Need(f, fo, 'E_PORTAL', { po: 'PO_FORCED' }, 'the door not forced open');
@@ -1875,6 +1897,8 @@ module.exports = {
       // (The hub's live chunks taken as each game has ended, its echo typed: the maker's first (a), the game's as it
       // was kept (b), the ones made again as it's carried on (c))
       start(m) {
+        dq0Scene(m, [{ g: 2, line: 'force', n: 1, rig: [{ kind: 'TEST', a: 'P_DODGE_HAZARD', actor: -1, grade: 'pass' }] }]);   // (The door's blade
+        //   dodged, dice2: not in shock, the rock dug after)
         const run = m.run, snaps = this.snaps = {};
         m.run = lim => {
           run(lim);
@@ -1917,6 +1941,10 @@ module.exports = {
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
         'u', 'climb up', 'climb up', 'u', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
+      start(m) {   // (The climbs rigged, dice2: out of the pit its first round made, its second a marginal failure, a slip; then out)
+        const climb = (grade, uses) => ({ kind: 'TEST', a: 'P_CLIMB', actor: -1, grade, uses });
+        dq0Scene(m, [{ g: 1, line: 'u', n: 1, rig: [climb('pass', 1), climb('fail', 1)] }, { g: 1, line: 'climb up', n: 1, rig: [climb('pass')] }]);
+      },
       check(m) {
         const T = dq0Turns(m), f = [], w = T.of('walk to the door east'), u1 = T.of('u'), u2 = T.after(u1, 'u');
         dq0Need(f, w, 'E_ARRIVE', { how: 'A_WENT_TO' }, 'not gone round to the far door');

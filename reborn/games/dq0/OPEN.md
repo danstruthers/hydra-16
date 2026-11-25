@@ -67,8 +67,6 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   be done. Source: built/2026-11-17-text.md, its open question 3.
 - **W9 (its bug).** The ruleset isn't carried to the next dungeon: without -r, a later dungeon goes back to
   HarnMaster. Source: built/2026-11-21-world1.md.
-- **G14.** A denizen's test sent without RS_ASKER gets dice that repeat (the quiet dice; search in a loop may too).
-  Every test must be fair and independent (section 8). Sources: climb1 10; build2 10; things2 12.
 - **G17.** dq0answer's things lines at 81-87%: a speed branch of their own (ix_pick, o_pacing)? A referee's blow giving
   way to a typed line? Source: speed13 1, 2.
 - **G18.** 4-byte stubs in the UI too (194 bytes, where it's 99 over its floor). Source: room7 1. (Its poke race was closed

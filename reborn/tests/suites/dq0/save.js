@@ -586,6 +586,12 @@ module.exports = {
         "dq0 -p t -s 70000 -c /ram/q.hm -d /ram/a -k 'journal,paper,charcoal'", 'read the journal', 'copy the journal', 'u', 'u',
         'echo =NEXT', 'dq0 -p t -c /ram/q.hm -d /ram/a', 'read the old writing', 'read the copy', 'quit',
         'echo =HEARD', 'cat /ram/a/heard.txt', 'echo =END', 'echo $status']) },
+      start(m) {   // (Each grade's reading rigged, dice2: G8 a success, G12 a failure, G17 a critical success, G21 a critical failure
+        //   (games 4 to 7), the first read's test alone, the second read's left to the dice (untested, the same); the copy's
+        //   game's readings failures, as the dice had them, the tablet read after the copy the same)
+        dq0Scene(m, [['pass', 4], ['fail', 5], ['well', 6], ['badly', 7]].map(([grade, g]) => ({ g, line: 'read the tablet', n: 1,
+          rig: [{ kind: 'TEST', a: 'P_LORE', uses: 1, grade }] })).concat([{ g: 8, line: 'copy the tablet', n: 1, rig: [{ kind: 'TEST', a: 'P_LORE', grade: 'fail' }] }]));
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\r/g, '');

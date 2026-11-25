@@ -3,9 +3,9 @@
 ** referee does alike, so a ruleset is only its answers.  A task in the referee's role (dq0NAME SEG ROLE DIR, started by
 ** the UI as dq0 -r NAME asks): the hub attached, its dice seeded from the game's (and its role), each of the hub's slots
 ** answered as it's rung (the world's, the UI's, and the denizens' task's own, DSLOT, a short one: DTEXT of its text),
-** each requester's dice its own stream (../dice.inc's dice_to: the dice by who asks, so a game's dice go by its seed and
-** its commands, not by the order the tasks' requests reach the referee), the asker rung with the reply (hub.h's
-** protocol).  And the words into a reply, what's to hand (RS_EQUIP's keys, each after its mark), the creatures' sheets
+** each request's dice keyed (../dice.inc's dice_key: a function of the game's seed, the asker, the request's kind,
+** actor, other and purpose, and its moment, so no roll elsewhere moves them, whatever order the requests come in), the
+** asker rung with the reply (hub.h's protocol).  And the words into a reply, what's to hand (RS_EQUIP's keys, each after its mark), the creatures' sheets
 ** read back as a game's carried on and written with the save (RS_SAVE: the ruleset's character first), the bearings'
 ** dice's state.  Its referee's main RAM's (each referee's rf.c #includes it).
 */
@@ -164,6 +164,7 @@ static void den_slot (void)
     hub_map (0);
     if (hub_posted (DSLOT)) {
         tlim = DTEXT;
+        dice_key (NSLOTS);
         answer (DSLOT);
         tlim = REQ_TEXT;
         hub_reply (DSLOT);
@@ -180,7 +181,6 @@ int main (int argc, char* argv[])
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
     rf_begin ();
     hub_map (0);
-    dice_to (3 + HUB->dice);                    /* (The streams begun: 3 + the hub's dice, dq0 -R's) */
     for (;;) {
         if (rf_later) {                         /* (A reply that left the summary's rest, referee.h's: the asker first, a
                                                 **   tick at most; then the rest, before anything else is answered.  A
@@ -206,7 +206,7 @@ int main (int argc, char* argv[])
                                                 **   background: a denizen's blow asked as a line's entered not taking
                                                 **   the answer's CPU, the one give-way's, gw3's, 2026-11-19) */
                 }
-                dice_to (s);
+                dice_key (s);
                 answer (&HUB->slot[s]);
                 hub_reply (&HUB->slot[s]);
                 if (s == SLOT_UI) {
@@ -214,7 +214,6 @@ int main (int argc, char* argv[])
                 }
             }
         }
-        dice_to (NSLOTS);
         den_slot ();
     }
     return 0;

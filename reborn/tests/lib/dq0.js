@@ -622,6 +622,7 @@ function sceneBuild(m, fn) {
     lame: k => rs(k + 1, C.SCN_LAME), att: (k, which, level) => rs(k + 1, C.SCN_ATT, { which, level }),
     tire: (k, o) => rs(k + 1, C.SCN_TIRE, { level: o.lv, ex: o.ex, till: o.at }),
     due: what => ctx.ops.push([C.SO_DUE, { burn: C.DU_BURN, trace: C.DU_TRACE, hold: C.DU_HOLD }[what]]),
+    rig: list => sceneRig(S, m.dq0.bank(0), list),
   };
   m.dq0.bank = i => cp(rbank.call(m.dq0, i));
   // (A task's own main RAM, the world's, the minds' or the referee's (by its label: a test's own reading of the build's): a
@@ -664,6 +665,32 @@ function sceneBuild(m, fn) {
     (r === S.world ? w : d).push([r === S.world ? C.SO_WRAM : C.SO_DRAM, o & 255, o >> 8, ...run]));
   if (ctx.rec) runs(ctx.rec.live, ctx.rec.copy, () => 'r', (r, o, run) => d.push([C.SO_REC, o & 255, o >> 8, ...run]));
   return [...w, ...ctx.ops.filter(o => o[0] === C.SO_RS || o[0] === C.SO_DUE), ...d, ...ctx.ops.filter(o => o[0] === C.SO_INTENT)];
+}
+
+// A test's rigged dice (dice2, 2026-11-24: hub.h's struct rig, the referee's, dq0harn's; its scene's SCN_HUB), the table
+// written whole on the hub's copy h, its uses counted afresh: each entry { kind (rs.h's RS_ less its RS_: 'TEST',
+// 'ATTACK' ...), a (a purpose's name, 'P_DIG', or a number; none any), actor (an actor's entry, -1 the character; none
+// any), uses (none every time), faces [the first dice's, four at most; [] the dice as they fall: a request kept from
+// the entries after] or grade (HarnMaster's d100 test, its first die: 'well' 5, 'pass' 1, 'fail' 99, 'badly' 100,
+// whatever the mastery) }: the first that matches a request has its first dice show its faces, the rest the key's.
+// kind 'WORLD': the world's own rolls (dq0w/wdice.c: a its WD_* name, 'WD_SHOT', 'WD_FALL', 'WD_DROP'; no actor, no uses:
+// every time), its faces each roll's value plus 1 in turn (a missile's stray: [1] it strays, then [1, k + 1] the one
+// beside it struck)
+const RIG_FACE = { well: 5, pass: 1, fail: 99, badly: 100 };
+function sceneRig(S, h, list) {
+  const H = S.H, C = S.C, o = H.off('hub', 'rig'), e0 = o + H.off('rig', 'e'), es = H.size('rig_e'), F = f => H.off('rig_e', f);
+  if (list.length > C.RIG_N) throw new Error('sc.rig: ' + list.length + ' entries, ' + C.RIG_N + ' at most');
+  for (let i = 0; i < C.RIG_N; i++) {
+    const p = e0 + i * es, e = list[i];
+    for (let z = 0; z < es; z++) h[p + z] = 0;
+    if (!e) continue;
+    const world = e.kind === 'WORLD', kind = world ? C.RIG_WORLD : C['RS_' + e.kind],
+      a = e.a === undefined ? C.RIG_ANY : typeof e.a === 'string' ? (world ? C[e.a] >> 12 : C[e.a]) : e.a, faces = e.faces || [RIG_FACE[e.grade]];
+    if (kind === undefined || a === undefined || faces.length > 4 || faces.some(x => !(x > 0 && x < 256))) throw new Error('sc.rig: ' + JSON.stringify(e));
+    h[p + F('kind')] = kind; h[p + F('a')] = a; h[p + F('actor')] = e.actor === undefined ? C.RIG_ANY : e.actor + 1;
+    h[p + F('uses')] = e.uses === undefined ? C.RIG_ANY : e.uses;
+    faces.forEach((x, j) => { h[p + F('face') + j] = x; });
+  }
 }
 
 // The machine's scenes: posted one at a time, the next when the last's in place (its after () then)
@@ -732,7 +759,7 @@ function dq0SceneNow(m, fn, after, why = 'a scene', enter = false) {
 // hub { NAME: v } the hub's bytes by the layout's names; fuel, wear { KIND: v }, item { KIND: { clear, or, hide, size,
 // quality, qty } } the first thing of that kind in the store; traps { hide, plates }; call (h, L, K, at, named, sc), a
 // scene of its own; and actor k (or name, the first so named): set { FIELD: v }, beside (a heading, or 'face'), engage,
-// senseless (tenths), hurt (levels), lame, rec { or, serve, contact }.  Each line's scene posted at its Enter; then (in
+// senseless (tenths), hurt (levels), lame, rec { or, serve, contact }; rig [...] (its dice rigged: sceneRig's).  Each line's scene posted at its Enter; then (in
 // place) the actors' moods and doings, m.hearts, and the line's own snapshot (m.dq0's) taken again
 function dq0Scene(m, pokes) {
   const a = m.acia, read = a.read;
@@ -815,6 +842,7 @@ function scenePoke(m, p, h, L, K, at, named, sc) {
   }
   if (p.traps) sceneTraps(m, p.traps, h, L, K);
   if (p.call) p.call(h, L, K, at, named, sc);   // (A scene of its own, 2026-11-03)
+  if (p.rig) sc.rig(p.rig);                     // (Its dice rigged: sceneRig's, dice2)
   const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
   if (k === undefined) return;
   for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
