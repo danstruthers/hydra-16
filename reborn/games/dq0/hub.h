@@ -1825,6 +1825,10 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   intent in the ring) */
     volatile unsigned char w_idle;              /* The world's: ui_want as it read it, all of it done since (its
                                                 **   lockstep's quiet): the UI's next line taken when they're equal */
+    volatile unsigned char mk_nap;              /* The maker's: 1 as it sleeps out a long task at the real paces, the
+                                                **   world's events not ringing it (hub.c's hub_event): no burst of
+                                                **   rings let go as it wakes, some 30,000 cycles a fight round's in a
+                                                **   line's first letter (lock2's F1, 2026-11-25) */
 };
 #define AL_REACH        0x1F
 #define AL_NOFIRE       0x40
@@ -2350,6 +2354,7 @@ struct wsave {
 **   own hub.rig referee                                        (A test's rigged dice: its scene's SCN_HUB, dice2)
 **   own hub.ui_want ui                                         (The lockstep turns pace: what the UI's set going,
 **   own hub.w_idle world                                       (all of it done, the world's: lock1's, 2026-11-24)
+**   own hub.mk_nap maker                                       (The maker asleep out of the events' rings: lock2's F1)
 **   own.
 */
 

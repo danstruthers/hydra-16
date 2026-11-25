@@ -236,7 +236,7 @@ void __fastcall__ hub_event (const struct msg* m)
     HUB->eq_head = h + 1;
     hub_ring (T_UI);                            /* (The UI woken to tell it: its loop's nap, hub_nap) */
     for (t = T_DENIZENS; t < NTASKS; ++t) {     /* (Those that wait for them) */
-        if (t != T_REFEREE && HUB->task[t]) {
+        if (t != T_REFEREE && HUB->task[t] && (t != T_MAKER || !HUB->mk_nap)) {
             hub_ring (t);
         }
     }
