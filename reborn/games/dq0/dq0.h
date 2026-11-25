@@ -80,7 +80,7 @@ unsigned char t_haskey (void);                  /* A key's come (conio's kbhit) 
 extern unsigned char t_wrote;                   /* Something out since the keys were last looked for (t_haskey's) */
 unsigned char t_getkey (void);                  /* The next key, waiting (conio's cgetc: Enter '
 ') */
-void __fastcall__ consctl (const char* what);   /* (main.c) A line to the window's consctl (rawon, rawoff) */
+void __fastcall__ consctl (const char* what);   /* (main.c, ov. 13) A line to the window's consctl (rawon, rawoff) */
 void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiting */
 
 /* ---- The clock: the game's time, in tenths of a second (a round the ruleset's, RS_HELLO's), run at the pace */

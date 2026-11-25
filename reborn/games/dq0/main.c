@@ -226,8 +226,12 @@ static void __fastcall__ ovl_in (int fd)
 
 /* ---- The character: the ruleset's (hmchar's), its file read by the referee */
 
-/* A line written to the window's consctl: on an fd kept open (raw mode lasts while the consctl that set it is) */
-void __fastcall__ consctl (const char* what)
+/* A line written to the window's consctl: on an fd kept open (raw mode lasts while the consctl that set it is).
+** Overlay 13's since lock2 (2026-11-25): the main RAM's room, the lockstep's; called at the start, a resize and the
+** end, never as a line's answered */
+#pragma code-name (push, "OV13CODE")
+#pragma rodata-name (push, "OV13RODATA")
+void __fastcall__ o_consctl (const char* what)
 {
     static int fd = -1;
 
@@ -238,6 +242,8 @@ void __fastcall__ consctl (const char* what)
         write (fd, what, strlen (what));
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW_start_end_CODE")
 #pragma rodata-name (push, "SW_start_end_RODATA")
