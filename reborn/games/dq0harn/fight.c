@@ -436,12 +436,15 @@ static unsigned char defence (void)
 
 static void attack (void)
 {
-    unsigned char z = RS_ATTACK_AIM (*R) == Z_HIGH ? HARN_HIGH : RS_ATTACK_AIM (*R) == Z_LOW ? HARN_LOW : HARN_MID, def, al, dl, res, n, k, ab;
+    unsigned char z = RS_ATTACK_AIM (*R) == Z_HIGH ? HARN_HIGH : RS_ATTACK_AIM (*R) == Z_LOW ? HARN_LOW : HARN_MID, def, al, dl, res, n, k, ab, ks = D.sk;
     int mod = STEP_PCT * (signed char) RS_ATTACK_STEPS (*R), dmod = -2 * STEP_PCT * (int) RS_ATTACK_OUTNUMBERED (*R);   /* (Outnumbered: two steps
                                                 **   worse each one more) */
 
     RS_ATTACK_WHOSE (*R) = 0;
     RS_ATTACK_AF (*R) = 0;
+    if (!D.who) {
+        D.sk = 0xFF;                            /* (The character's skill used defending: none till it defends, below) */
+    }
     if (A.c->state != HARN_CONSCIOUS || (!A.who && pc_out > tnow)) {
         RS_ATTACK_OUTCOME (*R) = 0xFF;                       /* (It can't) */
         return;
@@ -491,6 +494,11 @@ static void attack (void)
         return;
     }
     def = defence ();
+    if (!D.who) {                               /* (The character's skill used, the defence it made: its dodge's, the
+                                                **   thing that blocked; not the weapon it holds, dodging: "You've begun
+                                                **   to learn Club" as it dodged, a torch in hand, till 2026-11-24) */
+        D.sk = def == HARN_DODGE ? HARN_DGE : def == HARN_COUNTER ? ks : D.sk;
+    }
     if (z != HARN_MID && def != HARN_IGNORE) {
         mod -= 2 * STEP_PCT;                    /* (Aimed high or low, two steps: Ignore's free) */
     }
@@ -823,14 +831,17 @@ void __fastcall__ o_fight (struct req* r)
         } else {
             attack ();
         }
-        if (RS_ATTACK_OUTCOME (*r) != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
+        if (RS_ATTACK_OUTCOME (*r) != 0xFF && (unsigned char) (RS_ATTACK_OUTCOME (*r) - O_RISE) > O_REARM - O_RISE && !r->actor) {
+                                                /* (The character's skill used in it, for its development rolls,
                                                 **   opened its first time, the book's, Combat 19: its weapon striking;
-                                                **   skills.c's, slice 4.4's) */
+                                                **   skills.c's, slice 4.4's; not a turn spent getting up or taking
+                                                **   its weapon up again: "You've begun to learn Club" as it rose, a
+                                                **   torch in hand, till 2026-11-24) */
             skill_used (A.sk);
         }
     }
     if (RS_ATTACK_OUTCOME (*r) != 0xFF && r->actor && !r->other) {   /* (Or the thing that blocked, its dodge: at it, a shot too) */
-        skill_used (RS_ATTACK_DEFENCE (*r) == D_DODGE ? HARN_DGE : RS_ATTACK_DEFENCE (*r) != D_NONE ? D.sk : 0xFF);
+        skill_used (RS_ATTACK_DEFENCE (*r) != D_NONE ? D.sk : 0xFF);
     }
     tup = 0;
     if (RS_ATTACK_OUTCOME (*r) != 0xFF && !(RS_ATTACK_FLAGS (*r) & MS_STRAY)) {

@@ -9,7 +9,9 @@
 // summary of them all after the tests (grouped by the move that's to end them); HUBOWN=0: no check.  And in every dq0
 // test (HUBOWN=0 too), nothing told twice in one answer, nor a chunk's door or trap made twice (tests.js's dq0Check);
 // and what happened recorded, the hub's events, replies and state a line at a time (sim/lib/dq0meaning.js: m.dq0, for
-// the tests' meaning checks, tests.js's dq0Turns).
+// the tests' meaning checks, tests.js's dq0Turns); and the invariants held after every line (sim/lib/dq0inv.js: each
+// thing in one place, the hands', a hoard's room, the dead post nothing, nobody on the rock, no sentence four times in a
+// reply, no unseen denizen named ...: a broken one fails the test, one on tests/dq0/invknown.txt a note; INV=0 none).
 // The guards in every test (sim/lib/guards.js: an instruction fetched from the bank window with no code there, a write
 // or a read that names the hub's header with another bank there, the swap stack and the C stack past their room): the
 // first hit stops the machine, and fails the test.  GUARDS=0: none; GUARDS=note: each hit noted, none stopping the
@@ -40,6 +42,7 @@ const trends = require('../tests/lib/trends.js');
 const scenes = require('./lib/scenes.js');
 const crypto = require('crypto');
 const dq0meaning = require('./lib/dq0meaning.js');
+const dq0inv = require('./lib/dq0inv.js');
 
 const ROOT = path.join(__dirname, '..');
 const bin = (dir, n) => fs.readFileSync(path.join(ROOT, 'obj', dir, n + '.bin'));
@@ -164,12 +167,13 @@ const hubDir = path.join(ROOT, 'obj', 'hubown');
 function dq0Instrument(t) {
   if (!/^dq0/.test(t.name)) return null;
   const r = dq0meaning.createRecorder(), on = mm => { r.attach(mm); mm.dq0 = r; };   // (What happened: m.dq0, tests.js's dq0Turns)
-  if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }),
+  const inv = m => dq0inv.check(t.name, m);              // (The invariants: sim/lib/dq0inv.js)
+  if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => { const v = inv(m); return { failures: [...dq0Check(t.name, m), ...v.failures], notes: v.notes }; },
     state: () => ({ r: r.state() }), restore: s => r.restore(s.r) };   // (A scene's: sim/lib/scenes.js)
   const M = hubown.map(), c = hubown.createCheck(M);
   return { boot: { sharedWrite: (k, o, v, T, pc, W) => { c.hook(k, o, v, T, pc, W); r.hook(k, o, v); } }, attach: mm => { c.attach(mm); on(mm); },
     state: () => ({ r: r.state(), c: c.state() }), restore: s => { r.restore(s.r); c.restore(s.c); }, judge: m => {
-    const r = c.result(), { known, fresh } = hubown.judge(r), notes = [], failures = [...fresh.map(e => 'hub: ' + hubown.line(e)), ...dq0Check(t.name, m)];
+    const r = c.result(), { known, fresh } = hubown.judge(r), v = inv(m), notes = [...v.notes], failures = [...fresh.map(e => 'hub: ' + hubown.line(e)), ...dq0Check(t.name, m), ...v.failures];
     try { fs.mkdirSync(hubDir, { recursive: true }); fs.writeFileSync(path.join(hubDir, t.name + '.json'), JSON.stringify(r)); } catch (e) { /* (No summary) */ }
     if (!r.found) return { failures, notes: ['hub writers: no hub made'] };
     const moves = [...new Set(known.map(e => e.known))].sort();

@@ -2470,7 +2470,7 @@ void __fastcall__ s_climb (unsigned char d)
             t = cut = 0;
         } else if (k == 0xFE || wl) {
             if (k == 0xFF) {
-                no_way (N_NO_STAIRS);           /* (A well named, none within reach) */
+                no_way (N_NO_STAIRS | 2 << 8);  /* (A well named, none within reach: no way down, the UI's words) */
                 return;
             }
             hub_map (0);                        /* (Choked: told) */
@@ -2486,7 +2486,8 @@ void __fastcall__ s_climb (unsigned char d)
                 s_climb (DIR_DOWN);             /* ("Climb the rope" at its top: no way up here, so down it) */
                 return;
             }
-            no_way (N_NO_STAIRS);
+            no_way (N_NO_STAIRS | (d == DIR_UP ? 1 << 8 : 2 << 8));   /* (No way that way: told which, not "up or down",
+                                                **   a stair down beside it, 2026-11-24) */
         }
         return;
     }

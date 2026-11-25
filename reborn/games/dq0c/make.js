@@ -34,11 +34,39 @@ function incNames(text) {
   return out;
 }
 
+// The default aliases held to their verbs (2026-11-24: interface-minds.md's 1.1, 11 of them naming another verb than
+// their word's own, "wear equip" told the player as the game's words): each one's root a word that applies, a verb's
+// word (commands.verbs' [words]: its root's verb the line's when the typed word is none), a word of the grammar's (its
+// rules matched by the root), or a direction's (an alias that stands anywhere, *); and one whose word is a verb's word
+// itself (the scan takes the typed word first) naming that same verb, not another, nor its own word again.  Its faults,
+// each a line
+function aliasFaults(w, dict) {
+  const one = new Map(), multi = new Map(), f = [];
+  for (const e of w.verbs) (e.words.length === 1 ? one : multi).set(e.words.join(' '), e.v);
+  const name = v => (w.rows[v] && w.rows[v].name) || v;
+  const text = fs.readFileSync(path.join(__dirname, '..', 'dq0', 'commands.aliases'), 'latin1').split(/\r?\n/);
+  text.forEach((l, i) => {
+    const t = l.trim();
+    if (!t || t[0] === '#') return;
+    const p = t.split(/\s+/), any = p[0][0] === '*';
+    if (any) p[0] = p[0].slice(1);
+    const root = p.pop(), key = p.join(' '), at = 'commands.aliases:' + (i + 1) + ': "' + t + '": ';
+    if (key === root) return f.push(at + 'its word its own root');
+    if (any) return w.dirs.has(root) ? null : f.push(at + 'its root no direction');
+    const rv = one.get(root), kv = (p.length === 1 ? one : multi).get(key);
+    if (rv === undefined && !dict.has(root)) f.push(at + 'its root neither a verb\'s word nor the grammar\'s: it can never apply');
+    if (kv !== undefined && rv !== undefined && kv !== rv) f.push(at + 'its word says ' + name(kv) + ', its root ' + name(rv) + ': it contradicts its verb');
+  });
+  return f;
+}
+
 function build({ dir, objdir, say = () => {} }) {
   const grammar = path.join(dir, '..', 'dq0', 'commands.ebnf');
   const rules = loadRules(grammar);
   const g = tables.encodeGrammar(rules, tables.openNames(grammar)), i = tables.encodeIndex(rules, g), a = tables.encodeAliases();
-  const w = words.encode(words.load(), tables.indexWords(i, g));
+  const wl = words.load(), dict = new Set(tables.indexWords(i, g)), af = aliasFaults(wl, dict);
+  if (af.length) throw new Error('the default aliases:\n  ' + af.join('\n  '));
+  const w = words.encode(wl, tables.indexWords(i, g));
   const u16 = n => [n & 255, n >> 8];
   const h = grammarHead(g), head = Buffer.from([...g.subarray(0, 11), ...u16(h - 11)]), body = g.subarray(h);
   const hdr = Buffer.from([0x44, 0x51, 0x30, 0x43, DAT_VERSION, ...[head, i, a, body, w].flatMap(x => u16(x.length))]);

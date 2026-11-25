@@ -361,13 +361,14 @@ static unsigned char __fastcall__ doff (unsigned n)
     return IR_OK;
 }
 
-/* Its thing in hand handed to actor a less 1 beside it (FE_HAND): the receiver's take rule (its hands, what it lifts) */
+/* Its thing in hand handed to actor a less 1 beside it (FE_HAND): the receiver's take rule (its hands, what it lifts); never to
+** itself (the code review's finding 4, 2026-11-24: its own hands' thing "handed" to them) */
 static unsigned char __fastcall__ hand (unsigned n, unsigned char a)
 {
     struct actor q;
     unsigned w;
 
-    if (!a || a > NACTORS || !own (n) || !(item_at (n)->flags & I_HELD)) {
+    if (!a || a > NACTORS || a == bk + 1 || !own (n) || !(item_at (n)->flags & I_HELD)) {
         hub_map (0);
         return IR_NO;
     }
@@ -729,7 +730,7 @@ void __fastcall__ s_den_stash (const struct msg* q)
     struct item* p;
     struct actq aq;
     unsigned i, x, y, box;
-    unsigned char how, fac, hd = 0, n = 0, h = 0;
+    unsigned char how, fac, hd = 0, n = 0, h = 0, sh, ft = 1;
     unsigned char* s;
 
     x = I_ROB_X (*q);
@@ -762,7 +763,19 @@ void __fastcall__ s_den_stash (const struct msg* q)
         p->y = y;
         p->owner = p->hide = 0;
         p->flags &= ~(I_HELD | I_WORN | I_LOOT);
-        if (box) {
+        if (box) {                              /* (Its room: the weight it bears, what it keeps, the character's rule,
+                                                **   its lid lifted for it and let down again; a hoard full, what's left
+                                                **   lies by it: the code review's finding 5, past its room till
+                                                **   2026-11-24, T2) */
+            sh = item_at (box)->shut;
+            item_at (box)->shut = 0;
+            ccomp = 0;
+            ft = fits_c (i, box);
+            item_at (box)->shut = sh;
+            hub_map (0);
+        }
+        if (box && !ft) {
+            p = item_at (i);
             p->where = IW_ITEM;
             p->x = box;
             p->y = 0;

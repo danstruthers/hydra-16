@@ -116,7 +116,7 @@ static unsigned char __fastcall__ kept_for (unsigned char sn, unsigned cx, unsig
 
     hub_map (0);
     for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
-        if (a->name[0] && a->did && a->hsn == sn && (a->hx - STRATUM (sn).x0) >> CW_BITS == cx &&
+        if (a->name[0] && a->did && !(a->did & DID_BEAST) && a->hsn == sn && (a->hx - STRATUM (sn).x0) >> CW_BITS == cx &&
             (a->hy - STRATUM (sn).y0) >> CW_BITS == cy) {
             break;
         }

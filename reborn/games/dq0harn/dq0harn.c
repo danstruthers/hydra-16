@@ -1054,7 +1054,14 @@ parted:
         }
         strncpy (dtext, r->text, sizeof dtext - 1);
         if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
-            den_equip ((r->actor - 1) & 7);
+            den_equip (k = (r->actor - 1) & 7);
+            if (dwr[k]) {                       /* (A weapon in hand again, drawn or taken up: its fists no longer, its
+                                                **   own let fall or broken left behind; dq0shield's bandit, its dagger
+                                                **   broken and its sword drawn, struck with its fists till 2026-11-24) */
+                sheet_get (aden[k]);
+                bs.state &= ~BS_DISARMED;
+                sheet_put (aden[k]);
+            }
         } else {
             equip (dtext, RS_EQUIP_HOW (*r));                /* (A tool to hand, or not: skills.c's, the main RAM's room) */
         }

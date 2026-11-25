@@ -4609,40 +4609,93 @@ static unsigned char gd, geye, glv, gn, gfar, gfo;     /* (gfo: the denizen a pe
                                                 **   2026-11-17) */
 static struct item gr;
 
+/* Thing gr's words, n of them alike (gfine: assessed, near enough, its make and its condition too): "a dagger", "two
+** good pouches", "a good dagger (rusted)" (its condition in brackets, not a list's comma: "a good dagger and rusted" till
+** 2026-11-24, and_last62's) */
+static unsigned char gfine;
+static void __fastcall__ gwords (unsigned char n)
+{
+    const struct kind* k = kind_of (gr.kind);
+    unsigned char life, m;
+    char nm[28];
+    char* s;
+
+    if (n > 1) {
+        many (nm, n, gr.kind);                  /* ("two pouches": part inventory's) */
+        s = strchr (nm, ' ');
+        *s++ = 0;
+        put (nm);
+        put (" ");
+        if (gfine) {
+            put (gmake[gr.quality % 10]);
+            put (" ");
+        }
+        put (s);
+    } else {
+        strcpy (nm, k->name);
+        if (!(k->flags & K_PLURAL)) {
+            put (gfine ? (strchr ("aeiou", gmake[gr.quality % 10][0]) ? "an " : "a ") : strchr ("aeiou", nm[0]) ? "an " : "a ");
+        }
+        if (gfine) {
+            put (gmake[gr.quality % 10]);
+            put (" ");
+        }
+        put (nm);
+    }
+    if (gfine) {                                /* (Assessed, near enough: its condition) */
+        life = gr.dur_max ? (unsigned char) (gr.dur / (gr.dur_max / 10 + 1)) : 10;
+        if (life < 7) {
+            m = gr.mat;
+            put (life < 4 ? " (badly " : " (");
+            put (m == MT_IRON || m == MT_STEEL ? "rusted)" : m == MT_LEATHER ? "cracked)" : MT_TEXTILE (m) ? "frayed)" :
+                m == MT_WOOD ? "rotten)" : m == MT_SILVER || m == MT_BRONZE ? "tarnished)" : "worn down)");
+        }
+    }
+}
+
 /* Thing i's words, if the eyes make it out (gd its distance, geye the eyes, glv the level): a list's next, after
-** pre (the list's first) or ", "; in its carrier c (0 none): 1, or 0 (not made out: gfar) */
+** pre (the list's first) or ", "; in its carrier c (0 none): 1, or 0 (not made out: gfar).  One just like the list's
+** last, neither worn nor in a carrier, counted with it: "two pouches", not "a pouch and a pouch" (each thing its own,
+** told alike, as one look tells "Two giant rats": the invariants' twin, 2026-11-24) */
+static char* glast;                             /* (The list's last thing's words: where they begin, 0 none, how many */
+static unsigned char gcnt;                      /*   alike, their words) */
+static char gone[40];
 static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned c)
 {
     const struct kind* k;
-    unsigned char r, life, m;
-    char nm[14], cn[14];
+    unsigned char r, alone;
+    char cn[14];
+    char* w;
+    char* e;
 
     fetch (&gr, i);
     k = kind_of (gr.kind);
-    strcpy (nm, k->name);
     r = k->seen + (geye >> 1);
     if (gd > r) {
         gfar = 1;
         return 0;
     }
     put (gn++ ? ", " : pre);
-    if (!(k->flags & K_PLURAL)) {
-        put (glv == 2 && gd * 2 <= r ? (strchr ("aeiou", gmake[gr.quality % 10][0]) ? "an " : "a ") :
-            strchr ("aeiou", nm[0]) ? "an " : "a ");
-    }
-    if (glv == 2 && gd * 2 <= r) {              /* (Assessed, near enough: its make, its condition) */
-        put (gmake[gr.quality % 10]);
-        put (" ");
-        put (nm);
-        life = gr.dur_max ? (unsigned char) (gr.dur / (gr.dur_max / 10 + 1)) : 10;
-        if (life < 7) {
-            m = gr.mat;
-            put (life < 4 ? ", badly " : ", ");
-            put (m == MT_IRON || m == MT_STEEL ? "rusted" : m == MT_LEATHER ? "cracked" : MT_TEXTILE (m) ? "frayed" :
-                m == MT_WOOD ? "rotten" : m == MT_SILVER || m == MT_BRONZE ? "tarnished" : "worn");
+    gfine = glv == 2 && gd * 2 <= r;
+    alone = !c && (gr.flags & (I_WORN | I_HELD)) != I_WORN;
+    w = tp;
+    gwords (1);
+    if (alone) {
+        hub_map (UI_BANK);
+        e = tp;
+        if (glast && e - w < sizeof gone && !strcmp (w, gone)) {
+            tp = glast;                         /* (Its like's words and these taken back, said again counted) */
+            --gn;
+            hub_map (0);
+            gwords (++gcnt);
+            return 1;
         }
+        glast = w;
+        gcnt = 1;
+        strncpy (gone, w, sizeof gone - 1);
+        hub_map (0);
     } else {
-        put (nm);
+        glast = 0;
     }
     if ((gr.flags & (I_WORN | I_HELD)) == I_WORN) {
         worn_put (i, gfo ? WH_THEY : WH_DEN);   /* (" on its left hand": part worn's, 2026-11-10; a person's "their") */
@@ -4752,6 +4805,7 @@ unsigned char s_gear_words (void)
     gfar = 0;
     for (part = 0; did && part < 3; ++part) {   /* (In hand, worn, at its belt) */
         gn = 0;
+        glast = 0;
         hub_map (UI_BANK);
         t0 = tp;
         for (i = 0; (i = items (i, IN_DEN, 0)) != 0; ) {

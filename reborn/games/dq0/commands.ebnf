@@ -230,8 +230,9 @@
 <PUT>        ::= "put" | "place"
 <EMPTY>      ::= "empty" | "empty out" | "tip out" | "pour out" | "dump" | "dump out" | "pour"
 <USE>        ::= "use" | "make use of"
-<EQUIP>      ::= "equip" | "put on"
-<UNEQUIP>    ::= "doff" | "take off" | "put away"
+<EQUIP>      ::= "equip" | "put on" | "wear" | "don" | "wield" | "ready" | "brandish"   (* (Their words the grammar's own, not
+                                                 aliases of "equip" that named another verb: 2026-11-24) *)
+<UNEQUIP>    ::= "doff" | "take off" | "put away" | "stow" | "store"
 <ATTACK>     ::= "fight" | "slash" | "bash" | "stab" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
 <GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke" | "strangle" | "throttle"
 <THROW>      ::= "t" | "sling"
@@ -241,7 +242,7 @@
 <JUMP>       ::= "j"
 <SAY>        ::= "say"
 <VOLUME-SAY>  ::= "yell" | "whisper"
-<TELL>       ::= "tell"
+<TELL>       ::= "tell" | "order"
 <CAST>       ::= "c"
 <EAT>        ::= "eat"
 <DRINK>      ::= "drink"
@@ -310,7 +311,7 @@
                    | ( "unlock" | "pick" ) [ "the" | "its" ] "lock" [ ( "of" | "on" ) <object> ] [ <USING> <object:tool> ]   (* "pick
                                                    the lock of the chest", slice 4.1's; "... with the lockpicks"; "pick the lock", "pick lock"
                                                    alone, the one in front, as the help has it (2026-11-17) *)
-<fill>           ::= "fill" <object> [ <from-phrase:other> | "with" <object:other> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
+<fill>           ::= ( "fill" | "sharpen" | "hone" | "whet" ) <object> [ <from-phrase:other> | "with" <object:other> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
 <dip>            ::= ( "dip" | "soak" ) <object> [ ( "in" | "into" ) <object:other> ]   (* "dip the torch in the oil", "soak the torch in pitch"; "dip the torch": the first fuel carried *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
 <copy>           ::= ( "copy" | "transcribe" ) [ <object> ]   (* a writing copied onto a sheet (the plan's step 9: Drawing's); bare: the last thing named *)
@@ -324,7 +325,7 @@
 (* ---- Repeating and place ---- *)
 <again>          ::= <AGAIN>                                    (* repeat the last command; "repeat" and "g" its aliases *)
 <AGAIN>          ::= "again"
-<where>          ::= "where" "am" "i"
+<where>          ::= "where" [ "am" "i" ]   (* "where" alone too, 2026-11-24: "I don't know how to where." till then *)
 
 (* ---- Sequences (added 2026-10-19: the user, VB_SEQUENCE) ---- *)
 <sequence>       ::= <seq-part> "then" <seq-part> { "then" <seq-part> }   (* a list of actions, done in order; each part

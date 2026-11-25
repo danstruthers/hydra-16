@@ -10,14 +10,8 @@ mv walk
 trundle walk
 mosey walk
 saunter walk
-ready equip
-don equip
-wear equip
-wield equip
 remove doff
-store doff
 unwield doff
-stow doff
 leave exit
 scale climb
 tunnel dig
@@ -135,8 +129,6 @@ mine dig
 acquire get
 grip hold
 grasp hold
-brandish equip
-pack doff
 unequip doff
 apply use
 try use
@@ -144,12 +136,8 @@ conceal h
 stash h
 shut close
 set put
-order command
 refill fill
 refresh fill
-sharpen fill
-hone fill
-whet fill
 redip fill
 refuel fill
 # A thing looked over and judged (added 2026-10-22, the user's: "examine value [of] item", "determine value [of] item")

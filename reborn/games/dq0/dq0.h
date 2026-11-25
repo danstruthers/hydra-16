@@ -255,6 +255,9 @@ void __fastcall__ throw_said (unsigned r);      /* A throw told (the things' IO_
                                                 **   IR_NOT_HERE, no mark it sees; IR_FULL, none said): THROW's rows */
 extern unsigned char untarget;                  /* (main.c's: the target let go at the next command: the character
                                                 **   made to turn, by a trap set off, a blow from one it doesn't see) */
+extern unsigned char close_who, close_seq;      /* (main.c's: the last told seen closing with the character, its actor
+                                                **   plus 1, and the senses' look's seq then: its blows named by it, the
+                                                **   look a step behind; caps.c's, blows.c's) */
 
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 

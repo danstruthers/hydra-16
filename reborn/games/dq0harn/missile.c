@@ -188,6 +188,9 @@ unsigned o_shot (void)
             def = HARN_IGNORE;
         }
     }
+    if (!D.who) {                               /* (The character's skill used, the defence it made, as fight.c's) */
+        D.sk = def == HARN_DODGE ? HARN_DGE : def == HARN_IGNORE ? 0xFF : D.bare ? HARN_UNA : D.sk;
+    }
     if (f & (MS_STRAY >> 8)) {
         res = HARN_R_AH | 1;                    /* (A stray's: a strike of one die, no test) */
         al = HARN_MS;

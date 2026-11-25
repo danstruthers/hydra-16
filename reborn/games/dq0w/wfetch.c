@@ -51,23 +51,6 @@ static struct item rec;                         /* (A lot's part split off, a gi
 void den_equip (void);                          /* (Part den_things's, wlimbs.c's: body bd's things told the referee) */
 extern unsigned char den_eq_all;                /* (wlimbs.c's: told though nothing's left) */
 
-/* Thing n body bd's own, held (filed at its lair's home, as its things are: items.h's IW_DEN) */
-static void __fastcall__ hold (unsigned n)
-{
-    struct item* p = item_at (n);
-
-    p->where = IW_DEN;
-    p->sn = bd.hsn;
-    p->x = bd.hx;
-    p->y = bd.hy;
-    p->owner = bd.did;
-    p->hide = bd.did >> 8;
-    p->flags = (p->flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_HELD;
-    hub_map (0);
-    den_equip ();                               /* (The referee told what it holds now: every actor's, as the
-                                                **   character's equip_now; 2026-11-20) */
-}
-
 /* A count k of lot n split off (a gift's, a trade's: its own record, the rest left where it was): the part's number,
 ** or 0 (the store full) */
 static unsigned __fastcall__ lot (unsigned n, unsigned k)
@@ -93,6 +76,31 @@ static unsigned __fastcall__ lot (unsigned n, unsigned k)
 }
 
 static void fit (void);
+
+unsigned char __fastcall__ den_carry (unsigned n, unsigned char hand_first);   /* (Part den_acts's: every actor's carry, */
+void __fastcall__ den_hold (unsigned n, const struct actor* a, unsigned char f);    /*   its own) */
+
+/* Thing n given body bd, taken as it takes any thing up (the take rule's carry: a hand free first, else put away, coins
+** in its purse; kept, the market's, its own on it but not in a hand, as before); no hand free nor room for it, set down at its feet (a hand holds
+** one thing, B5: Bob with three in two till 2026-11-24, the invariants' hands); the referee told what it holds */
+static void __fastcall__ taken (unsigned n, unsigned char kept)
+{
+    struct item* p;
+
+    if (kept) {
+        den_hold (n, &bd, 0);
+    } else if (!den_carry (n, 1)) {
+        p = item_at (n);
+        p->where = IW_SQUARE;
+        p->sn = bd.sn;
+        p->x = bd.x;
+        p->y = bd.y;
+        p->owner = p->hide = 0;
+        p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN;
+        hub_map (0);
+    }
+    den_equip ();
+}
 
 /* The act table's give row's time (a thing handed over, every actor's: the one-path plan's stage 2, 2026-11-23) */
 static unsigned give_t (void)
@@ -191,10 +199,24 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             hub_map (0);
             return;
         }
-        hold (n);
-        if (I_ROB_KEPT (*q) == 1) {
-            item_at (n)->flags &= ~I_HELD;      /* (Kept, not held: the market's, 2026-11-02) */
+        if (I_ROB_KEPT (*q) == 2) {             /* (Food: eaten as it's taken, one of a lot, the rest held; its meal's
+                                                **   time, the denizens' own eating's, wtake.c's: the mind's fed, T3's
+                                                **   used up, not held counted eaten, 2026-11-24) */
+            p = item_at (n);
+            if (p->qty > 1) {
+                --p->qty;
+                taken (n, 0);
+            } else {
+                p->kind = 0;
+                hub_map (0);
+            }
+            bd.ready += 3000;
+            equip_now ();
+            light_now ();
+            told (FT_ATE, kind);
+            return;
         }
+        taken (n, I_ROB_KEPT (*q) == 1);        /* (Kept: put away first, the market's, 2026-11-02) */
         equip_now ();
         light_now ();
         told (FT_GOT, kind);

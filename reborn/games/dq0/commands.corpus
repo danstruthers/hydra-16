@@ -748,3 +748,4 @@ empty the sack onto the table	VB_EMPTY_OBJECT	object=sack;container=table	near=s
 pour out the waterskin	VB_EMPTY_OBJECT	object=waterskin	near=waterskin	a liquid poured away
 pour the water into the vial	VB_EMPTY_OBJECT	object=water;container=vial	near=water,vial	a liquid poured into another (the user's H11, 2026-11-19)
 empty the waterskin into the vial	VB_EMPTY_OBJECT	object=waterskin;container=vial	near=waterskin,vial	its liquid into the other
+where	VB_WHERE	-	-	where alone (2026-11-24: "I don't know how to where." till then)

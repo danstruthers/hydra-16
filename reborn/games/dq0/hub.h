@@ -1178,7 +1178,11 @@ struct actor {
                                                 **   (the referee's: it finishes one senseless; kinds.txt's ways k) */
     unsigned        did;                        /* Its denizen's number (the denizens' record's id: its things',
                                                 **   items.h's IW_DEN, the outfits' denizens' gear, 2026-10-27; 0
-                                                **   none), */
+                                                **   none; a beast's | DID_BEAST), */
+#define DID_BEAST       0x8000                  /* (A beast's did: its own, as the folk's, the things it takes up its
+                                                **   own, its mouth full with one, 2026-11-24; but no outfit made, its
+                                                **   lair's home not read in for it: the code review's finding 1, all
+                                                **   beasts' did 0, one beast's things every beast's) */
     unsigned        hx, hy;                     /*   its lair's home square, where its things are filed (the store's
                                                 **   chunk there kept while it's an actor: ipage.c's), */
     unsigned char   hsn;                        /*   on this stratum */
@@ -1259,7 +1263,7 @@ enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT,       /* (I_ROB's a: a robbery; an all
 #define PN_LIGHT        2                       /*   a light (none of its own); 0 food: the world's to choose a spare of
                                                 **   its own, the minds' to see the need: 2026-11-23) */
 enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR,
-       FT_STOLEN, FT_BARE };   /* (E_TASK TE_FETCHED's b's high
+       FT_STOLEN, FT_BARE, FT_ATE };   /* (E_TASK TE_FETCHED's b's high
                                                 **   bits: taken up, handed over, gone from where it lay, too heavy
                                                 **   for it, its hands full, set down at the character's feet (its own
                                                 **   hands full), a gift taken, no way to it; taken from it by the
