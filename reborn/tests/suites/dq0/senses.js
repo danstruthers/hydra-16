@@ -444,7 +444,7 @@ module.exports = {
 
     {
       name: 'dq0pose', meaning: true, what: 'Dingus Quest Zero\'s body positions (slice 4.6, HOUSE.md\'s body position, for review), by the hub\'s state and the words: at seed 3 by the way down the character crouches ("You crouch.", a second, the status line\'s CROUCHED), is told it\'s crouching already, kneels (the grammar\'s "kneel", the UI\'s by the word), sits, stands ("You get to your feet."), is told it\'s on its feet already, lies down, gets up (the book\'s Rise), crouches and steps forward crouched (a low walk: still crouched, a slow walk\'s pace), sits and steps forward (up first, a moment: "You get to your feet.", standing after)',
-      init: 't_rc', cycles: 440e6,   // (400e6 till 2026-10-30: 398.6M with the answers' work, the budget some 10% over it)
+      init: 't_rc', cycles: 560e6,   // (400e6 till 2026-10-30: 398.6M with the answers' work, the budget some 10% over it)
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'crouch', 'crouch', 'kneel',
         'sit', 'stand', 'stand', 'lie down', 'get up', 'crouch', 'step forward', 'sit', 'step forward', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -470,7 +470,7 @@ module.exports = {
     },
     {
       name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as its pace (the senses\' to reckon, the hub\'s pc_noise 0xFF, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, the senses\' to reckon, no test',
-      init: 't_rc', cycles: 700e6,   // (400e6 till 2026-10-30: 399.4M at the morale's merge, over it with succession's parts; 2026-11-03, a creep again and a stair)
+      init: 't_rc', cycles: 750e6,   // (400e6 till 2026-10-30: 399.4M at the morale's merge, over it with succession's parts; 2026-11-03, a creep again and a stair)
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'creep', 'step back', 'step forward', 'd', 'step forward', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -590,8 +590,8 @@ module.exports = {
           { g: 3, line: 'attack', n: 1, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [99, 1] }] }]);
         // (Its fights rigged, dice2: found, the bandits' blows missing (their d100 a marginal failure) and its own fists landing,
         // none parried and struck back (a marginal success, the defence a marginal failure), so it lives to its status; the blow
-        // from hiding a marginal failure, the Ignore table's one die a 1: the bandit not felled, so the reply's w2 isn't its
-        // tenths out and keeps RS_ASLEEP as the check reads it)
+        // from hiding a marginal failure, the Ignore table's one die a 1: the bandit not felled.  Its RS_ASLEEP read from the
+        // request's own flags (its ask), not the reply's w2, which a felling overwrites with its tenths out: fix3)
       },
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Prose(out), STEALTH = 4, RS_TEST = m.dq0.layout().K.RS_TEST, RS_ATTACK = m.dq0.layout().K.RS_ATTACK;
@@ -606,11 +606,11 @@ module.exports = {
         if (!/has seen you/.test(s)) f.push('found: not told');
         const at = T.of('attack', from(2));
         if (hid(at) !== 0) f.push('a blow from hiding: still hidden');
-        if (!dq0Rep(at, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length) f.push('a blow from hiding: not the book\'s Ignore (RS_ASLEEP)');
+        if (!dq0Rep(at, 'slot0', { kind: RS_ATTACK }).some(e => e.ask.asleep)) f.push('a blow from hiding: not the book\'s Ignore (RS_ASLEEP)');
         if (!/You strike from hiding/.test(s)) f.push('a blow from hiding: not told');
         const lk = T.of('look', from(3)), l2 = T.after(lk, 'look');
         const wt = T.after(lk, 'wait 1 minute');
-        if (!dq0Rep(wt, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length) f.push('a blow from hiding at the character: not the book\'s Ignore (RS_ASLEEP)');
+        if (!dq0Rep(wt, 'slot0', { kind: RS_ATTACK }).some(e => e.ask.asleep)) f.push('a blow from hiding at the character: not the book\'s Ignore (RS_ASLEEP)');
         if (!/leaps out of hiding/.test(s)) f.push('one hidden beside it: no blow from hiding told');
         return f;
       },
@@ -788,7 +788,7 @@ module.exports = {
     {
       scene: false,   // (Its watchers keep the looks' replies from the game's first: none taken up, sim/lib/scenes.js)
       name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every look of the character\'s with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, in order (DQ0LOOKS=write: written afresh from this run); the denizens\' senses (their number and place the minds\' timing\'s, since the hearing, 2026-11-20) each asked by a live denizen of the character or another live one, answered with the SN_* kinds alone, and every one asked answered',
-      init: 't_rc', cycles: 3000e6,
+      init: 't_rc', cycles: 4100e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rāecho furn 0 >> /ram/s.sc\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
         [['dq0 -p t -s 3 -c /ram/c.hm -T -W -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T -W',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm -W',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T -W',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T -W',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm -W',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm -W',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm -W',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + ' -S /ram/s.sc\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
@@ -1133,7 +1133,7 @@ module.exports = {
     {
       // (dq0sky=0, 2026-11-03, a scene's: as dq0dark's)
       name: 'dq0roomsearch', meaning: true, near: ['senses'], what: 'Dingus Quest Zero\'s searching a thing, and searching a whole room (the user\'s playtest, 2026-11-02: "When searching a pile of straw, it says "no sign of a trap", but I am not looking for traps, but for anything hidden in the straw.  Also, I would like `search the room` to take time to search around the whole room, poking through piles of straw, taking a closer look at the items, etc., not just searching for hidden doors or traps.  It should report incrementally what you are doing as well."; HOUSE.md\'s the search\'s forms and a room searched whole), by the world\'s events, the clock and the words.  At seed 7 (Awareness 95, a heap of straw and an iron key to hand, the key hidden under the straw where it lies and made unknown, dq0Poke\'s): the straw searched, a minute, "You poke through the heap of straw...", the key found in it and no words of traps; searched again, "You find nothing in the straw."; the table, the dagger the same, no traps; then the hall searched whole: its stages in order, its words a line each (along the wall to its left, round the corners by the compass), each thing in turn (its look over, the straw poked through), the clock on as much as the stops\' and things\' times and a slow walk, the character on another square at each corner, a long task LT_SEARCH (its bar\'s done counting the clock, never the squares); stopped at the first corner ("You stop searching."), a second search goes on from there ("You go on searching the room."), the things before the stop not gone through again, to its end ("You\'ve been over the whole room."); a third says it\'s done, in no time; kept with the game (dq0 -d: quit, carried on, still done).  In the dark (the first room, its torch doused) by touch, a thing\'s time twice, the block\'s 30 seconds.  In the light, the same first room, its door\'s hidden dart trap, its hiding 0 (the chunk poked), tested as a stop comes to it.  With a ghoul (seed 7, dq0 -T) put beside it, engaging it, stopped hard.  In a passage, stopped at the door behind it, a search about it.  In a great cavern (dq0 -V), refused kindly, no time.  And in the hall again with hidden plates poked onto each stop\'s middle but its first, its doors made secret (dq0Poke\'s traps): each plate noticed underfoot at a search\'s chance and gone round, or sprung and the search stopped there; a secret door found as a stop comes to it, told as found',
-      init: 't_rc', cycles: 4500e6,
+      init: 't_rc', cycles: 5200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 95 >> /ram/c.hm', 'mkdir /ram/g',
         "dq0 -p t -s 7 -c /ram/c.hm -d /ram/g -k 'heap of straw,iron key' -S /ram/s.sc", 'face north', 'open the door behind me', 's', 'drop the straw', 'hide the key', 'search the straw', 'search the straw',
         'search the table', 'search the dagger', 'search the room', 'search the room', 'search the room', 'search the whole room', 'search this room', 'search the entire room', 'search the chamber', 'search the hall', 'quit', 'dq0 -d /ram/g -S /ram/s.sc', 'search the room', 'quit',

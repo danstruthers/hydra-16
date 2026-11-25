@@ -41,6 +41,22 @@ const BANDIT_AT = (m, dx, dy, face) => (h, L, K, at, named) => {
   R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = h[L.pcSn];
   h[L.denSeq] = h[L.denSeq] + 1 & 255;
 };
+// The giant rat coaxed (the friendliest of them) put before the character, facing it, as a coaxing's typed: the one the
+// first coaxed, seen (fix3, 2026-11-25: a social verb's hearer perceived, S1; the coaxed rat keeping its distance, gone
+// from sight, was coaxed again unseen till then, "You look for the giant rat." and won over all the same)
+const COAXED = m => (h, L, K, at, named) => {
+  const ks = [...Array(L.nactors).keys()].filter(j => h[at(j) + L.aState] && named(j) === 'giant rat').sort((x, y) => h[at(y) + L.aAttitude] - h[at(x) + L.aAttitude]);
+  if (!ks.length) return;
+  const d = h[L.pcFace] & 7, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d];
+  BANDIT_AT_K(m, h, L, K, at, ks[0], x, y);
+};
+const BANDIT_AT_K = (m, h, L, K, at, k, x, y) => {
+  const o = at(k), R = dq0Rec(m), q = R.at(h[o + L.aDen]);
+  h[o + L.aX] = x & 255; h[o + L.aX + 1] = x >> 8; h[o + L.aY] = y & 255; h[o + L.aY + 1] = y >> 8; h[o + L.aSn] = h[L.pcSn];
+  h[o + L.aPos] = K.POS_STANDING;
+  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; R.mem[q + R.SN] = h[L.pcSn];
+  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+};
 // The world's act table's rows by name (games/dq0w/acts.txt, acts.js's read: the one-path plan's stage 1, 2026-11-19): each
 // act's time, test, noise (loud; nz the character's E_NOISE's what, de an actor's E_DEN's), the same for every actor
 const dq0Acts = () => Object.fromEntries(require(path.join(TESTS, '..', 'games', 'dq0w', 'acts.js')).read(require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load()).map(r => [r.name, r]));
@@ -341,7 +357,7 @@ module.exports = {
     },
     {
       name: 'dq0mine', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's miners at their work (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 374: their home south-west of the start, a copper seam crossing their chunk eight squares east of it, rock.h's; wary; a miner digs with the pick it carries, kinds.txt's ways m, outfits.txt's [role khuzmin]), the hour 8 in the morning (dq0hour: a diurnal miner's working hours, part 9's day), the character waiting in its cell six hours, out of their sight; the portcullis on their mine's way across raised (the scene set as the first long wait's typed: its state in the chunks' cache poked; a lowered one ends a mine's way, the minds raising none yet).  At its work (by the clock, part 9's SC_WORK: never polled) a miner digs its faction's mine (dq0d's work_dig, part 15's): from its lair's home across to its region's vein (rock.h's rock_vein: a seam of ore or quartz), then along it, the open squares and doorways on it walked through, its stand the square before its first wall, rock or rubble; a spell at a time, the world's (wdig.c, I_KIT's KT_DIG, by the character's rules: its pick's rate, its Strength test by its sheet), heard (E_DEN DE_DIG, 'a scraping in rock'), each square through a passage (DE_DUG) on the mine's line (the home's row between the home and the vein, or the vein's own squares at their row), none of them hostile",
-      init: 't_rc', cycles: 3000e6,
+      init: 't_rc', cycles: 4500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'echo hour 8 >> /ram/s.sc',
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 374 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc',
         'wait 2 hours', 'wait 2 hours', 'wait 2 hours', 'quit', 'echo $status'] })) },
@@ -956,7 +972,8 @@ module.exports = {
         'dq0 -p t -s 21 -c /ram/a.hm -T', 'befriend the rat', 'befriend the rat', 'follow me', 'quit',
         'dq0 -p t -s 5 -c /ram/a.hm -T', 'follow the sack', 'd', 'wait', 'follow the rat', 'quit', 'echo $status'] })) },
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }, { g: 1, line: 'befriend the rat', n: 2, call: COAXED(m) },   // (Seen as it's
+          //   coaxed again: COAXED's, fix3)
           { g: 2, line: 'follow the rat', n: 1, call: (h, L, K, at, named) => {   // (The rats near but the furthest sent off: the
             const u16 = o => h[o] | h[o + 1] << 8, d = k => Math.max(Math.abs(u16(at(k) + L.aX) - u16(L.pcX)), Math.abs(u16(at(k) + L.aY) - u16(L.pcY)));
             const near = [...Array(L.nactors).keys()].filter(k => named(k) === 'giant rat' && h[at(k) + L.aState] && d(k) <= 4).sort((x, y) => d(y) - d(x));
@@ -1151,7 +1168,7 @@ module.exports = {
     },
     {
       name: 'dq0denizens', meaning: true, what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt), by the actors\' records, their events and what the character perceives (their kinds\' records the referee\'s, HarnMaster\'s): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up), their stirring told (the world\'s E_VIEW) as what the character sees of them changes (gone out of sight), not again when nothing has; then (seed 5, down its ladder) the rats there seen, cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk or step onto a rat\'s square (dq0steps\' rat in the way, a step, in it)',
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'go right', 'go forward', 'step forward', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -1238,14 +1255,15 @@ module.exports = {
     },
     {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
-      init: 't_rc', cycles: 1400e6,
+      init: 't_rc', cycles: 1900e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', lines: ['echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept',
         'persuade the rat', 'examine the rat', 'befriend the rat', 'befriend the rat', 'befriend the rat', 'name the rat grub', 'tell grub to wait', 'turn around',
         'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T', 'attack the rat',
         'examine the rat', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },   // (Won over in two coaxes, then asked no more: RAT_WON's)
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },   // (Won over in two coaxes, then asked no more: RAT_WON's;
+          ...[2, 3].map(n => ({ g: 1, line: 'befriend the rat', n, call: COAXED(m) })),   //   seen as it's coaxed again: COAXED's, fix3)
           { g: 1, line: 'tell grub to wait', n: 1, name: 'Grub', beside: 1 }]);   // (Grub waiting north-east of it, out of its way east, dice2: come to its east side)
       },
       check(m) {
@@ -1289,7 +1307,7 @@ module.exports = {
         'inventory', 'tell grub to fetch the anvil', 'give the tinderbox to grub', 'give 1 ration to grub', 'inventory', 'tell grub to follow me at 3 squares',
         'quit', 'echo $status'] })) },
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }]);
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }, { g: 1, line: 'befriend the rat', n: 2, call: COAXED(m) }]);   // (Seen as it's coaxed again: COAXED's, fix3)
       },
       expect: ['% echo $status'],
       check(m) {
@@ -1325,7 +1343,7 @@ module.exports = {
         'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop the chest', 'close the chest', 'put 2 rations on the chest', 'move east 2 squares', 'turn around',
         'tell grub to fetch the rations', 'wait', 'wait', 'inventory', 'quit', 'echo $status'] })) },
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }]);
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }, { g: 1, line: 'befriend the rat', n: 2, call: COAXED(m) }]);   // (Seen as it's coaxed again: COAXED's, fix3)
       },
       expect: ['% echo $status'],
       check(m) {
@@ -2433,8 +2451,10 @@ module.exports = {
         'give 1 ration to grub', 'give 1 ration to grub', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {
-        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON },   // (Grub won over in two coaxes: RAT_WON's)
-          { g: 1, line: 'move east 2 squares', n: 1, name: 'Grub', beside: 1 }]);   // (Grub north-east of it, out of its way east, dice2: come to its east side)
+        dq0Scene(m, [{ g: 1, line: 'befriend the rat', n: 1, rig: RAT_WON }, { g: 1, line: 'befriend the rat', n: 2, call: COAXED(m) },   // (Grub won over in two coaxes: RAT_WON's; seen as it's coaxed again, COAXED's, fix3)
+          { g: 1, line: 'move east 2 squares', n: 1, name: 'Grub', beside: 1 },   // (Grub north-east of it, out of its way east, dice2: come to its east side)
+          { g: 1, line: 'give 1 ration to grub', n: 2, name: 'Grub', beside: 'face' }]);   // (Before it as the second gift's typed, seen: fix3, a social
+          //   verb's hearer perceived, S1; given it behind the character, unseen, till then)
         // (Its scenes: Grub put ahead of the character as the first step back's typed; set wary as the first gift's; the
         // denizens' head's factions' attitudes read as the gifts' lines and the quit are typed)
         const a = m.acia, read = a.read, self = this;

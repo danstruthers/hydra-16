@@ -63,7 +63,7 @@ module.exports = {
   tests: [
     {
       name: 'dq0highkinds', near: ['gear'], sdcard: true, what: "Dingus Quest Zero's kinds past 127 (the margins' pass, 2026-11-03: a kind's number a whole byte everywhere, 60 more in the catalogue's room, items.h's NKINDS; HOUSE.md's digging): a mang in hand, struck with (the hub's pc_strike SK_OF its kind, its name in the words), a mattock kept in a save and read back; a mang in a long task named by its kind; a mattock on a denizen's arm, let fall and taken up (the actor's arm, E_BEAT WB_PICKS); a wood chisel no use on stone, told so, a stone chisel with a hammer a chisel's dig, a spade and a mattock told as a shovel is",
-      init: 't_rc', cycles: 2600e6,
+      init: 't_rc', cycles: 3900e6,
       machine: { input: dq0Typed(dq0Game({ char: 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', lines: ['echo ml dge 90 >> /ram/c.hm', 'echo ml swd 60 >> /ram/c.hm',
         'dq0 -p t -s 14 -c /ram/c.hm -d /ram/s -k mang,mattock', 'inventory', 'hit the door with the mang', 'quit', 'dq0 -d /ram/s', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k mang,whetstone', 'sharpen the mang', 'quit',
@@ -174,7 +174,7 @@ module.exports = {
     },
     {
       name: 'dq0outfit', outfit: true, what: 'Dingus Quest Zero\'s starting outfits (games/dq0/outfits.txt, the world\'s draw: outfit.c, outdraw.c, outmake.c; DECISIONS.md\'s outfits, HOUSE.md\'s), by the things each character begins with (the store\'s records) and hmchar\'s files: the family\'s wealth rolled and kept (its "wealth" line, the book\'s by its class); the universal kit (clothes and footwear worn, a backpack and a belt worn, a pouch on the belt, a torch lit in hand, a tinderbox, three rations, a waterskin full, a knife in its sheath, a spare torch and a flask of oil), bought at the book\'s prices within the wealth (seed 5\'s hunter, a serf: sandals; its Spear a staff in hand, all it could pay for); seed 10\'s thief (seed 8\'s till its lantern, 2026-11-03: its money no longer reaches a dagger) its lockpicks, paper and charcoal in its pouch (handy), its Club\'s club and its Dagger\'s dagger in the knife\'s place, in its sheath; a yeoman of the shortbows its unit\'s issue, free (a shortbow worn, a quiver of 12 to 24 arrows on the belt, a falchion in its scabbard, a dagger in its sheath, a buckler, a kurbul helm and a leather vest worn); a cleric of Peoni its temple\'s things, free (a robe, a ring, a staff, its letter, the universal kit) and 6 to 36 pennies; the null ruleset\'s the universal kit alone, with some money; the same character in the same game the same outfit; each thing its own (its number, its make)',
-      init: 't_rc', cycles: 2600e6,
+      init: 't_rc', cycles: 2800e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['cat /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'inventory', 'quit',
         'hmchar -q -s 10 -u feudal -c thief -o /ram/t.hm', 'cat /ram/t.hm', 'echo att end 40 >> /ram/t.hm', 'dq0 -p t -s 3 -c /ram/t.hm -T', 'quit',
         'hmchar -q -s 11 -u feudal -c \'yeoman sb\' -o /ram/y.hm', 'dq0 -p t -s 3 -c /ram/y.hm -T', 'quit',
@@ -262,7 +262,7 @@ module.exports = {
     {
       // (dq0sky=0, 2026-11-03, a scene's: seed 1's start room's skylight takes the straw's square; the fight's dice other, the body's words "It's battered" among them; no fault)
       name: 'dq0kit', outfit: true, what: 'Dingus Quest Zero\'s denizens\' gear (the outfits\' plan\'s phase 1: games/dq0/outfits.txt\'s [role bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' gear), by the item store\'s records and the blows told: a lair of hostile bandits (a theme of them, as dq0disarm\'s) placed as the game begins, each bandit\'s things made (items.h\'s IW_DEN, its number its own: the hub\'s actor\'s did), clothes and a belt worn, a weapon held or on its belt (in its carrier: a sword in its scabbard), two bandits\' things not the same, the same seed\'s game the same things (kinds, makes, materials); a bandit drawing its weapon from its belt before it strikes (WB_DRAWS, told: "The bandit draws its hatchet."), striking with it (its words that weapon\'s), its weapon let fall the same record (WB_DROP: on the floor); one killed, its things on its body ("look at the body": what it wore, its belt and its sheath\'s knife on it), its vest taken from the body; the game saved and carried on, each denizen\'s things the same records (their numbers, makes, places)  (Its scene set by a poke since 2026-10-30, dq0Poke\'s: the bandits wary as the first attack is typed, the one down finished, the other not fighting on; since the denizens\' day, 2026-10-31, with no day: the environment\'s dq0hour=128, rc\'s, the bandits about, none asleep or on watch.)',
-      init: 't_rc', cycles: 1600e6,
+      init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'echo hour 128 >> /ram/s.sc', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
         'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm' -S /ram/s.sc", 'drop the staff',
@@ -357,7 +357,7 @@ module.exports = {
     },
     {
       name: 'dq0keys', what: 'Dingus Quest Zero\'s keys that fit (the user\'s answer 10: "A key opens its own lock, no test"; HOUSE.md\'s keys that fit, the outfits\' phase 2): a key made after a chest locks it and fits it alone (dq0 -k\'s "chest,iron key": every making\'s rule, the denizens\' boxes\' too): the chest put down locked, opened with its key with no test, a few seconds ("You unlock the chest with its key."), closed and locked again with it ("You lock the chest with its key."); its key put down, no picks: nothing to pick it with; a chest whose key was put down and another key kept ("chest,iron key,iron key"): "Your key doesn\'t fit its lock.", the chest locked still',
-      init: 't_rc', cycles: 900e6, outfit: true,
+      init: 't_rc', cycles: 1100e6, outfit: true,
       machine: { input: dq0Typed(dq0Game({ lines: ["dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key'",
         'drop the chest', 'open the chest', 'unlock the chest', 'open the chest', 'close the chest', 'lock the chest', 'open the chest', 'drop the iron key',
         'unlock the chest', 'quit', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key,iron key'", 'drop the chest', 'drop the iron key', 'unlock the chest', 'quit',
@@ -1393,7 +1393,7 @@ module.exports = {
     },
     {
       name: 'dq0ownseen', meaning: true, near: ['gear'], what: "Dingus Quest Zero's things made their own as they're seen (make_own, the world's owned; 2026-11-04: its loop the main RAM's, part 13 copied only for a thing not yet its own, the swap study's: a thing's number, its quality, its make come as they did): at the turns pace, what a look sees has a number; a look again changes no thing's record and takes no new number (none made twice, none of the store's dice spent); things out of sight have none; one it sees with no number (the scene's: its number cleared) has one when the world next looks about, the next number, the others untouched, and only once",
-      init: 't_rc', cycles: 400e6,
+      init: 't_rc', cycles: 530e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'look', 'look', 'turn left', 'turn left', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       start(m) {                                  // (A thing it sees made not its own yet, as the turn's typed: the world looks about after it)
@@ -2629,7 +2629,7 @@ module.exports = {
     },
     {
       name: 'dq0money', what: 'Dingus Quest Zero\'s money as the HarnMaster books have it (the user\'s, 2026-10-28: DECISIONS.md\'s money, HOUSE.md\'s): the kit\'s 12 silver pennies (a dram each: the pouch\'s weight nothing more than before), examined close their stamps told (the theme\'s mints: 1crypt\'s, four in five the region\'s own, Cendra\'s), their mix kept in the pile\'s record (its groups by mint, fifteenths of it), assessed their worth in pennies (as a local would take them); farthings, a penny cut in four (the user\'s "Please keep farthings"), the money counted ("count the money"), a farthing worth a farthing, one dropped and taken again joined to the other; a stocked old coin\'s mint by its era (themes\' mint lines compiled: dq0themec\'s); the same seed\'s pile the same mix',
-      init: 't_rc', cycles: 1100e6,
+      init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm',
         'examine the pennies', 'value the pennies', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm', 'examine the pennies', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k farthings,farthings', 'inventory', 'count the money', 'examine the farthings', 'value the farthings', 'drop 1 farthing', 'take the farthing', 'inventory', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -2690,7 +2690,7 @@ module.exports = {
     },
     {
       name: 'dq0newlight', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s new light lit from the old one (the user\'s, 2026-11-03, DECISIONS.md\'s: "light the new torch from the old one before it is extinguished"; HOUSE.md\'s a new light, for review), by the words in order and the things: "light a new torch" with one burning and a sword in the other hand: the sword set down, the pack off, the new torch got out, lit from the burning one, the old blown out and let fall, the sword taken up, the pack back on; no tinderbox touched; the new one lit in hand, the old unlit at its feet, each step its time (over 6 seconds); with the old one spent, the tinderbox\'s steps as before; a lantern from a torch, by "light the lantern"; and "turn" by its way, right, left, half left, half right, around, and by a compass way: "You turn to face west." always (the user\'s, 2026-11-16: whatever\'s typed after it; "You turn right, to face west." before, its way read from the command queue)',
-      init: 't_rc', cycles: 1500e6,
+      init: 't_rc', cycles: 2100e6,
       machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 61 minutes', 'light a new torch', 'inventory', 'quit',
@@ -2767,7 +2767,7 @@ module.exports = {
     },
     {
       name: 'dq0load', what: 'Dingus Quest Zero\'s load (the user\'s, 2026-10-16), by the things\' weights (the catalogue\'s, all the character carries) and the referee\'s summary (its load: HarnMaster\'s encumbrance, the load over its endurance, as the game\'s bands): the kit alone 9 lb (its spare torch and flask of oil, D5\'s, slice 4.1), no burden (within its free pounds by Strength, D13\'s, slice 4.4); with a pick, a shovel, a rope, a sword and bones (dq0 -k) 35 lb, a little burdened; some put down, 17 lb, a little burdened still (the sheet\'s penalties the referee\'s, its unit tests\'; the words: dq0wordsthings)',
-      init: 't_rc', cycles: 700e6,
+      init: 't_rc', cycles: 930e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones', 'drop rope', 'drop shovel', 'drop sword', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -2787,7 +2787,7 @@ module.exports = {
     },
     {
       name: 'dq0heft', outfit: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s weapons\' versions by Strength (D13, the user\'s: Strength sets how heavy a weapon is wielded without penalty, heavier versions hit harder, strong characters made with heavier weapons; the book\'s custom weapons, Combat 3; HOUSE.md\'s the character carries on), by the words told and the referee\'s marks: a hunter (hmchar\'s, seed 5) made strong (Strength 16, its file\'s line added) begins with its weapons heavy (its knife appraised "a heavy one"; RS_EQUIP\'s marks an H after its quality), made weak (Strength 4) with them light ("a light one")',
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 960e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/w.hm', 'echo \'att str 16\' >> /ram/c.hm',
         'echo \'att str 4\' >> /ram/w.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'inventory', 'appraise the knife', 'quit', 'dq0 -p t -s 3 -c /ram/w.hm', 'inventory', 'appraise the knife', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],

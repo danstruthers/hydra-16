@@ -45,6 +45,26 @@ unsigned char sight_light;                      /*   and the character's light, 
 char sight_lamp[14];                            /*   what gives it, named */
 unsigned char sight_close;                      /*   and a close look (look's first 2) */
 
+/* A look's words so far said (words.c's, seen.c's and dens.c's lb_out: lbsaid.s's lb_said), a sentence at a time as the
+** next begins; a look with names given its room's name put in its first sentence as that's said (names_look's: part
+** names_said's, the hub in the window for it, the overlay's put back after).  Made whole, not streamed, till fix3,
+** 2026-11-25, the name put in as the last of it was made: a long one ran past lb's 400 bytes into lbe (dq0sway's
+** "you.O", fix2's heard sentence; the rest of it, fix3's), its every sentence now in lb alone as it's made */
+static unsigned char lb_name;                   /* (Its room's name still to put in: look's) */
+void lb_out (void)
+{
+    unsigned w;
+
+    if (lb_name) {
+        lb_name = 0;
+        w = hub_here ();
+        hub_map (0);
+        names_look (1);
+        hub_back (w);
+    }
+    lb_said ();
+}
+
 /* The senses' record (their bank's) copied out, into sight_copy: what reads it reads the copy */
 struct sight* sight_get (void)
 {
@@ -94,15 +114,11 @@ void __fastcall__ look (unsigned char first)
     if (names_n) {
         names_look (0);                         /* (Its things named marked; then the room's name: names.c's) */
     }
-    lb_stream = !names_n;                       /* (Said as it's made, but with names: made whole, the room's name
-                                                **   put in it after) */
+    lb_stream = 1;                              /* (Said as it's made; with names, the room's put in its first sentence
+                                                **   as that's said, lb_out's) */
+    lb_name = names_n != 0;
     words ();
-    if (!lb_stream) {
-        names_look (1);
-        lb_said ();                             /* (Its sentences said but those said already this answer, as a
-                                                **   streamed look's are: lbsaid.s's) */
-    }
-    lb_stream = 0;
+    lb_stream = lb_name = 0;
     sight_sum = sight_sum_of ();                /* (What it saw, kept: a light's change compared with it, main.c's E_VIEW;
                                                 **   after its words, their first letter the sooner, 2026-11-18: the
                                                 **   words change none of what's summed) */

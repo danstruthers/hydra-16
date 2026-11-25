@@ -492,6 +492,7 @@ extern char* lbe;                               /* (lb's end: words.c's and seen
 extern const char* const wl_said[2];               /* (A well's shaft overhead: look.c's) */
 extern unsigned lbn;                            /* (What a look's said of its words already: lb's before) */
 extern unsigned char lb_stream;                 /* (A look's words said a sentence at a time, as they're made) */
+void lb_out (void);                             /* (look.c's) A look's words so far said, its room's name put in first (names given) */
 extern struct sight sight_copy;
 struct sight* sight_get (void);                 /* The senses' record copied into sight_copy (look.c's): it */
 const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's), the
@@ -518,6 +519,8 @@ extern unsigned char lsn;                       /* (main.c's: a listen, 1 one wa
 void __fastcall__ bg_words (unsigned char what);    /* Part positions (main.c's): the background heard, the draught felt */
 extern unsigned long heard_at;                  /* (main.c's: when a sound was last told, */
 extern unsigned char heard_rel;                 /*   and the way it came) */
+extern unsigned char stop_told;                 /* (main.c's: its long task's stop told, till it's free or a line's typed) */
+extern unsigned char face_told;                 /* (main.c's: the heading a turn told last since a line was typed, plus 1) */
 unsigned char __fastcall__ den_heard (const struct msg* m);   /* (Overlay 23's) A denizen's sound weighed: its way if it's
                                                 **   heard (REL8), to be told; else 0xFF */
 

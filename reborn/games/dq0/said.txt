@@ -859,7 +859,7 @@ SELF.facing         +"\nFacing: {text}{v?|, you think; you've lost your bearings
 SELF.step           +"\nYou step {v?forward|ahead to your right|to your right|back to your right|back|back to your left"
                     "|to your left|ahead to your left}."
 SELF.setoff         +"\nYou set off {text}."
-SELF.face           +"\nYou turn to face {text}."
+SELF.face           +"\nYou turn {v?|back }to face {text}."
 SELF.pose           +"\nYou {v?|lie down|crouch|kneel|sit down}."
 SELF.posed          +"\nYou are {v?|lying|crouching|kneeling|sitting} already."
 SELF.draught        +"\nYou feel a {v?|faint ||strong }draught from {n2?ahead|ahead to your right|your right|behind you to your right"

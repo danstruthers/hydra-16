@@ -24,6 +24,7 @@
 //   --seed N   the runner's --seed (default 1)
 //   --out FILE the profile written there too
 //   --timeline N  each task's run in the window of N cycles or more, in order (who ran when)
+//   --pause    the line's answer's longest pause profiled, not its first letter (fix3, 2026-11-25)
 //   --lead N   the profile begun N cycles before the Enter (what came just before it: a part copied in, a round's
 //              work begun); its cycles in the counts, its part loads at their (negative) cycles
 //   --sweep    (speed10's lag sweeps, a tool since speed11, 2026-11-22) each TEST run once at each lag (SIM_PROMPT_LAG,
@@ -259,6 +260,7 @@ async function main(argv) {
     else if (argv[i] === '--seed') opt.seed = +argv[++i];
     else if (argv[i] === '--out') opt.out = argv[++i];
     else if (argv[i] === '--lead') opt.lead = +argv[++i];
+    else if (argv[i] === '--pause') opt.pause = true;
     else if (argv[i] === '--timeline') opt.timeline = +argv[++i];
     else if (argv[i].startsWith('-')) { console.error('usage: node sim/tools/lineprof.js TEST [LINE] [--nth N] [--list] [--top N] [--seed N] [--out FILE] [--lead N] [--timeline N]\n' +
       '       node sim/tools/lineprof.js --sweep TEST ... [--lags L,L,...] [--jobs N] [--top N] [--seed N] [--all]'); process.exit(2); }
@@ -288,7 +290,7 @@ async function main(argv) {
   if (opt.nth) pick = pick.slice(opt.nth - 1, opt.nth);
   if (!pick.length) { console.error('lineprof: no line ' + JSON.stringify(want || '') + ' timed in ' + name); process.exit(2); }
   const line = pick.reduce((a, b) => b.first > a.first ? b : a);
-  const P = profiler(name, line.t - opt.lead, line.t + line.first);
+  const tm = t.timer.at(line.i), P = opt.pause ? profiler(name, line.t + tm.pauseFrom, line.t + tm.pauseFrom + tm.pause) : profiler(name, line.t - opt.lead, line.t + line.first);   // (--pause: its longest pause's window, fix3)
   T.addInstrument(P.part);
   const r2 = await T.runTest(t, ro);
   const again = t.timer.at(line.i).first;

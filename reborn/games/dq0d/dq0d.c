@@ -4184,14 +4184,16 @@ static unsigned char __fastcall__ called (const char* n, const char* w)
 }
 #pragma bss-name (pop)
 
-/* The actor meant by w ("": any): the nearest of them on the character's stratum, on a square it sees or within four
-** of it; its distance in dist.  The actor, or 0xFF */
+/* The actor meant by w ("": any): the nearest of them the character perceives, the senses' record's (what the UI names
+** it by: only seen names used, a social verb's hearer perceived, WORLD-MODEL.md's S1), or an ally of its own in
+** earshot (twelve squares, as an order to every ally reaches: one it named, known by its name); on a square it saw or within
+** four of it, seen or not, till fix3, 2026-11-25: "You look for the rat." then "The giant rat seems wary of you
+** already", dq0cover's); its distance in dist.  The actor, or 0xFF */
 static unsigned char __fastcall__ meant (const char* w)
 {
     struct actor* q;
-    unsigned char k, best = 0xFF;
-    unsigned char* p;
-    unsigned f, x, y;
+    unsigned char k, j, d, best = 0xFF;
+    unsigned f;
 
     dist = 0xFFFF;
     for (k = 0; k < NACTORS; ++k) {
@@ -4201,13 +4203,20 @@ static unsigned char __fastcall__ meant (const char* w)
             (*w && !called (q->name, w) && (kind_get (md.akind[k]), !called (K.name, w)))) {
             continue;
         }
-        x = q->x;
-        y = q->y;
-        if (f > 4 && ((p = at (pcs, x, y)) == 0 || !(*p & T_VIS))) {
-            continue;
+        hub_map (0);
+        d = q->den;
+        if (q->attitude == AT_ALLIED && f <= 12) {
+            j = 1;                              /* (An ally of its own in earshot, known by its name, as every
+                                                **   ally's asked in earshot is, s_sway's) */
+        } else {
+            hub_map (SIGHT_BANK);
+            for (j = SIGHT->ndens; j && SIGHT->den[j - 1].den != d; --j) {
+            }
         }
-        dist = f;
-        best = k;
+        if (j) {
+            dist = f;
+            best = k;
+        }
     }
     hub_map (0);
     return best;

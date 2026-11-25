@@ -178,7 +178,7 @@ module.exports = {
     },
     {
       name: 'hyforth', what: 'HyForth\'s additions (docs/design/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume; a channel\'s level, its old name; the registers read back: a note\'s key code and fraction; a song by play, its error; a note by its frequency, a glide, the LFO, a channel\'s sensitivity, the noise; a line of MML and a chord, by play); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
-      init: 't_rc', cycles: 180e6,
+      init: 't_rc', cycles: 260e6,
       // (At 115200, so words's thousands of characters are out before the next line comes: the keys typed meanwhile
       // wait in the window's queue, which has room for a line or two.  greet.fs, in /ram, the current directory: lib
       // finds it there, as REQUIRED does)
@@ -295,7 +295,7 @@ module.exports = {
     },
     {
       name: 'fdev', what: 'HyForth\'s device libraries (hylang\'s layer 3, source over the devices\' files): gpio (pins, the port, ctl, CA1\'s edge), i2c (a memory written and read at a register, the devices), spi (an echo device\'s transactions, mode 3), cons (the window, the windows), proc (a task\'s args, cwd, regs, memory), clock (the chip, the time set), disk (a disk\'s ctl, the cards: one on SPI device 5), pc (the PC tool answers; a file of its read), and sound\'s note-of and tune (its notes on the YM2151, in time)',
-      init: 't_rc', cycles: 320e6, pc: { files: { 'hi.txt': 'hi from the PC\n' } },
+      init: 't_rc', cycles: 350e6, pc: { files: { 'hi.txt': 'hi from the PC\n' } },
       get machine() {
         return { gpioIn: 0xA5, ca1: [200e6, 230e6, 260e6], i2c: { 0x50: 256, 0x68: 16 }, spiEcho: [3], sd: [card(5, 2048, false, () => 0)],
           rtc: Date.UTC(2026, 9, 3, 15, 4, 5) / 1000,

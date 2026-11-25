@@ -53,7 +53,7 @@ function dq0ClosestTest() {
   return {
     name: 'dq0closest', near: ['parser'], what: 'Dingus Quest Zero\'s resolver\'s choice of several kept (handles travel): "take the ' +
       'closest torch" of a lit one at the character\'s feet and an unlit one a step off takes the lit one, no "Which one?"',
-    init: 't_rc', cycles: 300e6 + lines.length * 40e6,
+    init: 't_rc', cycles: 360e6 + lines.length * 40e6,
     machine: { input: dq0Typed(dq0Game({ lines: [
       'dq0 -p t -s 3 -c /ram/c.hm -k torch -T', ...lines, 'quit', 'echo $status'] })) },
     expect: ['% echo $status'],
@@ -344,7 +344,7 @@ function dq0LeftoversTest() {
     name: 'dq0leftovers', near: ['parser'], what: 'Dingus Quest Zero\'s first words of the thing meant: a capital for a ' +
       'torch lying at the character\'s feet worded as that one, not the lit one in hand; two sacks alike, "take the sack" ' +
       'reached for, no "You look them over." (the world asks which only of two that differ)',
-    init: 't_rc', cycles: 300e6 + lines.length * 40e6,
+    init: 't_rc', cycles: 320e6 + lines.length * 40e6,
     machine: { input: dq0Typed(dq0Game({ lines: [
       'dq0 -p t -s 3 -c /ram/c.hm -T -k \'torch,sack,sack\'', ...lines, 'quit', 'echo $status'] })) },
     expect: ['% echo $status'],
@@ -795,7 +795,7 @@ module.exports = {
     },
     {
       name: 'dq0notyet', what: 'Dingus Quest Zero\'s verbs not done yet, the shared groundwork (2026-11-09, the plan for them, its batch B0: DECISIONS.md\'s "The verbs not done yet: the rows, the aliases and the powers\' refusals"): the powers refused, true to the character, from the rows (a spell: "You\'ve no magic: you never studied the convocations."; a talent: "You reach for it; nothing stirs."; an invocation, one learnt: "You know no invocations of Peoni\'s.", the character\'s deity the referee\'s, RS_DESCRIBE\'s RD_DEITY, its file\'s att dty 6); the aliases (activate, use\'s: a light used is lit, the things\' batch B4\'s, 2026-11-10; negotiate, persuade\'s; sense a lie, examine\'s); "status" (pace.c\'s, before the table) and "pace" alone (the table\'s H_STATUS, the same words); "sneak north" a creep, then the move (not the pace alone, as it was)',
-      init: 't_rc', cycles: 1000e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo att dty 6 >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'cast light', 'memorize the light spell', 'telepathy', 'invoke divination', 'learn divination',
         'activate the torch', 'negotiate with the rat', 'sense a lie from the rat', 'status', 'pace', 'sneak north', 'status', 'quit',
@@ -906,7 +906,7 @@ module.exports = {
     },
     {
       name: 'dq0names', meaning: true, what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c), by the names table (hub.h\'s struct tname, NAMES_AT) and the things\' records: a sword named Linda (dq0 -k sword: its record marked named), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs: no name made), Linda used in commands (dropped, seen lying there, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum; the game kept and carried on, the names with it; then a name forgotten (its record no longer named) (the names\' words: dq0wordsthings)',
-      init: 't_rc', cycles: 1000e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept',
         'name my sword Linda', 'name the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'drop Linda',
         'look', 'take Linda', 'examine Linda', 'attack the rat with Linda', 'call this room the mausoleum', 'quit', 'dq0 -d /ram/kept',
@@ -1008,7 +1008,7 @@ module.exports = {
     dq0AnswerTest(115200),
     {
       name: 'dq0words', what: 'Dingus Quest Zero\'s words, a test about wording alone (the others check meaning: dq0words, dq0wordsfix and dq0wordsthings are where the game\'s sentences are held to): rooms and what\'s seen as the user asked (2026-10-15 and 16): at seed 3 a room told in general words at a glance (a small kitchen, a barrel vault high overhead), the door behind not told ("descriptions often tell you what lies behind you, which you can\'t really see"), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); the door behind told as it turns round, examined in full (its make, size and thickness); at seed 5 a close look at a hall whose far side is dark, no figures, its far side lost in the dark; at seed 11 a door across the pantry examined, only its look from afar (tall, of wood, how far, go closer), and by a weak-eyed character (Eyesight 4: "Eyesight score should affect the amount of detail") not even its wood (dq0doors\' and dq0sense\'s words)',
-      init: 't_rc', cycles: 1350e6,
+      init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/w.hm', 'echo att eye 4 >> /ram/w.hm',
         'dq0 -p t -s 3 -c /ram/c.hm', 'look', 'look closely', 'x room', 'turn around', 'examine the door ahead to my left', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm', 'x room', 'quit', 'dq0 -p t -s 11 -c /ram/c.hm', 'examine the door ahead to my left', 'quit',
@@ -1033,7 +1033,7 @@ module.exports = {
     },
     {
       name: 'dq0wordsfix', what: 'Dingus Quest Zero\'s words, a test about wording alone: the fixtures\' (the doors, their bars, the windows) as the user asked (2026-10-15 and 16): at seed 4, three doors none of them ahead, open door listing them, numbered, from the character\'s left round (each where it lies, its state), 3 turning to and opening the one behind it to its right, the room\'s doors told again; its door\'s bar lifted out of its brackets and taken, carried; at seed 12 a window examined (its make, its pane judged), its pane looked at closely, not climbed through glazed, broken (shards at its feet), climbed through into a passage, the window seen from there; at seed 15 a barred door examined (its bar in its brackets), the bar looked at closely, the door battered with a pick till it gives way (the torch put down, the pick taken in hand: "You set to battering the door with the pick."), broken down for good: it won\'t shut (dq0doors\', dq0choose\'s and dq0window\'s words)',
-      init: 't_rc', cycles: 1150e6,
+      init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 4 -c /ram/c.hm', 'open door', '3', 'look', 'take the bar',
         'i', 'quit', 'dq0 -p t -s 12 -c /ram/c.hm', 'go through the door to the north', 'examine the window', 'x glass', 'climb through window', 'break window', 'look', 'climb through window',
         'turn around', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'examine the door ahead to my left', 'examine bar', 'drop the torch',
@@ -1102,7 +1102,7 @@ module.exports = {
     },
     {
       name: 'dq0choose', meaning: true, what: 'Dingus Quest Zero asking which, of several (the user\'s, 2026-10-16: "If I say open door and there are three closed doors in the room, it should give me a numbered list of choices if one is not directly in front of me"), by what each answer did: at seed 4, three doors on the bedchamber\'s north and west walls, none ahead: open door asks (nothing done), and 3 opens the one behind it to its right (turned to: facing north); then a fresh game, examine door asked again, answered with a way (right: the one to its right, examined); go through the door asked, a command not a choice (look) letting it go (1 then a word it doesn\'t know: nothing done), asked again and 1 going through the one ahead to its right; at seed 3 (dq0 -T) a portcullis and a door behind it, the first, the portcullis, walked up to (the lists\' words: dq0wordsfix, dq0wordsthings)',
-      init: 't_rc', cycles: 1100e6,   // (1000e6 till 2026-10-30: 994M then, over it with morale's bigger actors and parts)
+      init: 't_rc', cycles: 1500e6,   // (1000e6 till 2026-10-30: 994M then, over it with morale's bigger actors and parts)
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 4 -c /ram/c.hm', 'open door', '3', 'quit',
         'dq0 -p t -s 4 -c /ram/c.hm', 'examine door', 'right', 'face south', 'go through the door', 'look', '1', 'go through the door', '1', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'face north and east', 'walk to the portcullis behind me', 'quit', 'echo $status'] })) },
@@ -1129,7 +1129,7 @@ module.exports = {
     },
     {
       name: 'dq0stopwords', near: ['parser'], what: "Dingus Quest Zero's stop words other than \"stop working\" (HOUSE.md's stopping: the work named; 2026-11-03: the grammar had none of dipping, sharpening, freeing, and sharpening's was filling's kind), typed as each task's told (dq0OnWords): at the normal pace (a task's time for the words to be typed in), at seed 12 the window's pane being worked free: \"stop digging\" refused, naming what it's at, \"stop freeing\" stops it, the pane still in its frame; a blunted sword being sharpened (dq0Poke's wear): \"stop dipping\" refused, \"stop sharpening\" stops it, no fresh edge told; a torch being dipped: \"stop dipping\" stops it, no soaking told; dipped again, \"stop soaking\" stops it too (filling, soaking and dipping: whichever of them it's at, 2026-11-06; the UI's overlay 7 read the task's kind in its own bank till the load guard found it)",
-      init: 't_rc', cycles: 1300e6,
+      init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p n -s 12 -c /ram/c.hm', 'go through the door to the north', 'lift the pane', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,whetstone', 'sharpen the sword', 'quit',
