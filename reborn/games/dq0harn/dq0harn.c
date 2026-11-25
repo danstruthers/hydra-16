@@ -958,8 +958,11 @@ fights:
         fight ((struct req*) rq);
         harn_ep_of = 0;
         memcpy (r, rq, sizeof rq);
-        status_now ();                          /* (The blow's own summary in the reply, the rest after it: */
-        rf_later = 1;                           /*   rf_after's, the skeleton's, the user's T4, 2026-11-22) */
+        if (r->kind != RS_WIELD) {              /* (What it would strike with changes nothing of it: no summary,
+                                                **   some 40,000 cycles a fight-back spared, fix2, 2026-11-24) */
+            status_now ();                      /* (The blow's own summary in the reply, the rest after it: */
+            rf_later = 1;                       /*   rf_after's, the skeleton's, the user's T4, 2026-11-22) */
+        }
         break;
     case RS_HARM:                               /* (Harm, wounds over time, first aid: overlay 6's, heal.c, in a */
     case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
@@ -1042,8 +1045,12 @@ parted:
         k = pc.fl;
         spent (RS_EXERT_TENTHS (*r));
         RS_EXERT_TIRED (*r) = pc.fl > k;
-        status_now ();                          /* (Its steps in the reply, the rest after it) */
-        rf_later = 1;
+        if (pc.fl != k || pc.state != HARN_CONSCIOUS) {
+            status_now ();                      /* (Its steps in the reply, the rest after it; its fatigue as it was,
+                                                **   awake, its summary as it was: none worked out again, a fight's
+                                                **   round's some 40,000 cycles, fix2, 2026-11-24) */
+            rf_later = 1;
+        }
         break;
     case RS_EQUIP:
         if (RS_EQUIP_HOW (*r) == 2 && !r->actor) {
