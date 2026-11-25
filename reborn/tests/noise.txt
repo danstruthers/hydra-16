@@ -29,6 +29,7 @@ dq0letstow      denizens met at other moments (the minds' timing; maker3, the ch
 dq0letwhich     denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
 dq0torchwords   denizens met at other moments (the minds' timing; maker3, the chooser's give-way)
 dq0passes       denizens met at other moments (the minds' timing)
+dq0highkinds    denizens met at other moments (the minds' timing: seed 374's bandits seen or not during the dig as the referee's and the minds' timing falls, fix2)
 dq0denportc     a come-round stir told as the UI reads the senses' record racing their next look (actor0, 0ee3de84)
 dq0paceword     "status" read as the character lies or stands: a race with its state's write (actor0, 0ee3de84)
 dq0robrest      denizens met at other moments (the minds' timing)
