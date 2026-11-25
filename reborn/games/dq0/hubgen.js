@@ -94,7 +94,8 @@ const ASM = {
   jobs: {                                                       // games/dq0w/jobs.s: the lockstep's quiet (lock1's)
     HUB_WINDOW: 'HUB_WINDOW', HUBO_PACE: 'hub.pace', HUBO_ASKING: 'hub.pc_task.asking', HUBO_EQ: 'hub.eq_head',
     HUBO_DQ: 'hub.dq_head', HUBO_SEQ: 'hub.den_seq', HUBO_DITAIL: 'hub.di_tail', HUBO_MBEAT: 'hub.beat[T_DENIZENS]',
-    HUBO_WIDLE: 'hub.w_idle', T_UI: 'T_UI', T_DENIZENS: 'T_DENIZENS',
+    HUBO_WIDLE: 'hub.w_idle', HUBO_WANT: 'hub.ui_want', T_UI: 'T_UI', T_DENIZENS: 'T_DENIZENS',
+    WORLD_BANK: 'WORLD_BANK', W_CSUSED: 'wrec.cslot[0].used', CS_SIZE: 'sizeof cslot', NCSLOTS: 'NCSLOTS', CS_FRESH: 'CS_FRESH',
   },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
   dice: {                                                       // games/dq0/dice.inc: the referees' keyed dice
     HUB_WINDOW: 'HUB_WINDOW', HUBO_NOW: 'hub.now', HUBO_DICE: 'hub.dice', HUBO_SEED: 'hub.seed', HUBO_SLOT: 'hub.slot',

@@ -1216,6 +1216,14 @@ static unsigned char events (void)          /* (How many there were) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
                                                 **   knocked senseless by one, busy again; dead of one, the
                                                 **   game's end: no prompt, however the tasks' timing falls) */
+                if (stir_held && pace == PACE_TURNS) {
+                    stir_held = 0;              /* (A stir held as a line was answered: at the turns pace told here,
+                                                **   before the prompt, the world's work for that moment all done (its
+                                                **   E_READY after it, dq0w.c's): the senses' record it tells the same
+                                                **   whatever the tasks' timing, and never after the next line's keys
+                                                **   (lock2's, 2026-11-25) */
+                    stir ();
+                }
                 if (lsn) {
                     look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
                 }
@@ -3186,6 +3194,9 @@ int main (int argc, char* argv[])
         if (t_next () && line_free ()) {
             if ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d) {
                 scene_wait ();                  /* (A test's scene posted as it was entered: in place first, part scene's) */
+                ++HUB->ui_want;                 /* (Then, at the turns pace, the line taken at the world's quiet after
+                                                **   it, what it set going done: its den_seq's look, a stir; lock2's) */
+                continue;
             }
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
@@ -3368,13 +3379,16 @@ int main (int argc, char* argv[])
                                                 **   give way till the character's news comes, events'; an intent
                                                 **   sent, the character not busy, its answer owed too: a step that
                                                 **   can't be taken, the world's words) */
-        } else if (!(fored & FS_CMD)) {
+        } else if (!(fored & FS_CMD) && !t_next ()) {   /* (Nor while a line entered waits, the turns pace's quiet:
+                                                **   its part copied in as it's taken, the world not kept waiting on the UI's
+                                                **   copy as it looks for the quiet, lock2's) */
             ready ();                           /* (The commands' part back, if another's in; not while its
                                                 **   answer's owed at the real paces (fored's FS_CMD, ui_cmd's): its copy
                                                 **   not the world's time as it works the answer out, nor in the way of
                                                 **   its first news's part, 2026-11-17) */
         }
-        if (stir_held && !inn && !HUB->ui_cmd && !took) {
+        if (stir_held && !inn && !HUB->ui_cmd && !took && pace != PACE_TURNS) {   /* (At the turns pace told at the
+                                                **   character's E_READY alone, events': lock2's) */
             stir_held = 0;
             t_flush ();                         /* (Its answer out, not waiting on these words) */
             stir ();                            /* (A stir held while the line was typed and answered: told now, its
