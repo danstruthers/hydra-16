@@ -313,6 +313,7 @@ const DQ0_REPEATS = [
   { goes: true, what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
   { goes: true, what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
+  { goes: true, what: /^Nothing stirs in sight now\.$/, why: 'each stir\'s words when what it saw is gone, a stir\'s telling of its own as "Something stirs." is (dq0Repeats tells the stirs apart; the repeat invariant counts a reply: a rat at the edge of sight, four stirs in dq0torchwords\' dip of a torch, fix3)' },
   { goes: true, what: /^(?:You strike a spark|It doesn't catch)\.$/, why: 'a fire-maker\'s tries, each told as it goes (the user\'s, 2026-11-02: "continue until successful, reporting as it goes along")' },
   { goes: true, what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
@@ -1146,19 +1147,20 @@ function dq0Timer(m) {
       c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
     let last = prompt < 0 ? idx.length - 1 : prompt - 1;
     while (last > 0 && story[last] === ' ') last--;
-    let own = last, pause = null, pauseAt = '';  // (Its own words: up to the world's news told after its first letter)
+    let own = last, pause = null, pauseAt = '', pauseFrom = null;  // (Its own words: up to the world's news told after its first letter)
     if (w >= 0) {
       const k = story.slice(w + 1, last + 1).search(c.news || NEWS);
       if (k >= 0) for (own = w + k; own > w && story[own] === ' '; own--);
       for (let j = w + 1, p = -1; j <= own; j++) {
         const g = at[idx[j]] - at[idx[j - 1]];
-        if (g > p) { p = pause = g; pauseAt = story.slice(Math.max(w, j - 24), j) + ' | ' + story.slice(j, j + 24); }
+        if (g > p) { p = pause = g; pauseFrom = at[idx[j - 1]]; pauseAt = story.slice(Math.max(w, j - 24), j) + ' | ' + story.slice(j, j + 24); }
       }
       if (pause === null && own >= w) pause = 0;
     }
     const t = Math.max(e.t, (m.dq0SceneAt && m.dq0SceneAt.get(e.t)) || 0);   // (From the scene in place, a test's set as it was typed:
                                                 //   the UI's line waits for it, the test's own setting up, not the game's work)
-    return { line: c.line, first: w < 0 ? null : at[idx[w]] - t, whole: w < 0 || last < w ? null : at[idx[last]] - t, pause, pauseAt, busy: e.busy };
+    return { line: c.line, first: w < 0 ? null : at[idx[w]] - t, whole: w < 0 || last < w ? null : at[idx[last]] - t, pause, pauseAt, busy: e.busy,
+      pauseFrom: pauseFrom === null ? null : pauseFrom - t };   // (Where its longest pause begins: lineprof.js's --pause)
   }
 }
 
