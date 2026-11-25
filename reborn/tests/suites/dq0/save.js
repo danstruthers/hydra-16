@@ -37,7 +37,7 @@ module.exports = {
       // (850M, not 800M, 2026-10-29: two games begun, the referee's and the world's code the more for the shields and
       // the dens (some 4M more to load); it was at 799.4M; 940M, 2026-10-30: 851.0M with the answers' work, the budget
       // some 10% over it)
-      init: 't_rc', cycles: 940e6,
+      init: 't_rc', cycles: 1300e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
         'd', 'quit', 'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -274,7 +274,7 @@ module.exports = {
     },
     {
       name: 'dq0acctgone', outfit: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's time between two dungeons spending nothing on what isn't to hand (the user's, 2026-11-04: \"Skip it\"; HOUSE.md's between dungeons), by scenes on the saved files: a broke character with a spare sword half gone, the knife in its hand, and a quill: the sword sold, no work for the mending of what it sold; it can't practise the sword it sold, its filled-in answer leaving it out, named refused; the quill kept, its Script's (the plan's step 11: never sold unasked, what its practice needs), Script practised by name; one that set out with a bow and arrows buys its arrows back with the bow to shoot them, and none without",
-      init: 't_rc', cycles: 2400e6,
+      init: 't_rc', cycles: 2800e6,
       machine: { input: (() => {
         const L = '/sd/0/games/lib/dq0';
         const begin = (d, seed, from) => [L + '/dq0life -d /ram/' + d + ' -s ' + seed, 'cp /ram/' + from + '/kit.dat /ram/' + d + '/kit.dat', 'cp /ram/' + from + '/kit0.dat /ram/' + d + '/kit0.dat', 'cp /ram/' + from + '/pc.hm /ram/' + d + '/pc.hm'];
@@ -588,9 +588,11 @@ module.exports = {
         'echo =HEARD', 'cat /ram/a/heard.txt', 'echo =END', 'echo $status']) },
       start(m) {   // (Each grade's reading rigged, dice2: G8 a success, G12 a failure, G17 a critical success, G21 a critical failure
         //   (games 4 to 7), the first read's test alone, the second read's left to the dice (untested, the same); the copy's
-        //   game's readings failures, as the dice had them, the tablet read after the copy the same)
+        //   game's readings critical failures (failures till fix3, 2026-11-25, G12 the failure's: the copy's read in its own
+        //   dungeon told the true words, the tablet after it the swapped, HOUSE.md's reading and clues "in its own dungeon"),
+        //   the tablet read after the copy the same)
         dq0Scene(m, [['pass', 4], ['fail', 5], ['well', 6], ['badly', 7]].map(([grade, g]) => ({ g, line: 'read the tablet', n: 1,
-          rig: [{ kind: 'TEST', a: 'P_LORE', uses: 1, grade }] })).concat([{ g: 8, line: 'copy the tablet', n: 1, rig: [{ kind: 'TEST', a: 'P_LORE', grade: 'fail' }] }]));
+          rig: [{ kind: 'TEST', a: 'P_LORE', uses: 1, grade }] })).concat([{ g: 8, line: 'copy the tablet', n: 1, rig: [{ kind: 'TEST', a: 'P_LORE', grade: 'badly' }] }]));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -623,8 +625,9 @@ module.exports = {
         has('COPY', /You copy the marks of the (stone )?tablet onto your sheet, line by line: (a fair copy, every mark as it stands|a good copy|a rough copy, some of its marks guessed at|a poor copy, much of it botched)\./, 'the copy not made');
         const cp = sect('COPY').split('> read the copy')[2] || '', tb = sect('COPY').split('> read the tablet')[2] || '';
         if (!cp.includes('Here lies Aldric') && !/can't make out/.test(cp)) f.push('the copy not read: ' + cp.slice(0, 400));
-        const words = x => (/The tablet is cut[^>]*/.exec(x) || [''])[0].replace(/[\s\d]+$/, '');   // (Less the status line's figures after it)
+        const words = x => (/The \w+ is cut[^>]*/.exec(x) || [''])[0].replace(/[\s\d]+$/, '');   // (Less the status line's figures after it; "The sunstone" the critical failure's)
         if (!words(cp) || words(tb) !== words(cp)) f.push('the tablet read after its copy not the same: ' + tb.slice(0, 400));
+        if (!/built another town/.test(cp) || words(cp).includes(TABLET)) f.push('the copy\'s critical failure in its own dungeon: not its names swapped and another place: ' + cp.slice(0, 400));
         has('COPY', 'You have nothing to copy it onto: a sheet, and charcoal, a pencil, or a quill and ink.', 'a second copy, no sheet left');
         has('COPY', "You can't see to copy anything.", 'copied in the dark');
         // A puzzle done unread
@@ -642,7 +645,7 @@ module.exports = {
     },
     {
       name: 'dq0nosave', near: ['save', 'body'], what: "Dingus Quest Zero's words at a death telling the truth about the save (the user's, 2026-11-04: \"Change the words\", no save on arriving; HOUSE.md's death, and the autosave; dq0end's, by what's in the folder), a hunter (hmchar's, seed 5) dying of a grievous bleeding wound with nothing saved: in the first dungeon, nothing to go back to and a new game next (the life told as a life, not so far); in a later dungeon, that dungeon begun again by the same seed, the record not moved on; in hard mode, its own words; none of them saying a save's kept",
-      init: 't_rc', cycles: 2600e6,
+      init: 't_rc', cycles: 3500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/q.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -d /ram/e', 'wait 20 minutes', 'echo =NEXT', 'dq0 -p t -s 3 -c /ram/c.hm -m -d /ram/e', 'quit',
         'echo =HARD', 'dq0 -p t -s 3 -c /ram/c.hm -H -d /ram/h', 'wait 20 minutes',
@@ -834,7 +837,7 @@ module.exports = {
     },
     {
       name: 'dq0hard', near: ['save', 'body'], what: 'Dingus Quest Zero\'s death and its autosave (slice 4.4: D7, death permanent with autosaves before danger as a setting, off hard mode; HOUSE.md\'s the character carries on), by the world\'s events and the words told: a hunter (hmchar\'s, seed 5) given a grievous bleeding wound and its blood near spent (its file\'s lines added), begun by the stairway down (dq0 -T) and down it (kept as it comes into the stratum: the autosave), then a wait: dead of it, the ending\'s words saying its last save is kept, and the game begun again with the folder carried on from that save (resumed, not a new game); the same in hard mode (dq0 -H): no save to go back to, the game begun again a new one (its folder\'s save not taken up)',
-      init: 't_rc', cycles: 1700e6,
+      init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/d', 'd', 'wait 10 minutes', 'dq0 -p t -d /ram/d', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -H -d /ram/h', 'd', 'wait 10 minutes', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/h', 'quit', 'echo $status'] })) },
@@ -857,7 +860,7 @@ module.exports = {
     },
     {
       name: 'dq0savebytes', meaning: true, near: ['save', 'body'], what: 'Dingus Quest Zero\'s save byte for byte (ONE-PATH.md\'s stage 1, the character as actor 0: its record moved in the hub, the save\'s bytes as they were), over five seeds (dq0 -T, the turns pace): the character turned, a step, a jog, crouched, its torch put out and hidden, quit (the world\'s world.dat, the denizens\' dens.dat dumped), carried on and quit again (world.dat dumped again; the folder gone after, so the RAM disk keeps its room): the first world.dat the hub\'s state as it quit (its stratum, square, facing, position, hiding, pace and watchfulness), the game carried on from it, and written back the same (all but the time believed\'s next reckoning, made again as it goes on); the dumps the old build\'s and the new\'s alike (their transcripts compared); and the character\'s body actor 0, the hub\'s bodies[0] (its old names, pc_x ..., on its fields; the denizens\' entries the bodies\' from 1), in the dungeon (its state 1) as each game begins and is carried on',
-      init: 't_rc', cycles: 6000e6,
+      init: 't_rc', cycles: 7800e6,
       machine: { input: dq0Typed(dq0Game({ lines: [...[1, 2, 3, 6, 21].flatMap(s => [
         'dq0 -p t -s ' + s + ' -c /ram/c.hm -T -d /ram/k' + s, 'turn right', 'step forward', 'jog', 'crouch', 'douse the torch', 'hide', 'quit',
         'xd /ram/k' + s + '/d1/world.dat', 'xd /ram/k' + s + '/d1/dens.dat', 'cp /ram/k' + s + '/d1/world.dat /ram/k' + s + '/w1.dat',

@@ -33,8 +33,7 @@ static unsigned char gcap = 0;                  /* (The group told now: its capi
 #define S           sight_copy
 
 /* The words so far said (a look's, streamed), and out: lbsaid.s's, as words.c's are (none a look's said already this
-** answer: the sentences before a denizen's, the place's, kept as said too) */
-#define lb_out  lb_said
+** answer: the sentences before a denizen's, the place's, kept as said too): look.c's lb_out */
 
 static void __fastcall__ add (const char* s)
 {

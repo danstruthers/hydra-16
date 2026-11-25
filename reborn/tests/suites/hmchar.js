@@ -198,7 +198,7 @@ module.exports = {
     },
     {
       name: 'hmcharfs', what: 'hmchar.fs (games/hmchar: hmchar in HyForth, harn.fs in the ROM disk\'s /lib/forth) at rc, against C\'s hmchar: -q from a seed, its profile and its file the same as C\'s from it (the dice in the same order, the culture rolled too), the two agreeing and as they should be; then the same seed answered as a player would (a roll again, a deity chosen, an occupation out of range, weapons by a beginning, one ambiguous, one twice, an option point\'s improvements, a skill there isn\'t), its questions, profile and file the same as C\'s; a bad option; harn.fs\'s harn-read of the file, harn-eml and harn-end; a dwarf (-p: a species not rolled, Character 2), the same from C and HyForth, a Khuzdul of the Khuzan culture, its file as it should be; -p refused a species there isn\'t; -u viking (the culture not rolled), the same from both; the occupations by class and sex (the user\'s, 2026-10-20: the book\'s limits), a noblewoman\'s, a nobleman\'s and a serf\'s, the same from both: the Lady hers alone, the nobles and the guilded not the serf\'s, nor a knight',
-      init: 't_rc', cycles: 2400e6,
+      init: 't_rc', cycles: 2700e6,
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.fs -q -s 5 -o x.hm >f.out; cp x.hm f.hm\r' +
         'āhmchar -q -s 5 -o x.hm >c.out; cmp f.out c.out && cmp f.hm x.hm && echo same\r' +
         'ācat f.out; ' + HM_FILE('f.hm') + '\r' +

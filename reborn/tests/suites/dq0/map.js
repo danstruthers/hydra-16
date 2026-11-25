@@ -374,7 +374,7 @@ module.exports = {
     },
     {
       name: 'dq0deep', meaning: true, what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum), by the world\'s events, what the character perceives and the hub\'s cache: the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), come into the first time, mapped (the maker\'s map), and along a tunnel; the caves irregular (the user\'s, 2026-10-16: "not straight tunnels, not rectangular rooms"): the cache\'s chunks read, their chambers ragged, their tunnels bending, every open square reached, their edges met',
-      init: 't_rc', cycles: 500e6,
+      init: 't_rc', cycles: 680e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'sw', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
@@ -465,7 +465,7 @@ module.exports = {
     },
     {
       name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1; the scene set, slice 4.10\'s, as the shaft\'s rock now differs by the referee\'s pace: its oil two hours\' as it\'s first lit, dq0Poke\'s, the shaft longer under either referee, and twelve hours\' as it\'s lit again, the shaft through by it; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
-      init: 't_rc', cycles: 3800e6,                // (3600e6 till slice 4.10; 2026-10-31 3415M under HarnMaster's referee, 2721M the null's)
+      init: 't_rc', cycles: 4900e6,                // (3600e6 till slice 4.10; 2026-10-31 3415M under HarnMaster's referee, 2721M the null's)
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm', 'echo ml cli 95 >> /ram/m.hm',
         'dq0 -p t -s 3 -c /ram/m.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'fill the lantern', 'light the lantern', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status'] })) },
@@ -591,7 +591,7 @@ module.exports = {
     },
     {
       name: 'dq0rubble', near: ['map'], what: 'Dingus Quest Zero\'s age\'s collapse (slice 4.10: DUNGEON.md\'s rock and old places, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s rubble, caves.c\'s, by the stratum\'s age, twice where the rock is poor; world.h\'s T_RUBBLE), by the hub\'s cache: at seed 3 down the stairway (dq0 -T, d), the chunks of both strata read: rubble in old passages (seed 3\'s nine squares: the top stratum\'s chunk 3,1 and the caves\' 18,11 and 18,12), every square of it a passage\'s, in no room\'s bounds, every square beside it a passage\'s, the rock\'s or rubble (no doorway, no room\'s floor), never on a chunk\'s edge',
-      init: 't_rc', cycles: 600e6,
+      init: 't_rc', cycles: 670e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
@@ -612,7 +612,7 @@ module.exports = {
     },
     {
       name: 'dq0mixed', near: ['map'], what: 'Dingus Quest Zero\'s mixed strata (slice 4.10: DUNGEON.md\'s growing a chunk, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s cstyle), by the hub\'s cache: at seed 3 with every built stratum made mixed (dq0 -M, the tests\'), by the stairway (dq0 -T) and down it, the top stratum\'s chunks read: part natural (seed 3\'s 3,0 and 3,1: caves, every room a cave\'s chamber) and part built (2,0 and 2,1, the stairway\'s: no cave in them), and where a natural chunk meets a built one their edges\' open squares meet; the stratum below (natural) all caves',
-      init: 't_rc', cycles: 600e6,
+      init: 't_rc', cycles: 680e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -M', 'd', 'map', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m) {
@@ -902,7 +902,7 @@ module.exports = {
     },
     {
       name: 'dq0nodig', outfit: true, meaning: true, near: ['map', 'gear'], what: "Dingus Quest Zero's digs told why (the user's playtest, 2026-11-02, DECISIONS.md; HOUSE.md's digging, for review), by poked scenes at seed 374's cell, a closed door to the east of the start (the character by a stairway, facing south).  A hidden door (its portal's state poked in the chunks' cache, PS_HIDDEN, as its first look's typed): the dig takes it for a wall.  With no tool that bites (a knife; then none): told at once, no time spent, by what it carries (E_DIG D_NO_TOOL; 'Your knife only scratches', 'You need better tools'), the door still hidden, no refusal saying there's nothing to dig.  A chisel alone: 'You'd need a hammer to drive the chisel.'  A pick: begun as a wall's two feet, and a spell or so on the facing's off, the door found (D_FOUND: 'strikes wood', its PORTAL_STATE record no longer hidden), seen in the look after.  A hammer and a chisel: the wall west of the start worked at slowly, a stone's half foot a spell (D_GOOD or D_POOR, or asked).  A door in sight: D_PORTAL 'That's a door'; a portcullis (seed 1's guardroom, dq0tunnel's) 'Those are iron bars'.  A door hidden by magic: a pick makes no mark, and after two spells with nothing to show it's asked, soft ('This isn't getting anywhere'), no door told",
-      init: 't_rc', cycles: 3000e6,
+      init: 't_rc', cycles: 3700e6,
       machine: { input: dq0Typed(dq0Game({ lines: [
         'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
@@ -1278,7 +1278,7 @@ module.exports = {
     },
     {
       name: 'dq0soak', meaning: true, what: 'Dingus Quest Zero\'s stores paged to the save folder (move 2.8, DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back, a soak, by what the character perceives (the senses\' record) and the stores\' records: dq0 -C (the caches small: the chunks\' twelve slots, a change page, 24 of the item store\'s records, two of the denizens\' regions, two of the strata\'s slots, two seen maps) and -T -T -T (three strata grown below the top, the character on the second): the dagger put down by the stairway there, up (the strata\'s slots made way in: the top\'s record read back into a slot), the rations put down by the stairway on the top, down and up again and again, every cache made way in each time (the chunks made again from their seeds, the change records, the things and the denizens read back from their files, the seen maps too): each stratum seen each time as it was first (the dagger, the rations where they were put down), the giant rats by the stairway seen; the map; the folder\'s region files (rg, it, dn, sm, st); quit and carried on: where it was, seen the same, the map as it was, up again, the rations there; then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files of its stratum below gone, none of its things lying about (dq0page\'s and dq0strata\'s, these together)',
-      init: 't_rc', cycles: 2400e6,
+      init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept',
         'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
         'rm /ram/kept/d1/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept/d1', 'echo $status'] })) },
@@ -1557,7 +1557,7 @@ module.exports = {
     },
     {
       name: 'dq0doorfar', near: ['map', 'parser'], what: "Dingus Quest Zero's door beyond the room's walls walked over to (HOUSE.md's out of reach, walked to first: \"close the door\", \"hit the door\", \"kick the door\" not beside it by the four ways, nor on the walls of the room it stands in: dq0's door_go; 2026-11-03, the check of the document), by the words and the hub: at seed 3 out through the cell's doorway into the passage (the rats held off, the scene's), the doors on the cell's wall asked about, one chosen: \"You head for the door.\", walked to beside it, then the command: the open door closed, the closed one punched (the torch in hand never battered with: the user's, 2026-11-17), and kicked",
-      init: 't_rc', cycles: 1400e6,
+      init: 't_rc', cycles: 1800e6,
       machine: { input: (() => {
         const g = d => ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/' + d, 'step west', 's'];
         return dq0Typed(dq0Game({ lines: ['mkdir /ram/g', 'mkdir /ram/h', 'mkdir /ram/i', ...['g', 'h', 'i'].map(d => 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/' + d + '/theme.txt'),
@@ -1666,7 +1666,7 @@ module.exports = {
     },
     {
       name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not; knocked senseless by the hand-written theme\'s rats (dq0senseless\'s), tested as it\'s out; and the kobold warren (seed 517: its story\'s fall through a ruin\'s floor, its start fallen in), tested as it begins and again as it jumps down its gatehouse\'s ledge, ten feet; and a way walked often the easier (the user\'s, 2026-10-23: by the map\'s passings, the senses\' count of the times it\'s come to see a chunk again; its torch put out five minutes and lit again a passing): the bending passage east tested at 2 steps new, 6 with its end come to four times, untested at twelve',
-      bearings: true, init: 't_rc', cycles: 5000e6,
+      bearings: true, init: 't_rc', cycles: 5500e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo ml awa 5 >> /ram/c.hm',
         'hmchar -q -s 5 -p dwarf -o /ram/d.hm', 'echo ml awa 5 >> /ram/d.hm',
         'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'turn left', 'face north', 'face northwest', 'f', 'go through the door to the east', 'turn around', 'f', 'go through the door to the east', 'turn around', 'f', 'go through the door to the east', 'status',
@@ -1967,7 +1967,7 @@ module.exports = {
     },
     {
       name: 'dq0rebar', meaning: true, what: 'Dingus Quest Zero\'s doors barred again (the user\'s, 2026-10-16), by the world\'s events and the bar\'s record (a portal\'s part, IW_PORTAL, on the square of its side, or a thing carried or lying): at seed 4 the door\'s bar lifted out of its brackets and taken, then put back (bar the door: from its side, the door shut): out of the pack, in its brackets again, the door barred (opened: the bar lifted out again, at its feet); not while the door stands open; put back from the floor (put the bar back in its brackets); kept (dq0 -d), the door still barred and the bar in it as the game carries on (their words: dq0wordsfix)',
-      init: 't_rc', cycles: 800e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 4 -c /ram/c.hm -d /ram/g', 'take the bar',
         'bar the door', 'open', 'bar the door', 'close', 'put the bar back in its brackets', 'quit', 'dq0 -p t -d /ram/g', 'open', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -2150,7 +2150,7 @@ module.exports = {
     {
       scene: false,   // (Its watchers count the loads as the game begins: none taken up, sim/lib/scenes.js)
       name: 'dq0layers', meaning: true, what: 'Dingus Quest Zero\'s dungeon made from its history (Phase 3D, games/dq0/HISTORY.md; D12, the user\'s: "A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense"): at seed 70018 (a region of its own, themegen\'s) the top stratum the tombs the hill-men built, fallen in, and the temple the sun-priests made of them after (its layers: built, ruined, reused): by the way in (those who came after came in that way) the chunks the maker made the temple\'s (a kitchen or a pantry among them, no main room a crypt), and by the way down (dq0 -T, the far side) the old tombs\' (each main room a crypt, no kitchen nor pantry); stratagen (bank/stratagen, a bank program: a stratum\'s layers chunk by chunk) loaded by themegen (its checker) and by the maker, once for all the maker\'s chunks, and with dq0 -C (the bank programs given up after each request) again and again; then at seed 70008 a keep the conquerors made of an older temple: in a guardroom of the keep\'s by the way in, the temple\'s chapel\'s candle stubs (the older layer\'s mark: a guardroom\'s own use leaves none)',
-      init: 't_rc', cycles: 1300e6,
+      init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 70018 -c /ram/c.hm', 'quit',
         'dq0 -p t -s 70018 -c /ram/c.hm -T -C', 'quit', 'dq0 -p t -s 70008 -c /ram/c.hm', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -2283,7 +2283,7 @@ module.exports = {
     // a test (the rest left to the soak's 200 seeds: each game's start a game start's cycles, some 195M)
     ...[[1, 30, 66, 93, 111, 122], [138, 152, 161, 171, 189, 197]].map((seeds, k) => ({
       name: 'dq0start' + k, meaning: true, what: 'Dingus Quest Zero\'s starts (dq0m/plan.c\'s links and the world\'s way out off their chunks\' edges, world.h\'s INSET: room for the room each comes out in, built.c\'s tries all failing else, a fifth of the starts a dead end of a passage), by what the character perceives (the senses\' record): seeds ' + seeds.join(', ') + ' (some of those that began at a dead end), each beginning in a room, by the stairs up to the way out, with a door, a portcullis or a passage on (seen ahead, or turned round, or as it crosses the room and back by its own light: the rooms dark since slice 4.1, nobody keeping their lights)',
-      init: 't_rc', cycles: seeds.length * 360e6,      // (A timeout: each game started, turned round and quit; 360M
+      init: 't_rc', cycles: seeds.length * 450e6,      // (A timeout: each game started, turned round and quit; 360M
       // a game since 2026-10-29, the sound layer's pulses as it walks (320M since 2026-10-27, 300M before: the outfits'
       // and the denizens' gear's bigger world and referee to load))
       machine: { input: dq0Typed(dq0Game({ lines: [

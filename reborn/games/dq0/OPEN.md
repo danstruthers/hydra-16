@@ -86,8 +86,6 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
     senses' RAM; dq0p is 242 bytes over its floor);
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
   - dq0saveout's and dq0ahead's raw pokes.
-- **X3.** A test's `cycles` limit still acts as a budget where it sits close to the measure (dq0save: 940M against
-  851M). Make each a generous timeout. Source: built/2026-11-17-guards.md, its open question 2.
 - **E1, E2.** HyBASIC's banner (a version, or the free memory?), and docs/01-overview.md's examples (BASIC's shows its
   banner, hylang's leaves its own out). These are the languages' and the emulator's tools, not the game's. Source:
   built/2026-11-21-emu1.md, open questions 1 and 2.

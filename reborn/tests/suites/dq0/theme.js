@@ -36,7 +36,7 @@ module.exports = {
     },
     {
       name: 'dq0theme', meaning: true, what: 'Dingus Quest Zero\'s themes (theme.h: data, games/dq0/themes, made dq0t.dat), by the theme bank, the world\'s events and the things\' records: the theme picked by the seed (its second byte: seed 259 the second theme, the drowned temple; seed 3 the first, the crypt), kept in the save and the game carried on in it, its strata named by it (the senses\' record\'s stratum, the theme\'s names); the way out shut by its lock; then the crypt\'s puzzle\'s pieces (dq0 -k: the sunstone and the moonstone to hand) combined into the king\'s seal (its rule\'s: the stones gone, the seal carried), the seal used on the way out (it opens: the world\'s way_open), and taken: the game ended (escaped, E_LEFT), and the save marked done (a new game begun in its folder, not carried on) (its words, the theme\'s: the themes\' own data)',
-      init: 't_rc', cycles: 1400e6,
+      init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 259 -c /ram/c.hm -d /ram/t', 'u', 'quit', 'dq0 -d /ram/t',
         'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'u', 'combine the sunstone with the moonstone', 'use the seal on the way out',
         'u', 'dq0 -p t -c /ram/c.hm -d /ram/q', 'quit', 'echo $status'] })) },
@@ -160,7 +160,7 @@ module.exports = {
     },
     {
       name: 'dq0pieces', meaning: true, what: 'Dingus Quest Zero\'s puzzle\'s pieces placed with the plan (theme.h: each one\'s stratum from the seed, its chunk in the stratum\'s halls as its plan is grown, put down as the chunk is made, by the maker\'s stock), by what the character perceives and the things\' records and replies: the crypt\'s stone tablet on the top stratum (dq0 -T -T: the character begins on it), seen at its feet, taken and read (the parser\'s read: a piece of the puzzle found to hand), a dagger not (nothing written on it); then the crown and the throne (dq0 -k), the throne put down and not taken up again (fixed where it stands: refused), the crown put on it: the place ruled, the game ended (the theme\'s ending; its words, the theme\'s data)',
-      init: 't_rc', cycles: 800e6,
+      init: 't_rc', cycles: 960e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T -T', 'take the tablet', 'read the tablet',
         'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne', 'take the throne', 'put the crown on the throne', 'u', 'echo $status'] })) },
       expect: ['% echo $status'],
@@ -266,7 +266,7 @@ module.exports = {
     },
     {
       name: 'dq0cut', near: ['theme'], what: "Dingus Quest Zero's generated words whole (GAME-CRITIQUE.md's 5.6, 2026-11-17): themegen's histories said (themegen -s, its theme to read) for 24 seeds, the clock-sized ones 70000 on, the play test's 271828 and 1000003: no words cut short to fit their room (themegen's tcut, fill's and linegen's: \"themegen: words cut short\" said; linegen's 240-byte buffer cut every cursed tomb's clue at 239, \"...and their dead would not lie s\", seed 70001's grave slab), every clue's and era's words ending in a full stop; the story's capitals (an era's first letter's place past 255 bytes an unsigned char's: \"aNd Wearag held it\", \"ago. the Khulim dwarves\" at seed 1000003): every sentence begun with a capital, none inside a word",
-      init: 't_rc', cycles: 2400e6,
+      init: 't_rc', cycles: 2700e6,
       get machine() {
         return { input: ['bind -a /sd/0/games /bin', ...CUT_SEEDS.flatMap(s => ['themegen -s ' + s, 'echo seed ' + s + ' status $status']), 'echo done']
           .map(l => '\u0101' + l + '\r').join('') };
@@ -345,7 +345,7 @@ module.exports = {
     },
     {
       name: 'dq0quest', meaning: true, what: 'Dingus Quest Zero\'s goals from a region\'s history played to their ends (Phase 3D: G5, the user\'s: "Each dungeon needs a goal, and it may be to find a specific artifact, clean out the evil denizens, rescue a prisoner, or just find a way through to a distant exit"; themegen\'s goals.txt kinds): at seed 70000 the Cup of Rowon (an artifact): dq0 -T -T begins by the goal\'s own thing, the jade cup lying hidden where the history put it; with it to hand (dq0 -k) and the seeker\'s journal read, the way out shut, the cup held up to it (open), and up it: escaped; at seed 70007 the curse of Yiskeek (an evil): by the bone idol (dq0 -T -T), the silver bell and the old scroll to hand, the scroll read, the bell laid on the idol: the curse broken (ruled, the game ended); at seed 70012 Voven, the kobolds\' prisoner: the shackle key put to the chained woman, the way out open (hers), and up it: escaped; at seed 70008 the Far Door (a way through): dq0 -T -T -T (four strata grown below the top) the goal\'s stratum (the fourth) with a way out of its own, a far exit, and none on the strata between',
-      init: 't_rc', cycles: 2200e6,
+      init: 't_rc', cycles: 2700e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 70000 -c /ram/c.hm -T -T', 'quit',
         'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'', 'read the journal', 'u',
         'dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'', 'read the scroll', 'put the bell on the idol', 'quit',
@@ -387,7 +387,7 @@ module.exports = {
     },
     {
       name: 'dq0ends', near: ['theme', 'save'], what: "Dingus Quest Zero's three ends (the between-dungeons plan's steps 1 and 2, the user's Q1 \"Every dungeon\" and Q2 \"No, walk out\"; HOUSE.md's how a dungeon ends), each goal kind and each way out a scene, by the world's events, the words told and game.dat's outcome (xd: Q.done, Q.solved, the save's last bytes but plain): a sky shaft climbed unsolved (the crypt, seed 2, its roof poked in reach, no grating): left, its own words, then a carry-on into a new dungeon; an artifact's way in open: up it once told what that does, again left; the artifact itself to hand (dq0 -k): told it's done, walked out solved at the first asking, in its words; the thing taken up in play told once; the evil's way out shut, the curse broken told and the game going on, kept through a quit and walked out (ruled); the prisoner's way out shut, its other way out on the seed's stratum (dq0 -T -T -T, put by a poke at the foot of that stair) left unsolved; a through goal (a hand-written theme: the checker's way out its far exit) out by its far exit solved, with no asking; and a hard-mode death after solving still solved, in its words",
-      init: 't_rc', cycles: 5000e6,
+      init: 't_rc', cycles: 6900e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['echo sky 1 >> /ram/s.sc', 'echo hour 12 >> /ram/s.sc',
         'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/a -S /ram/s.sc', 'go to the shaft', 'u', 'xd /ram/a/d1/game.dat', 'dq0 -p t -s 259 -d /ram/a -S /ram/s.sc', 'quit', 'rm -r /ram/a',
         'dq0 -p t -s 70000 -c /ram/c.hm -d /ram/b -S /ram/s.sc', 'examine the way out', 'u', 'look', 'u', 'xd /ram/b/d1/game.dat', 'rm -r /ram/b',

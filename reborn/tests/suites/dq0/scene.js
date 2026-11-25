@@ -26,7 +26,7 @@ function dq0SceneTest() {
     ...['poke', 'scene'].flatMap(() => ['dq0 -p n -s 3 -c /ram/c.hm -T', ...rest, 'quit']), 'echo $status'] });
   return {
     what: "Dingus Quest Zero's scenes set while another task's copy of what they set is in hand (OPEN.md's G18, X1): a rat's gait set as the world asks the referee its blow (its body copied out, bd), poked and lost to the body written back, a scene's in place; the lights' minute made due as it's under way, poked (burn_due) and lost to the minute's end, a scene's (SO_DUE, burn_ask) run in the same minute",
-    init: 't_rc', cycles: 3000e6,
+    init: 't_rc', cycles: 3100e6,
     machine: { input: dq0Typed(lines) },
     expect: ['% echo $status'],
     start(m) {

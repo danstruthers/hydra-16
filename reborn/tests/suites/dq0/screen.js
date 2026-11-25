@@ -17,7 +17,7 @@ module.exports = {
     // ---- (The rules' round, 2026-11-03)
     {
       name: 'dq0clock', near: ['screen'], what: "Dingus Quest Zero's status line and the hour (the user's, 2026-11-03, DECISIONS.md's the round after HOUSE.md's check: \"Hide the minutes\"; HOUSE.md's the time of day believed): no minutes gone on the status line, by the screen's rows as the clock goes; dq0 -m, the tests' and debugging's, puts them back",
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 930e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 2 minutes', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -m', 'wait 2 minutes', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -151,7 +151,7 @@ module.exports = {
     // ---- The help (GAME-CRITIQUE.md's 5.6; DECISIONS.md's answers of 2026-11-17: "l" stays left, the help's first steps say so)
     {
       name: 'dq0help', near: ['screen'], what: "Dingus Quest Zero's help (help.c's o_help, games/dq0/help.txt; GAME-CRITIQUE.md's 5.6: three lines past help.c's 400-byte buffer were said as two paragraphs, two cut mid-word, \"the w\" \"ell\"): each of help.txt's lines said as one paragraph, whole, wrapped as the story wraps one (term.c's say: a word on the next line only where it won't fit the 80 columns), the long ones read in parts and said on at a space (games/dq0/make.js's helpParts, the build's check of every line); the first steps saying l is left, not look (the user's, 2026-11-17)",
-      init: 't_rc', cycles: 500e6,
+      init: 't_rc', cycles: 540e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'help', 'quit',
         'echo $status'] })) },
       expect: ['% echo $status'],
@@ -184,7 +184,7 @@ module.exports = {
     // ---- The words the player reads (2026-11-17: GAME-CRITIQUE.md's 5.6 and section 1's visible bugs)
     {
       name: 'dq0pitwords', near: ['screen'], outfit: true, what: "Dingus Quest Zero's refusals and measures in words (2026-11-17, the play test's): a thing let fall down a shaft with none near (the world's wwell2.c, IR_NONE: its words none, so the UI said the things' text as it was left, \"drop the candle stubs in the pit\" an inventory before it, cut short), said why, \"There's no well or shaft here for the torch to fall down.\", the inventory before it not said again, nor at the pit; a weapon's look (the soak's cleric's dagger, light: its item's size its version, WV_*, read as its measure, \"1 feet long\") without a measure",
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -T', 'i',
         'drop the torch down the shaft', 'i', 'drop the torch into the pit', 'quit', 'hmchar -q -s 1 -o /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'examine the dagger', 'quit',
         'echo $status'] })) },
