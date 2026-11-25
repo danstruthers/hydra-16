@@ -1053,7 +1053,12 @@ module.exports = {
         };
         dq0Scene(m, [{ g: 1, line: 'throw the dagger at the closest rat', n: 1, call: put(2, 1) }, { g: 1, line: 'wait', n: 1, call: look('g1') },
           { g: 2, line: 'look', n: 1, call: unbelt }, { g: 2, line: 'throw the dagger at the closest rat', n: 1, call: put(1, 0), name: 'giant rat', senseless: 3000 },
-          { g: 2, line: 'i', n: 1, call: look('g2') }, { g: 2, line: 'look', n: 2, call: near }]);
+          { g: 2, line: 'i', n: 1, call: look('g2') }, { g: 2, line: 'look', n: 2, call: near },
+          { g: 2, line: 'throw the dagger at the closest rat', n: 2, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 99] },
+            { kind: 'WORLD', a: 'WD_SHOT', faces: [100, 4] }] }]);   // (The second throw a miss, as the playtest's, lock2's: dice2's
+        //   rig in the missile's own order (its aspect's d6 first, then the throw's d100, 99: a marginal failure, the rat senseless, no
+        //   defence), its fall the world's WD_SHOT dice (a stray's test passed by, if one's beside the mark, then four squares on past
+        //   it): the dagger lying off where it fell, gone over to.  At the normal pace a hit came as the tasks' timing had its dice)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -1084,9 +1089,7 @@ module.exports = {
         if (inHand(t3.after).length || lying(t3.after).length !== 1) f.push('the dagger thrown again not on the floor');
         const a2 = o.slice(o.lastIndexOf('> hold the dagger'));
         if (/You lift the dagger\./.test(a2.slice(0, 80))) f.push('held after it was thrown again, its first words a dagger lifted (the UI\'s copy of what\'s carried): ' + a2.slice(0, 120));
-        // (Or reached for where it lies within reach, B5's and Ac2's: at the normal pace the second throw's dice fall as the tasks' timing
-        //  has them, a hit or a wild shot leaving it a step off, at the rat's feet, as the layout moves: lock2's, 2026-11-25; never lifted)
-        if (!/You have no dagger to hand\.|You go over to the dagger\.|You reach for the dagger\./.test(a2.slice(0, 200))) f.push('held after it was thrown again, neither told it isn\'t carried, gone over to nor reached for: ' + a2.slice(0, 200));
+        if (!/You have no dagger to hand\.|You go over to the dagger\./.test(a2.slice(0, 200))) f.push('held after it was thrown again, neither told it isn\'t carried nor gone over to: ' + a2.slice(0, 200));
         return f;
       },
       sdcard: true

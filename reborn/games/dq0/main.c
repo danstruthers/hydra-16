@@ -3160,6 +3160,8 @@ static void act (char* l)
     }
 }
 
+static unsigned char sc_seen;                   /* (A test's line's scene waited for, its number: main's) */
+
 int main (int argc, char* argv[])
 {
     unsigned shown = 0, t;
@@ -3194,8 +3196,9 @@ int main (int argc, char* argv[])
             }
         }
         if (t_next () && line_free ()) {
-            if ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d) {
+            if ((HUB->scene & SCENE_LINE) && HUB->scene != sc_seen) {
                 scene_wait ();                  /* (A test's scene posted as it was entered: in place first, part scene's) */
+                sc_seen = HUB->scene;           /* (Each its once: one put in place before the line came here as well) */
                 ++HUB->ui_want;                 /* (Then, at the turns pace, the line taken at the world's quiet after
                                                 **   it, what it set going done: its den_seq's look, a stir; lock2's) */
                 continue;

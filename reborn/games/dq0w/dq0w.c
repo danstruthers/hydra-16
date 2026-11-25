@@ -3451,6 +3451,7 @@ unsigned char __fastcall__ num (const char* s);
 ** task none yet, started (s_start); 1 if it can't be attached.  Part dungeon_begin's, as the world's start-up is (the main
 ** RAM's room, 2026-10-29) */
 void __fastcall__ s_start (const char* dir);
+extern unsigned char was_busy;                  /* (main's: its E_READY to come) */
 unsigned char __fastcall__ s_wstart (char** argv)
 {
     if (hub_attach (num (argv[1]), num (argv[2]))) {
@@ -3532,7 +3533,13 @@ void __fastcall__ s_start (const char* dir)
         }
         stocks ();                              /* (Last: what the rest had made stocked too) */
     } while ((chart_late || START_BURN ()) && !HUB->ui_keys && (unsigned) (hy_ticks () - t0) < START_WORK);
-    event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */
+    if ((HUB->pace & 3) == 3) {
+        was_busy = 1;                           /* (At the turns pace its E_READY the main loop's, after the denizens'
+                                                **   first turn at what the start told and the jobs that made due: the
+                                                **   first line not behind them, the lockstep's quiet near; lock2's) */
+    } else {
+        event (E_READY, 0, 0);                  /* (The UI waits for it: its commands, the world started) */
+    }
     HUB->starting = 0;
     last = hy_ticks ();
 }

@@ -4908,6 +4908,8 @@ int main (int argc, char* argv[])
                                                 **   copy in hand: part scene's) */
         }
         settle ();                              /* (Its intents the world's, as it goes on) */
+        ++HUB->beat[T_DENIZENS];                /* (Round to its loop's top, settled: the world's lockstep's quiet waits
+                                                **   on that, not on its growing a stratum below; lock2's, D17's) */
         if (hub_posted (&HUB->dsave)) {         /* (The UI's asked for a save) */
             keep (0);
             hub_reply (&HUB->dsave);
