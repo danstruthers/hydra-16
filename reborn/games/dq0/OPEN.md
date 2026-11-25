@@ -86,6 +86,17 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
     senses' RAM; dq0p is 242 bytes over its floor);
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
   - dq0saveout's and dq0ahead's raw pokes.
+- **F1. A line's first letter in a fight** (built/2026-11-25-fix3.md, section 8; fix2's open item 1). The lag sweep
+  (264 typings) leaves dq0fightcmd 2 past D17 (worst 881K): a fight's first fight-back, its part copies (~80K), the
+  referee's blow (~150K), the UI's words (~100K), the minds (60-80K). Levers: the blow's sentence begun first, held_kinds
+  in the engage part. And a "d" line as a denizen's kit is drawn: 600-650K.
+- **F2. The look across's pause** (fix3, section 8): about 1.05M of it is the senses' far look, 223K its four parts'
+  copies; it grows with the ground the maker built during the listen. 94% in one run, under 90% in the next.
+- **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
+  or a pack in their outfits, so what they take or are given goes in it, not "hung at the belt"; then invknown.txt's
+  loose entry goes. Watch dq0trade, dq0farthing and dq0hoard.
+- **F4. The rouse keyed and riggable** (fix3's item 11): the character's shock rolls on coming round are rolled under
+  the next request's key. Its cheap fix is in turns_run.
 - **E1, E2.** HyBASIC's banner (a version, or the free memory?), and docs/01-overview.md's examples (BASIC's shows its
   banner, hylang's leaves its own out). These are the languages' and the emulator's tools, not the game's. Source:
   built/2026-11-21-emu1.md, open questions 1 and 2.
