@@ -430,12 +430,15 @@ function make({ dir, objdir, compiled, own, sizes }) {
     'code-name "SW_name_CODE" names it: its line left from a merge, or a part renamed on one side?)');                         //   left?)
   if (sizes) for (const s of ['SWSTP', 'SWSTL', 'SWSTH'])   // (The stubs' tables, swap.inc's SWSTUBOV: a byte a stub each, bank.s's,
     if (new RegExp('^\\s*' + s + ':', 'm').test(text)) sizes.set(s, stubs.length);   //   its bank's own: room7, 2026-11-23)
+  const bank = own.find(f => path.basename(f) === 'bank.s');   // (Its overlays' stubs, if its bank.s has OVFN: ovfn.inc)
+  const ovs = bank && /^\.macro\s+OVFN\b/m.test(fs.readFileSync(bank, 'latin1')) ? ovstubs(text, compiled, own) : null;
+  if (sizes && ovs) for (const s of ['OVSTO', 'OVSTL', 'OVSTH'])   // (The overlays' stubs' tables, a byte a stub each,
+    if (new RegExp('^\\s*' + s + ':', 'm').test(text)) sizes.set(s, ovs.length);   //   bank.s's ovcall's: dq0harn's, fix2)
   const placed = sizes ? spread(text, list, sizes, src) : banks(text, list, new Map(), src);
   const put = { ...list, parts: list.parts.map(p => ({ ...p, ov: placed.at.get(p.n) })) };
   fs.writeFileSync(path.join(objdir, 'parts.inc'), inc(task, put, stubs));
   fs.writeFileSync(out, cfg(text, put, src));
-  const bank = own.find(f => path.basename(f) === 'bank.s');   // (Its overlays' stubs, if its bank.s has OVFN: ovfn.inc)
-  if (bank && /^\.macro\s+OVFN\b/m.test(fs.readFileSync(bank, 'latin1'))) fs.writeFileSync(path.join(objdir, 'ovfn.inc'), ovinc(task, ovstubs(text, compiled, own)));
+  if (ovs) fs.writeFileSync(path.join(objdir, 'ovfn.inc'), ovinc(task, ovs));
   fs.writeFileSync(path.join(objdir, 'parts.json'), JSON.stringify({ parts: list.parts.map(p => p.name) }) + '\n');
   fs.writeFileSync(path.join(objdir, 'placed.txt'), placed.moved.map(m => list.parts[m.n - 1].name + ' ' + m.from + ' ' + m.to + ' ' + m.size + '\n').join(''));
   fs.writeFileSync(path.join(objdir, 'spare.txt'), (typeof placed.spare === 'number' ? placed.spare : [...placed.spare].map(([k, s]) => 'OV' + k + ' ' + s + ', the rest ' + spareOf(list)).join('')) + '\n');   // (Each bank's room kept free: the room table's)
