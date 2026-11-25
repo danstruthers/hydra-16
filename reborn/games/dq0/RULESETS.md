@@ -44,6 +44,17 @@ SCN_HURT b levels, SCN_LAME, SCN_ATT c to b, SCN_TIRE; SCN_RAM and SCN_HUB, raw 
 header it writes); a ruleset answers what it has (dq0harn all, dq0null SCN_OUT for the character and the raw two), 0xFF
 the rest.
 
+**The dice are keyed** (dice2, 2026-11-24: the skeleton's dice.inc, dice_key): a request's dice are a function of its
+key alone, the game's seed and its dice offset (dq0 -R), the asker's slot, the request's kind, actor, other, a and b,
+its moment (the clock; a blow's its own; a creature's sheet its record's number) and how many requests that moment had
+its tag before it, so no roll elsewhere moves them and no two requests roll alike but the same act at the same moment.
+What it keeps is the hub's (hub.h's struct dkey, the referee's).  **A test's rigged dice** are the tests' alone
+(hub.h's struct rig, set by a test's scene, tests/lib/dq0.js's sc.rig; no game but a test's has one, and no menu
+shows it): a request that matches an entry (its kind, its purpose or aim, its actor, while its uses last) has its first
+dice show the entry's faces, the rest the key's.  dq0harn has them (its RS_DICE hook; HarnMaster's d100 test shows a
+critical success at 5, a marginal one at 1, a marginal failure at 99 and a critical one at 100, whatever the mastery);
+dq0null hasn't.
+
 | Request | Asked by | The game reads |
 |---------|----------|----------------|
 | RS_HELLO | the UI, as the game starts | w1 the round (tenths: the world's clock, a climb's round, a creature held back); the text's lines: its name, its character generator ("": none) |
@@ -84,7 +95,7 @@ referee is three things, and only the last is a ruleset's own:
 
 - **The skeleton** (games/dq0/referee.h; games/dq0/rf/rf.c and rf/sheets.c, compiled into each referee by a file of
   its own that #includes them, its #pragmas first where its room is): the main loop (the hub attached, its dice seeded
-  from the game's, each slot answered as it's rung, the dice by who asks: dice.inc's dice_to), the words into a reply
+  from the game's, each slot answered as it's rung, each request's dice keyed: dice.inc's dice_key), the words into a reply
   (put, putn), what's to hand (tools, tflag, tqual: RS_EQUIP 2's keys, equip_all; has), the creatures' sheets read back
   once as a game's carried on and written after the character (beasts.dat: sheets_open), the bearings' dice's state.
 - **The house's rules** (games/dq0/rshouse.h's declarations; their code games/dq0/rf/dig.c, notice.c, state.c,

@@ -678,6 +678,15 @@ void __fastcall__ s_populate (unsigned char n)
 extern unsigned long xs_seed;                   /* (xorshift.s's state) */
 static unsigned long minds;
 
+/* The minds' keyed dice (phase C, dice2, 2026-11-24: mkey.s): each decision's dice a function of its key alone, so
+** no other denizen's, and no roll elsewhere, moves them: the game's seed and its dice offset (mbase, as the minds
+** begin), the denizen's number (the hub's actor's did; MK_* the minds' own work, no one's), the moment it decides at
+** (its ready, not when the minds come to it).  The dice after it the generator's as before */
+#define MK_MINDS        0xFFFF                  /* (The minds' own work at a moment: what they hear, the fights, the
+                                                **   character's ways with one, the UI's) */
+extern unsigned long mbase;
+void __fastcall__ mkey (unsigned id, unsigned long t);
+
 static void grow (void)
 {
     static unsigned char ms[MAXSTRATA], ns[MAXSTRATA];
@@ -3473,6 +3482,7 @@ static void tend (void)
             continue;
         }
         if (woke && (q->doing || up) && q->doing < DO_FIGHT && q->ready > now + 10 && !md.aflight[k]) {
+            mkey (q->did, now);
             rouse (k, 1 + random (10));         /* (The character's changed: a watcher sees to it soon; not one
                                                 **   fighting, fleeing or senseless: its own time) */
             settle ();
@@ -3490,6 +3500,7 @@ static void tend (void)
             continue;
         }
         for (n = 0, r = q->ready; r <= now && q->name[0] && n < 64 && (!n || !held ()); ++n) {
+            mkey (q->did, r);                   /* (Its dice its own, by the moment it decides at) */
             if (decide (k) && (r = a.ready) > now) {
                 break;                          /* (A wait only, the world's to carry out with the rest) */
             }
@@ -4824,6 +4835,7 @@ int __fastcall__ s_start (char** argv)
     kb = fd;
     pb = fd + 1;
     rseed (HUB->seed ^ 0x2B7E1516UL ^ (unsigned long) HUB->dice << 16);          /* (The minds' dice, their own: grow's) */
+    mbase = xs_seed;                            /* (Their keys' base: mkey's) */
     if (kinds_load (dir)) {
         return -1;
     }
@@ -4908,6 +4920,7 @@ int main (int argc, char* argv[])
         }
         if (act || hub_posted (&HUB->sway)) {
             now = hub_now ();
+            mkey (MK_MINDS, now);               /* (The minds' own dice at this moment, and the UI's ways with one) */
             pcx = HUB->pc_x;
             pcy = HUB->pc_y;
             if (pcs != HUB->pc_stratum) {

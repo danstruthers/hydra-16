@@ -194,12 +194,10 @@ ovcall:
 
             .include    "parts.inc"         ; (The parts and their stubs, the build's: parts.txt, ../dq0/parts.js)
 
-; The dice by who asks (referee.h's dice_to: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
-            .export     _dice_to
-_dice_to:   ldy         #7
-            jsr         ovl_in
-            jsr         dice_entry
-            jmp         ovl_out
-DICE_OVL    = 1
-.define     DICE_SEG    "OV7CODE"
+; The keyed dice (referee.h's dice_key: ../dq0/dice.inc), overlay 9's, its stub and its reader of the hub the main
+; RAM's (dice.inc's own)
+DICE_OVL    = 9
+DICE_RIG    = 1                     ; (A test's rigged dice: hub.h's struct rig, the RS_DICE hook's faces)
+.define     DICE_SEG    "OV9CODE"
+.define     DICE_RO     "OV9RODATA"
             .include    "../dq0/dice.inc"
