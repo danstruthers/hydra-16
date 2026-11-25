@@ -40,6 +40,8 @@ static unsigned char osn, od, fc_;          /* (fc_: the way it faces) */
 static unsigned char lf_;                       /* (seen_on's: a near part's way to a chunk not made, 2, or out past
                                                 **   what a glance is sure of, 1: way_stop's) */
 extern unsigned char wnear, wfar, wheld;        /* (dq0p.c's: a near part made now; far_may's; an opening held back) */
+extern unsigned hox, hoy;                       /* (dq0p.c's: a far part's first way on held, where it stopped, */
+extern unsigned char hod, hn, hok;              /*   its way on and its squares; 1 if there's one: rest_seen's) */
 unsigned char __fastcall__ way_stop (unsigned x, unsigned y);
 void __fastcall__ way_more (struct wayseen* r);
 
@@ -67,6 +69,14 @@ static void seen_on (void)
     lf_ = 0;
     for (n = 0; n < 2 * WAY_R && ox - px + WAY_R <= 2 * WAY_R && oy - py + WAY_R <= 2 * WAY_R; ) {
         if ((wnear | v_nom) && (lf_ |= way_stop (ox, oy)) & 2) {
+            if (!(wnear | hok)) {
+                hok = 1;                        /* (A far part's first: where its rest's look goes on from, its
+                                                **   lead-in's, rest_seen's) */
+                hox = ox;
+                hoy = oy;
+                hod = od;
+                hn = n;
+            }
             break;                              /* (A near part's: a chunk round it not made, the far part's; a far
                                                 **   part's, one none's made for, its rest's: v_may's) */
         }
@@ -156,6 +166,7 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
 
     memset (&W, 0, sizeof W);
     wheld = 0;
+    hok &= wnear;                               /* (A far part's first way on held: none yet) */
     fc_ = face;
     W.seq = s->seq;
     osn = sn;

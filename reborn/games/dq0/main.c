@@ -1062,6 +1062,11 @@ void o_fore_sync (void)
     if (f != fored) {
         o_fore_set (fored = f);
     }
+    hub_mem (0, &k, (const void*) &HUB->look.ch, 1);
+    if (k & LC_BEGIN) {
+        o_rest_begin ();                        /* (A look one way's rest seeing on, at the turns pace: its lead-in now,
+                                                **   way.c's, lock4's, 2026-11-25) */
+    }
 }
 
 /* The UI's nap four times as long, nothing said (main's): while the senses work a look one way out at the real paces

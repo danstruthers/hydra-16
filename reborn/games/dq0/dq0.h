@@ -368,6 +368,9 @@ unsigned char still_out (void);                 /* (Overlay 13's) The character 
 unsigned char line_free (void);                 /* (Overlay 13's) A line entered taken now: main's, the lockstep's */
 void fore_sync (void);                          /* (Overlay 13's) The answer's tasks in the foreground or out, as
                                                 **   a line's in hand or not (main.c's) */
+void o_rest_begin (void);                       /* (Overlay 13's, o_fore_sync's) A look one way's rest's lead-in told as
+                                                **   its look sees on, at the turns pace (way.c's) */
+#define BEGUN_REST      0x7F                    /* (blows.c's begun: a rest's lead-in, not a blow's, way.c's) */
 unsigned char nap_long (void);                  /* (Overlay 13's) The UI's nap four times as long: an answer's
                                                 **   CPU its tasks' (main.c's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's

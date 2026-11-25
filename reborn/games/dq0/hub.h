@@ -1918,6 +1918,9 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY, LK_PEEK, LK_NEAR, LK_REST, LK_LIT };  
                                                 **   LK_REST's: its rest to tell) */
 #define LC_WHOLE        4                       /* (LK_NEAR's: its last look not standing, the whole look one way done
                                                 **   as LK_WAY's would, no far part to ask: a request the less) */
+#define LC_BEGIN        8                       /* (LK_REST's, as its look goes on, at the turns pace: a way on told "so
+                                                **   far" sees on now, the rest's lead-in the UI's to tell: dq0p.c's
+                                                **   rest_seen, the UI's rest_begin; the reply's ch without it) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,

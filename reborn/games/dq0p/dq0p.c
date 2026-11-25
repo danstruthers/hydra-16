@@ -46,6 +46,9 @@ static unsigned char face, light, sight, dark, sn, own, range;
 static unsigned x, y;
 
 void sens_pc (void);                            /* (Part way_near's, below) */
+unsigned char rest_seen (void);                 /* (Part way_near's, below: its stub, bank.s's) */
+unsigned hox, hoy;                              /* (way.c's seen_on: a far part's first way on held, where it stopped, */
+unsigned char hod, hn, hok;                     /*   its way on and its squares; 1 if there's one: rest_seen's) */
 
 /* The character as the hub has it */
 static void pc (void)
@@ -112,6 +115,12 @@ static void look (void)
     sens_pc ();                                 /* (Its senses kept: part way_near's, the lamps' after it) */
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
+    if (v_nom == 2 && hok && (hub_map (0), !HUB->tpr) && rest_seen ()) {
+        hub_map (0);
+        HUB->look.ch |= LC_BEGIN;               /* (Its first way on seen further: the rest's lead-in the UI's to tell
+                                                **   now, rest_seen's) */
+        hub_ring (T_UI);
+    }
     if (!v_way) {
         kept (3);                               /* (What it keeps of it: each chunk's memory, part kept's, and a passage's
                                                 **   ways' runs for its words; a look one way's memory after its
@@ -288,6 +297,51 @@ unsigned char s_far_may (void)
         }
     }
     return f;
+}
+
+/* A look one way's rest at the turns pace (LK_REST's, its squares seen: view's), its first way on told "so far" (hok:
+** way.c's seen_on) on past where it stopped as seen_on goes, straight on through the dark, round a bend only where it
+** sees the square: 1 if it sees a square of it now, the way on seen further, its sentence the rest's first, "Peering
+** on, down the passage ..." (the UI's lead-in told now, LC_BEGIN: the answer's pause in two, D17's, lock4's,
+** 2026-11-25); 0, it may tell nothing more (a passage dark past the light: the look across's), no lead-in before it */
+static unsigned char __fastcall__ see_past (const unsigned char* p)
+{
+    static struct portal* q;
+
+    return p && T_CLEAR (*p) && !((TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) && (q = portal_at (cx_, cy_)) != 0 &&
+        !(q->state & PS_OPEN) && q->kind != PK_PORTCULLIS);   /* (way.c's past) */
+}
+
+unsigned char s_rest_seen (void)
+{
+    static unsigned char k, w, d, n;
+    static unsigned ux, uy;
+    static const unsigned char* p;
+
+    ux = hox;                                   /* (Not wa, wb: way_stop's) */
+    uy = hoy;
+    d = hod;
+    for (n = hn; n < 2 * WAY_R && ux - x + WAY_R <= 2 * WAY_R && uy - y + WAY_R <= 2 * WAY_R; ) {
+        if (way_stop (ux, uy) & 2) {
+            return 0;                           /* (Another chunk not made round it: held again) */
+        }
+        for (k = 0, w = 0xFF; k < 8; ++k) {     /* (seen_on's way on) */
+            if (!REL_BEHIND (k - d) && (w == 0xFF || k == d) && (!(k & 1) || slant (sn, ux, uy, k)) &&
+                see_past (p = at (sn, ux + head_x[k], uy + head_y[k])) && (k == d || (*p & T_VIS))) {
+                w = k;
+            }
+        }
+        if (w == 0xFF) {
+            return 0;
+        }
+        ux += head_x[d = w];
+        uy += head_y[d];
+        ++n;
+        if (*at (sn, ux, uy) & T_VIS) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 #pragma bss-name (pop)
