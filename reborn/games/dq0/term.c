@@ -569,7 +569,8 @@ void inl_show (void)
 
 void t_done (void)
 {
-    if (away) {
+    if (away && !begun) {                       /* (Not with a blow begun: the story's line its sentence's still,
+                                                **   the keys not read meanwhile, blows.c's fight_begin) */
         if (shown) {
             go (th, 3 + shown);
             unhide ();

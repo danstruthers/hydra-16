@@ -120,6 +120,20 @@ static void an (void)
     art = 0;
 }
 
+/* lb's words said, but the first said_skip letters (blows.c's: a blow begun, its first words out before the referee's
+** answer, the rest of the sentence after them, lock2's F1) */
+static void said_say (void)
+{
+    unsigned char n = strlen (lb);
+
+    if (n <= said_skip) {
+        said_skip -= n;
+        return;
+    }
+    say (lb + said_skip);
+    said_skip = 0;
+}
+
 /* lb's words so far said (an "a" made "an" first, if its word begins with a vowel), lb begun again */
 static void flush (void)
 {
@@ -128,7 +142,7 @@ static void flush (void)
         if (once) {
             lb_said ();
         } else {
-            say (lb);
+            said_say ();
         }
     }
     sp = said_to;
@@ -267,7 +281,10 @@ static const unsigned char* __fastcall__ run (const unsigned char* at)
         if (c < SC_NUM) {
             if (c == SC_NL) {
                 flush ();
-                msg ("");                       /* (A line of its own: msg's) */
+                if (!said_skip) {
+                    msg ("");                   /* (A line of its own: msg's; but a blow begun's, on
+                                                **   from its first words, fight_begin's) */
+                }
             } else if (c == SC_POSS) {          /* (The actor's, after it: "Your", "The bandit's") */
                 strcpy (sp, ac ? "'s" : "r");
                 sp += strlen (sp);
@@ -278,7 +295,7 @@ static const unsigned char* __fastcall__ run (const unsigned char* at)
                 if (c == ' ' && sp >= lb + SAY_SOON && !art && !once && !said_q && said_to == lb) {
                     *sp = 0;
                     if (!strchr (lb, '#')) {
-                        say (lb);               /* (The words so far said: say's column and its space owed kept) */
+                        said_say ();               /* (The words so far said: say's column and its space owed kept) */
                         sp = lb;
                     }
                 }

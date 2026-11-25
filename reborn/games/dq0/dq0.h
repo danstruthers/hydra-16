@@ -642,6 +642,12 @@ void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to tak
 #define W_MAX           0x80
 extern unsigned char said_ahead, walk_op, worded, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
 void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_FIGHT worded, and what comes of it) */
+void fight_begin (void);                         /* (Overlay 15's, blows.c: the character's blow's first words, as its
+                                                **   referee's answer is worked out: o_fore_sync's, lock2's F1) */
+unsigned char __fastcall__ fight_seen (const char* s, unsigned char who);   /* (Overlay 6's, blows.c: one named s seen by the
+                                                **   character, as a blow's words have it) */
+extern unsigned char begun, begun_n, said_skip; /* (blows.c's: the blow begun, its first words' length; said.c's
+                                                **   skip of them as its sentence is said whole) */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part search's) A search begun, by its form (search.c) */
 void __fastcall__ sheet_map (unsigned char what);   /* (Part map's) The sheet (0), or the map (1) */

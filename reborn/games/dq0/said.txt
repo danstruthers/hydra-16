@@ -641,7 +641,7 @@ SWAY.wont[how=SW_ROB]       "{Obj} wakes as you go through {folk?its|their} thin
 # the attacker's body.  A grapple's (O_HOLD ... O_LETGO): the character's hold.  (blows.c's fight_words and grip_words
 # before, overlays 6 and 19)
 
-own FIGHT gone bled bound stray hurt
+own FIGHT gone bled bound stray hurt begun
 
 @A          "{w4?You|{au?The {w4}|Something}}"
 @a          "{w4?you|{au?the {w4}|something}}"
@@ -695,6 +695,7 @@ FIGHT.stumble           "{@blow}{f1?|{actor?, but stumble|, but stumbles}}{f2?|{
 FIGHT.advantage         "{@blow}{actor?; {dfolk?it slips|they slip} inside your guard|; you see an opening}.{@after}"
 FIGHT.any               "{@blow}.{@after}"
 FIGHT.hurt              "{au?{@A} is hurt by the {instr}: {w6}.{@after}|}"
+FIGHT.begun             "{first?{@A}|Quicker, {@a}} strike at {@d}"
 
 # ---- A refusal (UK_NO: no, U_*, A_*: refuse.c's say_no, the one wording of its meaning; text the thing's name as it's
 # put in, "a door", "The giant rat"; a name not to be said, its nameless form, the next).  (refuse.c's said before,

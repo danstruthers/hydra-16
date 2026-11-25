@@ -1000,6 +1000,10 @@ unsigned char o_line_free (void)
     unsigned char p[2];
     unsigned long r[2];
 
+    if (begun) {
+        return 0;                               /* (A blow begun, its sentence not ended: the line after it, not
+                                                **   between its words, blows.c's fight_begin) */
+    }
     if (busy && (held || !asking)) {
         return !held;
     }
@@ -1038,7 +1042,19 @@ void o_fore_sync (void)
         }
     }
     hub_mem (0, r, (const void*) &HUB->slot[SLOT_WORLD].state, 5);   /* (Its state, kind, from, seq, actor: RQH's) */
-    k = r[0] == REQ_POSTED && (q[0] != q[1] || (c && r[1] == RS_ATTACK && !r[4]));
+    k = (c && busy) || (r[0] == REQ_POSTED && (q[0] != q[1] || (c && r[1] == RS_ATTACK && !r[4])));   /* (And all the
+                                                **   while the character's busy with a line in hand: the round it's held
+                                                **   behind asks RS_WIELD and RS_EXERT before its blow's RS_ATTACK, each
+                                                **   worked at once, not after the line's parse and on the CPU left over:
+                                                **   158,000 and 108,000 cycles of dq0fightcmd's 954,366, lock2's F1,
+                                                **   2026-11-25) */
+    if (t && c && busy && !begun && r[0] == REQ_POSTED && r[1] == RS_ATTACK && !r[4] && (hub_mem (0, q, (const void*) &HUB->ui_eq, 2),
+        hub_mem (0, r, (const void*) &HUB->eq_head, 1), hub_mem (0, r + 1, (const void*) &HUB->dq_head, 1), q[0] == r[0] && q[1] == r[1])) {
+        o_fore_set (fored = FS_UI | FS_SENS | FS_CMD);  /* (The referee out of the foreground meanwhile: the
+                                                **   words out first, not a slice each by turns with its blow's work) */
+        fight_begin ();                         /* (The round a line's held behind: its blow's first words now, not
+                                                **   after the referee's answer, at the real paces: blows.c's, lock2's F1) */
+    }
     f = t ? FS_UI | FS_SENS | (c ? FS_CMD : 0) | (k ? FS_REF : 0) : c ? FS_UI | FS_PARSE : 0;
                                                 /* (The turns pace: the command parser with the UI, the world not: a
                                                 **   line's parse in the background some 260,000 cycles of its 165,000,
@@ -3184,7 +3200,8 @@ int main (int argc, char* argv[])
     begin (argc, argv);
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
-        while (t_haskey ()) {
+        while (!begun && t_haskey ()) {   /* (Not as a blow's begun: its sentence ended first, a line's echo not
+                                                **   in it, blows.c's fight_begin) */
             k = t_getkey ();
             if (k == CH_ESC) {
                 wset (WS_PAUSE, paused = !paused, 0);
