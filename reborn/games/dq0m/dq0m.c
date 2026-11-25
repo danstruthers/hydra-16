@@ -197,6 +197,20 @@ unsigned char ahead_held (void)
     return r;
 }
 
+/* Asleep for the game's own time (giving's 2: the character's long task, the start, its end): the rings come meanwhile
+** (each event's, hub.c's hub_event: a fight's dozens a round) let go first, a request looked at again after, then asleep
+** AH_NAP ticks at most or till rung: woken once, not at each event (some 80,000 cycles a fight round's, its first
+** letters', fix2, 2026-11-25).  The hub's header in the window */
+static unsigned char asked (void);
+static void nap (void)
+{
+    while (hy_sem_try (HUB->sem[T_MAKER]) == 0) {
+    }
+    if (!asked ()) {
+        hy_sem_wait (HUB->sem[T_MAKER], AH_NAP);
+    }
+}
+
 /* At a checkpoint of a chunk being made ahead (make.c's ahead_check): 1, give it up (a request posted for anything but
 ** it: ahead.c's nsn, ncx, ncy; the game's end; another the nearest wanted now, the character moved on: looked at again
 ** as it comes to another eight squares' block); else, giving way, held there, asleep AH_HOLD ticks at a time; 0, go on (in
@@ -239,7 +253,11 @@ unsigned char ahead_wanted (void)
                                                 **   it, 2026-11-17) */
             return 0;
         }
-        hy_sem_wait (HUB->sem[T_MAKER], g == 2 ? AH_NAP : AH_HOLD);
+        if (g == 2) {
+            nap ();
+        } else {
+            hy_sem_wait (HUB->sem[T_MAKER], AH_HOLD);
+        }
     }
 }
 
@@ -344,7 +362,11 @@ int main (int argc, char* argv[])
             fore (0);
             if ((t = giving ()) != 0) {
                 calm = 0;
-                t = t == 2 ? AH_NAP : AH_HOLD;
+                if (t == 2) {
+                    nap ();             /* (The game's own time: woken once, the rings let go) */
+                    continue;
+                }
+                t = AH_HOLD;
             } else if (!calm) {
                 calm = 1;
                 t = AH_SETTLE;                  /* (Once, rung awake by a request meanwhile) */
