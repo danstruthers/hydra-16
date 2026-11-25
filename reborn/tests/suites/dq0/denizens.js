@@ -1251,7 +1251,7 @@ module.exports = {
         sw(T.of('give the tinderbox to grub'), { kind: 'SW_GIVE', result: 'SR_CANT' }, 'a beast taking a tinderbox');
         const g = T.of('give 1 ration to grub');
         sw(g, { kind: 'SW_GIVE', result: 'SR_OK' }, 'the ration not given');
-        if (!dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the ration not taken (' + dq0Evs(g) + ')');
+        if (!dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_ATE' }).length) f.push('the ration not taken and eaten (' + dq0Evs(g) + ')');   // (Food given eaten as it's taken, T3: FT_GOT till 2026-11-24, held for ever counted eaten)
         const inv2 = T.after(g, 'inventory');
         if (!inv2.after || rations(inv2.after) !== had + 1) f.push('the character\'s rations not one fewer (' + (inv2.after && rations(inv2.after)) + ')');
         sw(T.of('tell grub to follow me at 3 squares'), { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }, 'Grub not told to follow at a distance');

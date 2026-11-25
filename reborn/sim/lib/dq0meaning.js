@@ -139,6 +139,9 @@ function layoutOf(H) {
   ckKept: F('struct chunk', 'kept'), kQ: F('struct ckept', 'q'), kM: F('struct ckept', 'm'), kN: F('struct ckept', 'n'), kMap: F('struct ckept', 'map'),
   kDq: F('struct ckept', 'dq'), kDsk: F('struct ckept', 'dsk'), kSk: F('struct ckept', 'sk'), sMapfade: F('struct rs_summary', 'mapfade'),
   sMapmind: F('struct rs_summary', 'mapmind'),
+  // (The invariants', sim/lib/dq0inv.js's: an actor's body, a kind's keeps and the weight it bears, a chunk's squares)
+  aBody: F('struct actor', 'body'), kKeeps: F('struct kind', 'keeps'), kCapWeight: F('struct kind', 'cap_weight'), ckTile: F('struct chunk', 'tile'),
+  cw: K('CW'),
   };
 }
 
@@ -185,16 +188,38 @@ function createRecorder() {
   function decode(b, o, den) {
     const e = { line: enters, kind: name('E_NONE', b[o + L.mKind]), who: b[o + L.mWho], a: b[o + L.mA], b: b[o + L.mB],
       w1: w16(b, o + L.mW1), w2: w16(b, o + L.mW2), t: w32(b, o + L.mT), x: Array.from(b.subarray(o + L.mX, o + L.mX + 4)), den };
-    return Object.assign(e, H.decode(b, o, e.kind, ''));
+    const h = den && e.who ? bank(0) : null, ao = L.actor + ((e.who - 1) & 7) * L.actorSize;   // (Its actor's body as it's told:
+    if (h) e.as = { state: h[ao + L.aState], doing: name('DO_ROAM', h[ao + L.aDoing]), name: str(h, ao + L.aName, 12) };   //   the invariants')
+    Object.assign(e, H.decode(b, o, e.kind, ''));
+    if (e.kind === 'E_DEN') e.tile = tileAt(e.sn, e.sx, e.sy);   // (The square it's on as it's told: the invariants')
+    return e;
   }
   // An intent's record (struct msg at o of bank b, the ring's: 'ui', the hub's iq, or 'den', its di): its kind, who,
   // and its payload's fields by name (games/dq0/msgs.def's, the build's decoder: a denizen's its :den form's, if its kind
   // has one), its slots as they are in raw
   function intent(b, o, ring) {
     const kind = name('I_NONE', b[o + L.mKind]);
-    return Object.assign({ line: enters, ring, kind, who: b[o + L.mWho] }, H.decode(b, o, kind, ring === 'den' ? 'den' : ''),
+    const w = b[o + L.mWho], ao = L.actor + ((w - 1) & 7) * L.actorSize, as = ring === 'den' && w ? { state: b[ao + L.aState],   // (Its actor's
+      doing: name('DO_ROAM', b[ao + L.aDoing]), name: str(b, ao + L.aName, 12) } : undefined;   //   body as it posts it: the invariants')
+    return Object.assign({ line: enters, ring, kind, who: w, as }, H.decode(b, o, kind, ring === 'den' ? 'den' : ''),
       { raw: { a: b[o + L.mA], b: b[o + L.mB], w1: w16(b, o + L.mW1), w2: w16(b, o + L.mW2), t: w32(b, o + L.mT),
         x: Array.from(b.subarray(o + L.mX, o + L.mX + 4)) } });
+  }
+  // The square x, y of stratum sn, its tile (world.h's T_*: its chunk's, in the cache), or -1 (its chunk not there)
+  function tileAt(sn, x, y) {
+    const wb = bank(L.worldBank);
+    if (!wb) return -1;
+    let st = null;
+    for (let k = 0; k < L.maxstrata && !st; k++) { const o = L.wStrata + k * L.stSize; if (wb[o + L.stMade] && wb[o + L.stN] === sn) st = { x0: w16(wb, o + L.stX0), y0: w16(wb, o + L.stY0) }; }
+    if (!st || x < st.x0 || y < st.y0) return -1;
+    const cx = (x - st.x0) >> 5, cy = (y - st.y0) >> 5;
+    for (let k = 0; k < L.ncslots; k++) {
+      const o = L.wCslot + k * L.csSize;
+      if (!wb[o + L.csUsed] || wb[o + L.csSn] !== sn || w16(wb, o + L.csCx) !== cx || w16(wb, o + L.csCy) !== cy) continue;
+      const cb = bank(L.cacheBank0 + Math.floor(k / 3));
+      return cb ? cb[(k % 3) * L.chunkSize + L.ckTile + ((y - st.y0) & (L.cw - 1)) * L.cw + ((x - st.x0) & (L.cw - 1))] & 15 : -1;
+    }
+    return -1;
   }
   // The state as it is now (the hub's records): see the comment at the top
   function snap() {
@@ -208,7 +233,7 @@ function createRecorder() {
         skew: h[L.pcSkew], lost: h[L.pcLost], noise: h[L.pcNoise], mask: h[L.pcMask], bg: h[L.pcBg], airH: h[L.airH], airS: h[L.airS],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
-        chart: h[L.pcChart], chartk: h[L.pcChartk], map: w16(h, L.pcMap), state: h[L.pcBody + L.aState] },   // (state: its body's, actor 0's)
+        chart: h[L.pcChart], chartk: h[L.pcChartk], map: w16(h, L.pcMap), state: h[L.pcBody + L.aState], tile: tileAt(h[L.pcSn], w16(h, L.pcX), w16(h, L.pcY)) },   // (state: its body's, actor 0's)
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
         limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth],
@@ -217,7 +242,8 @@ function createRecorder() {
     for (let k = 0; k < L.nactors; k++) {
       const o = L.actor + k * L.actorSize, a = { k, state: h[o + L.aState], sn: h[o + L.aSn], face: h[o + L.aFace], pos: h[o + L.aPos],
         x: w16(h, o + L.aX), y: w16(h, o + L.aY), doing: name('DO_ROAM', h[o + L.aDoing]), name: str(h, o + L.aName, 12),
-        attitude: name('AT_HOSTILE', h[o + L.aAttitude]), faction: h[o + L.aFaction], kind: h[o + L.aKind], did: w16(h, o + L.aDid) };
+        attitude: name('AT_HOSTILE', h[o + L.aAttitude]), faction: h[o + L.aFaction], kind: h[o + L.aKind], did: w16(h, o + L.aDid),
+        body: h[o + L.aBody], tile: tileAt(h[o + L.aSn], w16(h, o + L.aX), w16(h, o + L.aY)) };
       if (a.state || a.name) s.actors.push(a);
     }
     const cat = bank(L.catBank), kname = k => cat ? str(cat, k * L.kindSize, 14) : '';     // (CATALOGUE[kind])
@@ -227,7 +253,8 @@ function createRecorder() {
       if (!b || !b[o + L.iKind]) continue;
       s.items.push({ n: i, kind: b[o + L.iKind], name: kname(b[o + L.iKind]), weight: cat ? cat[b[o + L.iKind] * L.kindSize + L.kWeight] : 0,
         kflags: cat ? cat[b[o + L.iKind] * L.kindSize + L.kFlags] : 0, kform: cat ? cat[b[o + L.iKind] * L.kindSize + L.kForm] : 0,
-        kvalue: cat ? w16(cat, b[o + L.iKind] * L.kindSize + L.kValue) : 0, size: b[o + L.iSize], flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
+        kvalue: cat ? w16(cat, b[o + L.iKind] * L.kindSize + L.kValue) : 0, kkeeps: cat ? cat[b[o + L.iKind] * L.kindSize + L.kKeeps] : 0,
+        capWeight: cat ? w16(cat, b[o + L.iKind] * L.kindSize + L.kCapWeight) : 0, size: b[o + L.iSize], flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
         sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId), fuel: w16(b, o + L.iFuel),
         thick: b[o + L.iThick], mat: b[o + L.iMat], quality: b[o + L.iQuality], shut: b[o + L.iShut],
         dur: w16(b, o + L.iDur), durMax: w16(b, o + L.iDurMax), wear: b[o + L.iWear],
@@ -342,12 +369,14 @@ function createRecorder() {
       const b = m.sharedBanks()[k];
       if (b && b[0] === (L.magic & 0xFF)) {
         key0 = k;
-        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], intents: [], asked: {}, eq: 0, dq: 0, iq: 0, di: 0 });
+        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], intents: [], asked: {}, eq: 0, dq: 0, iq: 0, di: 0, seen: {} });
       }
       return;
     }
+    if (game && k === key0 + L.sightBank) { sightDirty = true; return; }   // (The senses' record written: its denizens read again)
     if (!game || k !== key0) return;
     const h = m.sharedBanks()[key0];
+    if (sightDirty && (off === L.eqHead || off === L.dqHead)) seenNow();
     if (off === L.eqHead) {                                     // (An event shown: its entry written whole before)
       if (v !== ((game.eq + 1) & 0xFF)) return;
       game.eq = v;
@@ -357,6 +386,8 @@ function createRecorder() {
       game.dq = v;
       const b = bank(L.denBank);
       if (b) game.dens.push(decode(b, ((v - 1) & (L.dqSize - 1)) * L.msg, true));
+      const e = game.dens[game.dens.length - 1];   // (One the world tells seen: its name seen this line, the invariants')
+      if (b && e && e.kind === 'E_DEN' && e.seen && e.who) seenAdd(str(h, L.actor + ((e.who - 1) & 7) * L.actorSize + L.aName, 12));
     } else if (off === L.iqHead || off === L.diHead) {          // (An intent shown, the UI's or the denizens': its entry
       const ui = off === L.iqHead, n = ui ? L.iqSize : L.diSize, was = ui ? game.iq : game.di;   //   written whole before)
       if (v !== (was + 1) % n) return;
@@ -387,6 +418,18 @@ function createRecorder() {
       game.asked[off] = H.decode(h, off, name('RS_HELLO', h[off + L.rqKind]), '');   //   for its reply's record)
     }
   }
+  // (The denizens the character sees, by name, a line at a time (game.seen[line]: those in the senses' record as the line
+  // went, its look about and its looks one way, and those the world told seen): sim/lib/dq0inv.js's, no denizen named
+  // that isn't seen)
+  let sightDirty = false;
+  function seenAdd(n) { if (!n) return; (game.seen[enters] || (game.seen[enters] = new Set())).add(n); }
+  function seenNow() {
+    sightDirty = false;
+    const t = bank(L.sightBank);
+    if (!t || !game) return;
+    for (let i = 0; i < Math.min(t[L.tNdens], L.seeDens); i++) seenAdd(str(t, L.nName + i * L.tDenSize, 12));
+    for (const at of [L.wayAt, L.wayNearAt]) for (let i = 0; i < Math.min(t[at + L.wNdens], L.seeDens); i++) seenAdd(str(t, at + L.wDen + i * L.tDenSize - L.tDen + L.nName, 12));
+  }
   // (Each line entered: a CR the CPU reads from the serial port, the state it finds kept first; the lines typed, as
   // the serial port gave them, in lines)
   const lines = [];
@@ -396,7 +439,9 @@ function createRecorder() {
     const a = m.acia, read = a.read;
     a.read = (r, t) => {
       if (r === 0 && a.rdrf && a.rx === 13) {
+        if (game) seenNow();                     // (What the line before saw, kept with it; and what this one finds)
         enters++;
+        if (game) seenNow();
         lines.push(typed);
         typed = '';
         const s = game ? snap() : null;

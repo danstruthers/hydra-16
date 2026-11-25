@@ -927,7 +927,7 @@ module.exports = {
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
-      expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
+      expect: ['You carry', 'There\'s no way up here.', '% echo $status'],
       // (The inventory's budget a guard against a large slowdown at 9,600 baud, not a target: 1,410,000 to 1,530,000
       // cycles measured, as the rats' stirring falls on the line before it; the user's targets are 115,200's, D17:
       // dq0answer's)
@@ -935,7 +935,7 @@ module.exports = {
       // of more than 5% said, not failed)
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, trend: true },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
-          to: 'There\'s no way up or down here.', per: 1, trend: true }],
+          to: 'There\'s no way up here.', per: 1, trend: true }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
       // second, the user's; the step's from the line entered, as it's told into the story (on a line of its own: the
       // line typed's row, 24, after it, or the status line's clock first, as the second falls): about 285,000 cycles to "go up"'s answer since the world sleeps on its
@@ -968,7 +968,7 @@ module.exports = {
       // timing moves where the rats' words fall at 9,600 baud (the kernel's polled console timed, the step's own path the
       // same): a budget of 700,000, a guard against a large slowdown, as the inventory's; the user's targets dq0answer's)
       check(m, out) {
-        const a = out.indexOf('There\'s no way up or down here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
+        const a = out.indexOf('There\'s no way up here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
         if (top > 4) f.push(top + ' moves up to the status line while nothing happened (a second at most each)');
         const turned = out.indexOf('You turn '), looked = turned < 0 ? -1 : turned + out.slice(turned).search(/You (can see|are in)/);

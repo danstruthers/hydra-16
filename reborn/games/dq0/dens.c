@@ -301,6 +301,9 @@ void o_stir_words (void)
         }
     }
     if (heard && !heard_was) {
+        if (!stirs && lbe != lb) {
+            add (" ");                          /* (After "Nothing stirs in sight now.": its own sentence, 2026-11-24) */
+        }
         stirred ();
         add (" ");
         den_list (0, LF_HEARD << 8, 0, 0);

@@ -1,0 +1,9 @@
+# invknown.txt - the invariants' known breaks (sim/lib/dq0inv.js, in every dq0 test): each a bug the one-path rewrite is
+# to end (two paths that disagree), kept short; a break listed here is a test's note, not its failure, and never passed
+# over silently: each names its invariant, the tests it's in (a regex of their names), what it says (a regex of the
+# failure's words), and the bug.  A break not listed fails its test.
+#
+# INVARIANT  TESTS  /WHAT/  the bug
+posts      .*  /senseless, posts/  the minds post a step behind the world, which makes a senseless body's intent a wait (dq0w/wbody.c)
+hands      .*  /held all the same/  the tests' kit (dq0 -k, things.c's s_kit) holds what has no room all the same, past the hands (B5)
+unseen     dq0par.*  /named, not seen \(> ask the/  an order's answer names the one ordered, seen or not (the sway's words, not the senses': interface-minds.md's 4.3)

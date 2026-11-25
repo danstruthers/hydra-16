@@ -23,6 +23,8 @@ static const char* const said[T_COUNT] = {
     "You go over to it.",
     "The way out is shut fast. Whatever opens it is somewhere below.",
     "There's no way up or down here.",
+    "There's no way up here.",
+    "There's no way down here.",
     "There's nothing there to dig (a wall, or the rock; a shaft from a room's floor).",
     "You can't go that way.",
     "Taken.",

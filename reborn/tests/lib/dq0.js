@@ -269,7 +269,7 @@ const DQ0_REPEATS = [
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
   { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work|The rotten rock splits over you, and part of the roof falls into the hole)\.$/,
     why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
-  { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
+  { what: /^You (?:climb on|slip back a little|find no hold yet) \((?:\d+ feet|a foot) to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
   { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b|^(?:Your|Its|Their) [a-z]+ strikes .* instead\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
@@ -1192,7 +1192,7 @@ function dq0Held(t, f, notes, id, what, vs, max) {
 const DQ0_ANSWERS = [['turn left', 'You turn'], ['turn right', 'You turn'],
   ['step forward', 'You step forward'], ['inventory', 'You carry', 'read'], ['examine the torch', 'You look at the torch|You look for the torch', 'read'], ['walk to the door ahead to my left', 'You head for'], ['examine the door', 'You head for|A door|Which door'],
   ['open the door', 'You try the door|You turn|Which door'], ['close the door', 'You reach for the door|You turn|Which door'], ['listen', 'You listen'], ['bar the door', 'You look at the door|You turn|Which door'],
-  ['look', 'You', 'read whole'], ['look ahead', 'You peer ahead|You turn', 'read'], ['go up', 'There\'s no way up or down here.'], ['go to the far side', 'You'], ['walk to the window', 'You head for'], ['take the bones', 'You look for the bones|You go over to the bones.'], ['look', 'You', 'read'],
+  ['look', 'You', 'read whole'], ['look ahead', 'You peer ahead|You turn', 'read'], ['go up', 'There\'s no way up here.'], ['go to the far side', 'You'], ['walk to the window', 'You head for'], ['take the bones', 'You look for the bones|You go over to the bones.'], ['look', 'You', 'read'],
   ['take the sack from the backpack', 'You reach for your backpack|You look for'], ['put the whetstone in the sack', 'You reach|You look for the whetstone'], ['take the whetstone from the sack', 'You reach|You look for'],
   ['drop the sack', 'You put down the|You reach|You look for'], ['take the sack', 'You reach for the sack|You look for the sack'], ['assess the sack', 'You look at the sack|You look for the sack', 'read'], ['sit', 'You sit down'], ['stand', 'You get to your feet'], ['wait 1 minute', 'You wait a minute'], ['dig down', 'You look at the floor']];   // (The first words as they begin, 2026-11-04: dq0firstword's; a walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken.  "You stop", a line taken for a soft question's answer, gone: no question's asked with -a, 2026-11-17)
 

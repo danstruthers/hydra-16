@@ -1286,8 +1286,9 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.step = K.step;
     a.attitude = D.attitude;
     a.faction = D.fac;
-    a.did = KF_NATURE (K.form) >= NA_FOLK ? D.id : 0;  /* (Its things': filed at its lair's home, the outfits' gear;
-                                                **   folk's and the dead's, s_place's I_KIT; a beast none) */
+    a.did = KF_NATURE (K.form) >= NA_FOLK ? D.id : D.id | DID_BEAST;  /* (Its things': filed at its lair's home, the
+                                                **   outfits' gear, folk's and the dead's, s_place's I_KIT; a beast's
+                                                **   its own too, what it takes up, but no outfit: DID_BEAST) */
     a.hx = D.hx;
     a.hy = D.hy;
     a.hsn = D.lsn;
@@ -4201,7 +4202,8 @@ void __fastcall__ s_gift (unsigned char k)
         I_ROB_ERRAND (im) = FE_GIFT;            /* (Taken: the world's to hand over, a count of a lot split off) */
         I_ROB_THING (im) = sw.item;
         I_ROB_COUNT (im) = sw.iy >> 8;
-        I_ROB_KEPT (im) = 0;
+        I_ROB_KEPT (im) = sw.iy & 1 ? 2 : 0;    /* (Food: eaten as it's taken, its fed below the world's to make so:
+                                                **   used up, not held for ever counted eaten, T3, 2026-11-24) */
         I_ROB_DOING (im) = I_ROB_FACE (im) = 0xFF;
         post (I_ROB, k + 1);
         settle ();

@@ -107,7 +107,11 @@ unsigned __fastcall__ o_fight_said (const struct msg* m)
     hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
     s = pc || (f->which & FW_STRAY) ? f->def : f->att;     /* (A stray's: the one it struck, seen or not) */
     if (*s) {
-        for (k = n; k--; ) {
+        hub_mem (SIGHT_BANK, &k, &SIGHT->seq, 1);
+        if (k == close_seq && close_who && !(f->which & FW_STRAY) && close_who == (pc ? E_FIGHT_DEF (*m) : m->who)) {
+            k = 0;                              /* (Told seen as it closed, the senses' look not since: by its name, as
+                                                **   it was told then, not "something" the next line, 2026-11-24) */
+        } else for (k = n; k--; ) {
             hub_mem (SIGHT_BANK, at, SIGHT->den[k].name, sizeof at);
             if (!strcmp (at, s)) {
                 break;

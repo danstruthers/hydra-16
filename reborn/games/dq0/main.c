@@ -1032,6 +1032,8 @@ unsigned char walk_op, worded;                  /* (The things' request it's ask
 unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
                                                 **   walk_says': its arrival not "over to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
+unsigned char close_who, close_seq;             /* (The last told seen closing with the character, its actor plus 1,
+                                                **   and the senses' look then: caps.c's, blows.c's) */
 
 /* The heading the character believes h is (the hub's pc_skew: its bearings, the world's, slice 4.2's: the north it
 ** believes in, the compass's words and the status line's), from the true one */
@@ -1098,6 +1100,9 @@ unsigned long heard_at;
 unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
 unsigned char heard_rel = 0xFF;
 char heard_what[20];
+static unsigned heard_sum[3];                   /* (The sounds told as the character's busy, each its words' sum, and */
+static unsigned char heard_rep;                 /*   how far told: two bits a sound, 1 once, 2 again and again; 0 at
+                                                **   its command's end: s_noise_told's, nothing told twice) */
 
 
 /* The character senseless still as event m came (the user's, 2026-11-14: a knocked-out character senses nothing): out_told
@@ -1171,7 +1176,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = step_k = journeyed = 0;
+                busy = step_k = journeyed = heard_rep = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
@@ -1296,7 +1301,7 @@ static unsigned char events (void)          /* (How many there were) */
             } else if (m.w1 == N_SHUT) {
                 way_words ();                   /* (The theme's: its lock) */
             } else {
-                tell (m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ? T_THERE_S_NOTHING : m.w1 == N_CLOSED ?
+                tell ((unsigned char) m.w1 == N_NO_STAIRS ? T_THERE_S_NO + (m.w1 >> 8) : m.w1 == N_NO_DIG ? T_THERE_S_NOTHING : m.w1 == N_CLOSED ?
                     T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
             }
             break;
@@ -3355,7 +3360,10 @@ void s_when_free (void)
 ** 14's: seldom, the main RAM's room; main.c's door_words, part door_words's, and its own strings before, 2026-11-11) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
-    unsigned char d = E_DEN_DE (*m);
+    unsigned char d = E_DEN_DE (*m), k;
+    unsigned s;
+    char* p;
+    const char* q;
 
     hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
     memcpy (heard_what, SND_AT + (E_DEN_DKIND (*m) % SND_KINDS * 2 + (d == DE_NOISE)) * SND_REC, sizeof heard_what);
@@ -3394,6 +3402,28 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
         }
     }
     heard_words (d | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
+    if (busy && (p = strrchr (lb, '.')) != 0) { /* (The same sound again as the character's busy at one command: told
+                                                **   once, then "again", then "again and again", then no more till the
+                                                **   command's done; the 240 squeaks of a two hours' sleep three
+                                                **   sentences, nothing told twice: WORLD-MODEL.md's 7) */
+        for (s = 0, q = lb; *q; ++q) {
+            s = (s << 1 | s >> 15) ^ (unsigned char) *q;
+        }
+        for (k = 0; k < 3 && !((heard_rep >> 2 * k & 3) && heard_sum[k] == s); ++k) {
+        }
+        if (k < 3) {
+            if ((heard_rep >> 2 * k & 3) == 3) {
+                return;
+            }
+            heard_rep += 1 << 2 * k;
+            strcpy (p, (heard_rep >> 2 * k & 3) == 2 ? ", again." : ", again and again.");
+        } else {
+            for (k = 0; k < 2 && (heard_rep >> 2 * k & 3); ++k) {
+            }
+            heard_sum[k] = s;                   /* (A free place, else the last's) */
+            heard_rep = (heard_rep & ~(3 << 2 * k)) | 1 << 2 * k;
+        }
+    }
     msg (lb);
     if (busy && HUB->pc_task.kind && !asked && !HUB->pc_out) {
         asked = 1;                              /* (The first sound heard as a long task goes: asked, the world's to

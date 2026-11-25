@@ -18,6 +18,8 @@ enum {
     T_YOU_GO_OVER,
     T_THE_WAY_OUT,
     T_THERE_S_NO,
+    T_NO_WAY_UP,                                /* (T_THERE_S_NO's, by the way asked: E_NOWAY's N_NO_STAIRS, its high */
+    T_NO_WAY_DOWN,                              /*   byte 1 up, 2 down) */
     T_THERE_S_NOTHING,
     T_YOU_CAN_T,
     T_TAKEN,
