@@ -1102,8 +1102,10 @@ static unsigned dplace;
 unsigned long heard_at;
 unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
 unsigned char heard_rel = 0xFF;
+unsigned char face_told;                        /* (The heading a turn told last since a line was typed, plus 1: task.c's
+                                                **   turned_says, "back" to it; 0 none) */
 char heard_what[20];
-static unsigned heard_sum[3];                   /* (The sounds told since the last line was typed, each its words' sum, */
+static unsigned heard_sum[4];                   /* (The sounds told since the last line was typed, four, each its words' sum, */
 static unsigned char heard_rep;                 /*   and how far told: two bits a sound, 1 once, 2 again and again; 0
                                                 **   as a line's typed: s_noise_told's, nothing told twice) */
 
@@ -3240,9 +3242,10 @@ int main (int argc, char* argv[])
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
             if (l && !held) {
-                heard_rep = 0;                  /* (A command typed, not held for the character before: the sounds
+                heard_rep = face_told = 0;      /* (A command typed, not held for the character before: the sounds
                                                 **   told as the last went begun again, s_noise_told's; not a soft
-                                                **   question's answer, its task the same, its sounds "again") */
+                                                **   question's answer, its task the same, its sounds "again"; and
+                                                **   the heading a turn told last, task.c's turned_says) */
             }
             if (l && busy && !out_told && (held = !k || (k = at_once (l)) != 1)) {
                                                 /* (Senseless, a line out_line let by (the quit, help) not held for
@@ -3472,20 +3475,22 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
                                                 **   "again and again", then no more till a line's typed; the 240
                                                 **   squeaks of a two hours' sleep three sentences, a rat squeaking
                                                 **   as the character stands idle the same, nothing told twice:
-                                                **   WORLD-MODEL.md's 7; as it was busy alone till fix2, 2026-11-24) */
+                                                **   WORLD-MODEL.md's 7; as it was busy alone till fix2, 2026-11-24;
+                                                **   four remembered, three till fix3, 2026-11-25: a fourth put one out
+                                                **   of mind, told again whole, dq0time's squeak) */
         for (s = 0, q = lb; *q; ++q) {
             s = (s << 1 | s >> 15) ^ (unsigned char) *q;
         }
-        for (k = 0; k < 3 && !((heard_rep >> 2 * k & 3) && heard_sum[k] == s); ++k) {
+        for (k = 0; k < 4 && !((heard_rep >> 2 * k & 3) && heard_sum[k] == s); ++k) {
         }
-        if (k < 3) {
+        if (k < 4) {
             if ((heard_rep >> 2 * k & 3) == 3) {
                 return;
             }
             heard_rep += 1 << 2 * k;
             strcpy (p, (heard_rep >> 2 * k & 3) == 2 ? ", again." : ", again and again.");
         } else {
-            for (k = 0; k < 2 && (heard_rep >> 2 * k & 3); ++k) {
+            for (k = 0; k < 3 && (heard_rep >> 2 * k & 3); ++k) {
             }
             heard_sum[k] = s;                   /* (A free place, else the last's) */
             heard_rep = (heard_rep & ~(3 << 2 * k)) | 1 << 2 * k;

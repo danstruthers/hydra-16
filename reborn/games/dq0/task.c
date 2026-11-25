@@ -175,6 +175,12 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             reach_said (TE_IDLE, 0);
         }
     }
+    if (out_told && (p <= TE_NEAR || p == TE_ENGAGED)) {
+        return 0;                               /* (Its long task stopped as it lies senseless, by the blow that felled
+                                                **   it or one after: its command dropped (above), the stop untold, as
+                                                **   all it would sense is (B3: the senseless sense nothing; dq0hoard's
+                                                **   "You stop waiting." three times, fix3, 2026-11-25) */
+    }
     k = p;
     said_s[0] = said_s[1] = 0;                  /* (The row's words: what it was doing its text, in the main RAM) */
     said_s[2] = strcpy (lb + 300, d);
@@ -524,7 +530,12 @@ void __fastcall__ o_turned_says (unsigned char go)
     }
     if (go & 32) {                              /* (A turn: the heading it believes it faces, the world's) */
         said_s[2] = head_name[go & 7];
-        my (MY_FACE << 8, 0);
+        d = (go & 7) + 1;
+        my (MY_FACE << 8 | (face_told == d), 0);   /* (The heading a turn told last since the line was typed again:
+                                                **   it turned from it untold between, a walk's or a step's way, so
+                                                **   "You turn back to face southeast.", not the same words twice:
+                                                **   WORLD-MODEL.md's 7, dq0follow's turns, fix3, 2026-11-25) */
+        face_told = d;
         return;
     }
     if (worded == 2 && !(go & 8)) {             /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk,

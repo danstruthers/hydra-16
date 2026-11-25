@@ -39,8 +39,8 @@ static const char* const count[5] = { "", "one", "two", "three", "four" };
 
 static struct sight* S;
 
-/* The words so far said, and out: lb begun again (look.c's lb_said: none a look's said already this answer) */
-#define lb_out  lb_said
+/* (The words so far said, and out, lb begun again: look.c's lb_out, its room's name put in first if names were given;
+** lbsaid.s's lb_said, none a look's said already this answer) */
 
 /* Words added to lb: a sentence begun (a look's, streamed), those before it said first */
 #pragma register-vars (push, on)

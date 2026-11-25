@@ -19,9 +19,7 @@
 
 static struct sight* S;
 
-/* words.c's: the words so far said (a look's, streamed), and out (look.c's lb_said: none a look's said already this
-** answer) */
-#define lb_out  lb_said
+/* (words.c's: the words so far said, a look's, streamed, and out: look.c's lb_out) */
 
 #pragma register-vars (push, on)
 static void __fastcall__ add (const char* s)
