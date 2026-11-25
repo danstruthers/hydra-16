@@ -3533,10 +3533,12 @@ void __fastcall__ s_start (const char* dir)
         }
         stocks ();                              /* (Last: what the rest had made stocked too) */
     } while ((chart_late || START_BURN ()) && !HUB->ui_keys && (unsigned) (hy_ticks () - t0) < START_WORK);
-    if ((HUB->pace & 3) == 3) {
-        was_busy = 1;                           /* (At the turns pace its E_READY the main loop's, after the denizens'
+    if ((HUB->pace & 3) == 3 && !HUB->pc_out && HUB->now >= HUB->pc_ready) {
+        was_busy = 1;                           /* (At the turns pace, free, its E_READY the main loop's, after the denizens'
                                                 **   first turn at what the start told and the jobs that made due: the
-                                                **   first line not behind them, the lockstep's quiet near; lock2's) */
+                                                **   first line not behind them, the lockstep's quiet near; lock2's.  Not
+                                                **   a game carried on as it lies senseless: told now, as ever,
+                                                **   dq0saveout's) */
     } else {
         event (E_READY, 0, 0);                  /* (The UI waits for it: its commands, the world started) */
     }

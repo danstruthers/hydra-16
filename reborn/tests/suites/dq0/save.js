@@ -918,8 +918,10 @@ module.exports = {
           w(ad('ko_at'), now, 4); w(ad('ko_n'), 2, 2); w(ad('pc_out'), (now + 3000) >>> 0, 4);
           h[PCOUT] = 1;
           m.kosN = r[ad('aden')]; w(ad('ko_at') + 4, 0x1234, 4); w(ad('ko_n') + 2, 5, 2);   // (Actor 0's, its sheet aden[0]'s: kept as the save's, KOSAVE)
-          const fb = fbMem(); if (fb) [0x34, 0x12, 0, 0, 5, 0].forEach((v, i) => { fb[KOS(m.kosN) + i] = v; });
           m.kept.push(read());
+          m.kept[0].kos = [...r.subarray(ad('ko_at') + 4, ad('ko_at') + 8), ...r.subarray(ad('ko_n') + 2, ad('ko_n') + 4)];   // (Its KOS to come
+                                                //   as kept: the referee's ko_at[1] and ko_n[1] as set, all the scene's (its
+                                                //   RS_SCENE SCN_RAM), no raw poke of its fb bank's, lock2's, 2026-11-25)
         } }, { g: 2, line: 'look', n: 1, call: () => m.kept.push(read()) }]);
       },
       expect: ['% echo $status'],
