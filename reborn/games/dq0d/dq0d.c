@@ -5008,13 +5008,10 @@ int main (int argc, char* argv[])
         }
         hub_map (0);
         ++HUB->beat[T_DENIZENS];
-        hub_sleep ((HUB->tpr ? HUB->ui_cmd : HUB->ui_want != HUB->w_idle) ? 40 : 10);  /* (Asleep on the doorbell: a
-                                                **   request, an event, the clock moved on at the turns pace, wakes it at
-                                                **   once; a command's answer in hand at the real paces, four times as
-                                                **   long, the answer's tasks the CPU, its minds held meanwhile anyway:
-                                                **   2026-11-18; at the turns pace all the while what the UI set going
-                                                **   is under way, the world's quiet not come, its turns rung: lock4's,
-                                                **   2026-11-25) */
+        hub_sleep (HUB->tpr && HUB->ui_cmd ? 40 : 10);  /* (Asleep on the doorbell: a request, an event, the clock
+                                                **   moved on at the turns pace, wakes it at once; a command's answer in
+                                                **   hand at the real paces, four times as long, the answer's tasks the
+                                                **   CPU, its minds held meanwhile anyway: 2026-11-18) */
     }
     return 0;
 }

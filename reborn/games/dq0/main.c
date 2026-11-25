@@ -1071,19 +1071,22 @@ void o_fore_sync (void)
 
 /* The UI's nap four times as long, nothing said (main's): while the senses work a look one way out at the real paces
 ** (LK_WAY ... LK_NEAR, its near part told: not its rest's, after the prompt, a line perhaps typed meanwhile); at the turns
-** pace all the while what it set going is under way, the world's quiet not come (ui_want, w_idle: the lockstep's), its
-** rest's too, told in the answer there (Ti4).  Its events, the world's quiet and the replies ring it as ever; only the
-** keys wait the longer: each look at them the UI's loop and the console's call, some 13,000 cycles a fourth tick, a
-** sixth of the answer's CPU (lock4's, 2026-11-25) */
+** pace all the while what the UI set going is under way (ui_want, w_idle: the lockstep's), but in a long task or a reach's
+** steps, a look's rest's too, told in the answer there (Ti4).  Its events,
+** the world's quiet and the replies ring it as ever; only the keys wait the longer: each look at them the UI's loop and
+** the console's call, some 13,000 cycles a fourth tick, a sixth of a look's CPU.  Not all an answer at the turns pace: a
+** line that breaks off a long task or a reach's steps, typed meanwhile, landing later (dq0reachflee2's flee; lock4's,
+** 2026-11-25) */
 unsigned char o_nap_long (void)
 {
-    unsigned char r[2], w[2];
+    unsigned char r[2], w[2], k;
     unsigned t;
 
     hub_mem (0, &t, (const void*) &HUB->tpr, 2);
     hub_mem (0, w, (const void*) &HUB->ui_want, 2);        /* (ui_want, w_idle) */
+    hub_mem (0, &k, (const void*) &HUB->pc_task.kind, 1);
     hub_mem (0, r, (const void*) &HUB->look.state, 2);     /* (Its state, kind: RQH's) */
-    return (!t && w[0] != w[1]) || (r[0] == REQ_POSTED && (unsigned char) (r[1] - LK_WAY) <= LK_NEAR - LK_WAY);
+    return (!t && w[0] != w[1] && !k && !reach) || (r[0] == REQ_POSTED && (unsigned char) (r[1] - LK_WAY) <= (t ? LK_NEAR : LK_REST) - LK_WAY);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -3485,8 +3488,7 @@ int main (int argc, char* argv[])
                                                 **   at the first prompt 823,616 cycles, dq0fightcmd's); and while the senses work a look one way
                                                 **   out, nothing said, four times the nap: their look the CPU (not its
                                                 **   rest's, after the prompt, a line perhaps typed meanwhile),
-                                                **   2026-11-18; at the turns pace a command's whole answer, and its
-                                                **   rest's, lock4's: nap_long's) */
+                                                **   2026-11-18; at the turns pace its rest's too, lock4's: nap_long's) */
     }
     finish ();
     return 0;
