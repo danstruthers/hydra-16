@@ -1103,9 +1103,9 @@ unsigned long heard_at;
 unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
 unsigned char heard_rel = 0xFF;
 char heard_what[20];
-static unsigned heard_sum[3];                   /* (The sounds told as the character's busy, each its words' sum, and */
-static unsigned char heard_rep;                 /*   how far told: two bits a sound, 1 once, 2 again and again; 0 at
-                                                **   its command's end: s_noise_told's, nothing told twice) */
+static unsigned heard_sum[3];                   /* (The sounds told since the last line was typed, each its words' sum, */
+static unsigned char heard_rep;                 /*   and how far told: two bits a sound, 1 once, 2 again and again; 0
+                                                **   as a line's typed: s_noise_told's, nothing told twice) */
 
 
 /* The character senseless still as event m came (the user's, 2026-11-14: a knocked-out character senses nothing): out_told
@@ -1179,7 +1179,7 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_READY:
             if (m.who == 0) {
-                busy = step_k = journeyed = heard_rep = 0;
+                busy = step_k = journeyed = 0;
                 placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
@@ -3215,8 +3215,9 @@ int main (int argc, char* argv[])
             if (!held) {
                 ntold = 0;                      /* (Its answer: no look's sentence said yet, no harm's state; a
                                                 **   line held for the character, taken again, the same answer:
-                                                **   what its task's end told meanwhile not told again) */
-                harm_told = 0;
+                                                **   what its task's end told meanwhile not told again; the
+                                                **   sounds told as it went begun again, s_noise_told's) */
+                harm_told = heard_rep = 0;
             }
             asked = 0;                          /* (Its long task, if it's one: not asked of a sound yet) */
             hub_map (0);
@@ -3449,10 +3450,12 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
         }
     }
     heard_words (d | (E_DEN_BETWEEN (*m) ? 0x80 : 0), rel);
-    if (busy && (p = strrchr (lb, '.')) != 0) { /* (The same sound again as the character's busy at one command: told
-                                                **   once, then "again", then "again and again", then no more till the
-                                                **   command's done; the 240 squeaks of a two hours' sleep three
-                                                **   sentences, nothing told twice: WORLD-MODEL.md's 7) */
+    if ((p = strrchr (lb, '.')) != 0) {         /* (The same sound again between one line typed and the next, busy at
+                                                **   its command or idle after it: told once, then "again", then
+                                                **   "again and again", then no more till a line's typed; the 240
+                                                **   squeaks of a two hours' sleep three sentences, a rat squeaking
+                                                **   as the character stands idle the same, nothing told twice:
+                                                **   WORLD-MODEL.md's 7; as it was busy alone till fix2, 2026-11-24) */
         for (s = 0, q = lb; *q; ++q) {
             s = (s << 1 | s >> 15) ^ (unsigned char) *q;
         }
