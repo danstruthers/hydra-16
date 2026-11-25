@@ -138,11 +138,13 @@ static unsigned char fg;                        /* (In the kernel's foreground n
 /* The requests posted: bit i mreq[i]'s (ASK_*), bit 4 the map's (the hub's header in the window) */
 static unsigned char asked (void)
 {
-    unsigned char i, w = 0;
+    const struct mreq* q = HUB->mreq;
+    unsigned char b, w = 0;
 
-    for (i = 0; i < NASK; ++i) {
-        if (hub_posted (&HUB->mreq[i])) {
-            w |= 1 << i;
+    for (b = 1; b < 1 << NASK; b <<= 1, ++q) {  /* (A pointer walked, a bit shifted: no product an entry, each wake's,
+                                                **   an event's ring's, fix2, 2026-11-24) */
+        if (hub_posted (q)) {
+            w |= b;
         }
     }
     return hub_posted (&HUB->mapq) ? w | 0x10 : w;
