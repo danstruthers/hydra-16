@@ -71,8 +71,8 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   Every test must be fair and independent (section 8). Sources: climb1 10; build2 10; things2 12.
 - **G17.** dq0answer's things lines at 81-87%: a speed branch of their own (ix_pick, o_pacing)? A referee's blow giving
   way to a typed line? Source: speed13 1, 2.
-- **G18.** 4-byte stubs in the UI too (194 bytes, where it's 99 over its floor). dq0Poke re-pokes until its write takes
-  (the dq0fightmid/dq0felled race). Source: room7 1, 3.
+- **G18.** 4-byte stubs in the UI too (194 bytes, where it's 99 over its floor). Source: room7 1. (Its poke race was closed
+  by scene1's scenes, 2026-11-24: dq0scene proves it.)
 - **R7.** Room and time:
   - a spare of its own for the minds' and the UI's banks;
   - the most-read said rows in the first two banks;
@@ -83,8 +83,11 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   Source: room8 1-5.
 - **A1.** Game code in the paged ROM, for good: "tried for one module, measured, then decided" (DECISIONS.md:2274).
   It is bank placement, the engineer's under section 8: run the trial, then report the measure and the choice.
-- **X1.** dq0hold's own poke of burn_due is lost if a minute is under way as it lands. It should poke burn_ask, a
-  sturdier probe. Source: built/2026-11-14-decisions-archive.md:447-448.
+- **S2c. The tests' scenes, what's left** (built/2026-11-24-scene1.md, its open questions 1 and 2):
+  - the senses get a scene part, by the rule that every task owning state a test sets has one (dq0heading pokes the
+    senses' RAM; dq0p is 242 bytes over its floor);
+  - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
+  - dq0saveout's and dq0ahead's raw pokes.
 - **X3.** A test's `cycles` limit still acts as a budget where it sits close to the measure (dq0save: 940M against
   851M). Make each a generous timeout. Source: built/2026-11-17-guards.md, its open question 2.
 - **E1, E2.** HyBASIC's banner (a version, or the free memory?), and docs/01-overview.md's examples (BASIC's shows its
