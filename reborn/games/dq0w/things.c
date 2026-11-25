@@ -6177,13 +6177,17 @@ void __fastcall__ s_make_own (unsigned i)
 unsigned ilim = NITEMS;                         /* (The store's records used, at most: dq0 -C's fewer) */
 unsigned ihigh = NITEMS;                        /* (Every record from here on free: items ()'s end, items.s's, raised
                                                 **   as a record's taken, 2026-10-27) */
+static unsigned pd_from = 1;                    /* (put_down's first record looked at: s_stock_down's run, each thing
+                                                **   after the last put, the records before it taken; else 1.  A chunk's
+                                                **   things looked for from the first each, 545,000 cycles of item_at in
+                                                **   one stocking: lock2's, 2026-11-25) */
 static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, unsigned char sn, unsigned x,
     unsigned y, unsigned char qty)
 {
     struct item* p;
     unsigned i;
 
-    for (i = 1; i < ilim || it_room () && (i = 1); ++i) {   /* (Record 0 is never one: "none") */
+    for (i = pd_from; i < ilim || it_room () && (i = 1); ++i) {   /* (Record 0 is never one: "none") */
         p = item_at (i);
         if (!p->kind) {
             if (i >= ihigh) {
@@ -6231,6 +6235,7 @@ void __fastcall__ s_stock_down (unsigned char k)
             break;                              /* (The store full: no more) */
         }
         prev = i;
+        pd_from = i + 1;
         p = item_at (i);
         if (e.hide < ST_LIT) {
             p->flags = I_HIDDEN;
@@ -6261,6 +6266,7 @@ void __fastcall__ s_stock_down (unsigned char k)
             p->thick = e.kind == KI_PANE ? 2 : e.kind == KI_BARS ? 8 : m == MT_WOOD ? 24 : 12;
         }
     }
+    pd_from = 1;
     hub_map (0);
 }
 
