@@ -3494,8 +3494,9 @@ void __fastcall__ s_start (const char* dir)
     }
     hub_map (0);
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    outfits_in ();                              /* (The outfits' file into its banks, before the start draws an outfit
+                                                **   (its list let go by the opening): part outfit's, fix2, 2026-11-24) */
     s_begin ();
-    outfits_in ();                              /* (The outfits' file into its banks: part outfit's, fix2, 2026-11-24) */
     tr_flush (0);                               /* (The traces' store begun as the game starts, not at its first flush:
                                                 **   its two banks cleared, its kinds read, some 1.2M cycles, a command's
                                                 **   answer kept waiting behind it, 2026-10-27: dq0answer's normal pace,

@@ -1337,13 +1337,14 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         }
-        if (given && (saidc != said0 || m.kind == E_READY)) {
+        if (given && (saidc != said0 || m.kind == E_READY || !took)) {
             hub_map (0);
             HUB->ui_cmd = owed = 0;             /* (Its answer given: as its words are told, not before, the world's
                                                 **   held jobs (the denizens' intents, part den_bodies) not let in beside the
-                                                **   telling, the menacing sit's 2026-11-19; an event of the character's
-                                                **   that tells nothing (a fight-back begun, a beat) not its answer, its
-                                                **   round's blow to come still: dq0fightcmd's wait, fix2, 2026-11-24) */
+                                                **   telling, the menacing sit's 2026-11-19; a line that took a fight's
+                                                **   round over (took), an event of the character's that tells nothing (a
+                                                **   fight-back begun, a beat) not its answer, its round's blow to come
+                                                **   still: dq0fightcmd's wait, fix2, 2026-11-24) */
         }
     }
     return n;

@@ -1045,9 +1045,9 @@ parted:
         k = pc.fl;
         spent (RS_EXERT_TENTHS (*r));
         RS_EXERT_TIRED (*r) = pc.fl > k;
-        if (pc.fl != k || pc.state != HARN_CONSCIOUS) {
+        if (pc.fl != k || pc.state != HARN_CONSCIOUS || conditions () != HUB->pcsum.cond) {
             status_now ();                      /* (Its steps in the reply, the rest after it; its fatigue as it was,
-                                                **   awake, its summary as it was: none worked out again, a fight's
+                                                **   awake, its conditions too (tiring), its summary as it was: none worked out again, a fight's
                                                 **   round's some 40,000 cycles, fix2, 2026-11-24) */
             rf_later = 1;
         }
