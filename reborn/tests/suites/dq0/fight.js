@@ -2174,8 +2174,11 @@ module.exports = {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
         dq0Scene(m, [...[1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true })),   // (A rat put before the character, hostile and fighting it)
-          { g: 2, line: 'inventory', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [99] }] }]);   // (The menacing game's blows rigged, dice2: each a marginal failure,
-                                                //   no wound, the rat fighting on through the lines: its first felled it, a gash)
+          ...[1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, rig: [{ kind: 'ATTACK', actor: -1, faces: [99] }] }))]);   // (Each game's blows rigged,
+                                                //   dice2: each a marginal failure, no wound, the rat fighting on through the
+                                                //   lines.  The menacing game's first felled it, a gash; the normal game's too as
+                                                //   built (lock2's, 2026-11-25): a real pace's blow falls at the tasks' timing,
+                                                //   its dice keyed by its moment, so the layout chose whether a round was met)
         // (Each line marked MID_MARK typed only as the world's referee slot holds the character's own blow: posted, not yet
         // answered; or, none come in NO_ROUND_MID cycles, typed anyway and said so)
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
