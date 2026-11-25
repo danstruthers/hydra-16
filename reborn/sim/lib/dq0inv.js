@@ -13,6 +13,8 @@
 //              most if it has two hands, a beast's mouth one; no thing a denizen's that's no actor's (did 0: the code
 //              review's finding 1, a beast's own things every beast's)
 //   hoard      a faction's hoard holds no more weight than it bears (T2: a thing is put only where it can rest)
+//   loose      a denizen's own thing (IW_DEN) is worn or held, else it's in nothing (T1: every thing is somewhere;
+//              dq0kit's lair keys till fix3)
 //   handed     nobody hands a thing to itself (E_BEAT WB_HANDS_TO: whose, the receiver)
 //   posts      a senseless actor posts no intent (B3: the senseless do nothing), its intent's moment's state (on
 //              the known list: the minds a step behind the world, which makes it a wait)
@@ -21,11 +23,13 @@
 //   acts       a senseless body does nothing (B3): no blow struck, no step, no door worked, as it lies
 // The words' (each reply: the story between one prompt and the next, the game's "> " alone):
 //   repeat     no sentence more than three times in one reply but those told as they go by the user's decisions (a
-//              fight's blows, a fire-maker's tries, a dig's or a climb's spells: GOES below)
+//              fight's blows, a fire-maker's tries, a dig's or a climb's spells: goes below, tests/lib/dq0.js's list)
 //   feet       no "1 feet" (a foot)
 //   twin       no "a X and a X" (two of them)
 //   stop       no sentence run into the next with no space after its full stop
 //   unseen     no denizen named the senses' record doesn't show seen, in that reply (S1, section 7: only seen names)
+//   numb       no stop of its long task told after the character's black-out in a reply (B3: the senseless sense nothing)
+//   heard      no sound told whole twice in a reply (main.c's: once, "again", "again and again"; section 7)
 // And "nothing told twice in one answer" (section 7) is tests/lib/dq0.js's dq0Check's, as before.
 'use strict';
 const fs = require('fs');
@@ -69,29 +73,11 @@ function replies(out) {
 }
 const sentences = t => t.split(/(?<=[.!?])\s+/).filter(x => x.length > 8 && /[a-z]{2}/i.test(x));
 
-// Told as it goes, each time (the user's decisions): such a sentence may come more than three times in one reply
-const GOES = [
-  // (A fight's rounds, each blow told as it falls (the user's, 2026-10-20: fighting on), its falls, risings, turns and tries
-  // to rise; a grapple's rounds, HOUSE.md's grappling, 2026-11-09; its fumbles; commands typed ahead taking it over)
-  /^(?:(?:The|A) .* |Something |[A-Z][a-z]+ )(?:bites|claws|strikes|swings|lunges|thrusts|shoots|throws|stings|gores|kicks|butts)\b.*\bat you\b/,
-  /^You (?:strike|swing|thrust|punch|kick|lunge|shoot|throw|grapple)\b/,
-  /^(?:Your|Its|Their) [a-z]+ strikes .* instead\b/,
-  /^(?:You get to your feet|You fall|You struggle, but can't get up|You stop fighting|You turn to .+|You fight back against .+|The .+ (?:falls|gets to (?:its|their) feet|closes with you|takes aim at you|goes down|rises again)|Something (?:gets to its feet|falls|coils itself up again))\.$/,
-  /^(?:You (?:fumble for|reach for) the .+|You drop your .+|The .+ drops (?:its|their) .+)\.$/,
-  /^(?:You choke .+|(?:The [a-z ]+|Something) (?:struggles in your grip|resists your hold))\.$/,
-  /^(?:The [a-z ]+|Something) (?:struggles|scrabbles|writhes|flails its legs|flaps|wavers), but can't (?:get up|right itself|rise)\.$/,
-  // (A fire-maker's tries: the user's, 2026-11-02, "continue until successful, reporting as it goes along")
-  /^(?:You strike a spark|It doesn't catch)\.$/,
-  // (A dig's spells, a climb's rounds, a battering's beats: each told as it ends, the user's, 2026-10-22)
-  /^(?:\(\d+ feet to go\.\) |\(A foot to go\.\) )?(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work)\.(?: \(.*\))?$/,
-  /^\((?:\d+ feet|A foot) to go\.\)/,
-  /^You (?:climb on|slip back a little|find no hold yet) \((?:\d+ feet|a foot) to go\)\.$/,
-  /^You keep at it\.$/,
-  // (A walk's beats as it goes, slice 4.0's and 4.10's: an incline told four feet of rise at a time, dq0incline's two or more)
-  /^The way (?:rises|falls away)\.$/,
-  // (Each stir its own telling, what it sees of the denizens changed: tests/lib/dq0.js's dq0Repeats tells each apart)
-  /^Something stirs\.$/,
-];
+// Told as it goes, each time (the user's decisions): such a sentence may come more than three times in one reply.  The
+// entries of tests/lib/dq0.js's DQ0_REPEATS marked goes (one list with the told-twice check's, fix3, 2026-11-25: this
+// one's own had none of the fight's words, "It falls senseless.", that one allows), each in the tests it names
+let GOES_ = null;
+const goes = () => GOES_ || (GOES_ = require('../../tests/lib/dq0.js').DQ0_REPEATS.filter(r => r.goes));
 
 function words(name, out) {
   const f = [];
@@ -100,7 +86,7 @@ function words(name, out) {
     const at = ' (> ' + a.cmd + ')';
     const n = new Map();
     for (const t of sentences(a.text)) n.set(t, (n.get(t) || 0) + 1);
-    for (const [t, c] of n) if (c > 3 && !GOES.some(r => r.test(t))) f.push(['repeat', 'told ' + c + ' times in one reply' + at + ': ' + JSON.stringify(t)]);
+    for (const [t, c] of n) if (c > 3 && !goes().some(r => r.what.test(t) && (!r.tests || r.tests.test(name.replace(/@\d+$/, ''))))) f.push(['repeat', 'told ' + c + ' times in one reply' + at + ': ' + JSON.stringify(t)]);
     let m;
     const feet = /\b1 feet\b/g;
     while ((m = feet.exec(a.text))) f.push(['feet', '"1 feet"' + at + ': ' + JSON.stringify(a.text.slice(Math.max(0, m.index - 40), m.index + 20))]);
@@ -108,6 +94,18 @@ function words(name, out) {
     while ((m = twin.exec(a.text))) f.push(['twin', '"' + m[0] + '"' + at]);
     const stop = /[a-z][.!?][A-Z]/g;
     while ((m = stop.exec(a.text))) f.push(['stop', 'no space after a full stop' + at + ': ' + JSON.stringify(a.text.slice(Math.max(0, m.index - 30), m.index + 30))]);
+    // (Senseless, its long task's stop untold: B3, dq0hoard's "You stop waiting." three times after the black-out, fix3)
+    let out = false;
+    for (const t of sentences(a.text)) {
+      if (/[Ee]verything goes black/.test(t)) out = true;
+      else if (/^You come round\b|\bcome to\b/.test(t)) out = false;
+      else if (out && /(?:^You|: you) stop [a-z]+ing\.$/.test(t)) f.push(['numb', 'a stop told as it lies senseless' + at + ': ' + JSON.stringify(t)]);
+    }
+    // (A sound told whole twice in one reply: once, then "again", "again and again", then no more till a line's typed,
+    // main.c's; four sounds kept in mind, dq0time's fourth put a squeak out of it till fix3)
+    const heard = new Map();
+    for (const t of sentences(a.text)) if (/^You hear (?!nothing)/.test(t) && !/, again(?: and again)?\.$/.test(t)) heard.set(t, (heard.get(t) || 0) + 1);
+    for (const [t, c] of heard) if (c > 1) f.push(['heard', 'a sound told whole ' + c + ' times in one reply' + at + ': ' + JSON.stringify(t)]);
   }
   return f;
 }
@@ -172,6 +170,7 @@ function things(s, L, kit = new Set()) {
   }
   // (The character on rock: the square the recorder read under it; a denizen's, as it steps there, acts' below: a
   // test's scene puts them where it will, out of the way, its pokes no step of the world's)
+  for (const i of s.items) if (i.where === IW.DEN && !(i.flags & (I_HELD | I_WORN))) f.push(['loose', what(i) + ' on denizen ' + i.did + ', neither worn nor held: in nothing' + (i.flags & 0x10 ? ' (its takings, I_LOOT)' : '')]);
   if (s.pc.tile === 0 || s.pc.tile === 2) f.push(['rock', 'the character stands in ' + (s.pc.tile ? 'a wall' : 'the rock') + ' at ' + s.pc.x + ',' + s.pc.y]);
   return f;
 }
@@ -258,4 +257,4 @@ function check(name, m) {
   return { failures, notes };
 }
 
-module.exports = { check, replies, words, things, acts, GOES };
+module.exports = { check, replies, words, things, acts, goes };

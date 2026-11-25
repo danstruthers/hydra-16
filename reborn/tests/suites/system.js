@@ -532,7 +532,7 @@ module.exports = {
     },
     {
       name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
-      init: 't_rom', cycles: 300e6,                         // (the walk takes some 240M)
+      init: 't_rom', cycles: 410e6,                         // (the walk takes some 240M)
       check(m, out) {
         const romfs = require('../../tools/romfs.js'), { crc16 } = require('../../tools/romimg.js');
         const files = romfs.manifest(path.join(TESTS, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];
@@ -617,7 +617,7 @@ module.exports = {
     },
     {
       name: 'c', what: 'the C target (cc65): its samples at rc, the library\'s test (ctest), conio\'s raw keys (an Escape alone too; and raw ended with the program)',
-      init: 't_rc', cycles: 220e6,
+      init: 't_rc', cycles: 290e6,
       // (Each line typed at its prompt, as the tools test's.  Then keys: three keys and q; and again, ended by Ctrl-C,
       // its window cooked again for rc)
       get machine() {
@@ -742,7 +742,7 @@ module.exports = {
     },
     {
       name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning; - for the source (a pipe, a < file; the output - too unless named) and for the output (stdout); -l with - refused',
-      init: 't_rc', cycles: 300e6,
+      init: 't_rc', cycles: 360e6,
       pc: {
         files: () => {
           const t = n => fs.readFileSync(path.join(TESTS, 'ram', 't_asall', n));

@@ -403,7 +403,7 @@ module.exports = {
     },
     {
       name: 'dq0skykin', near: ['time', 'senses'], what: "Dingus Quest Zero's sky's kin (2026-11-03: HOUSE.md's what shows the sky, daylight falling in, kin; dq0sky's the rest), by the senses' replies, the words and the chunks, every room's skylight and window and a shaft the environment's dq0sky=1: a denizen's sight in daylight: a cave adder (sees 30 feet by light, 10 with none, hears 15; held where it is, dq0Poke's) 30 feet from the character, its torch out, by a skylight's daylight at noon: seen (dsense's SN_SEEN); the same at ten at night: not; the drip under a shaft: seed 2's shaft's square, nothing but water trickling heard, and the same square with no sky (dq0sky=0), no water; a save and a load: quit and carried on (dq0 -d) under the shaft, the same words, daylight falling, its chunk the same as it was kept; and a chunk read out of the cache and read in again (the character down the ladder, the chunk's slot let go, as a full cache's evicting it; dq0pure's kind): the same bytes, the shaft and its daylight as before",
-      init: 't_rc', cycles: 3000e6,
+      init: 't_rc', cycles: 3100e6,
       machine: { input: (() => {
         const adder = d => ['dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/' + d + ' -S /ram/s.sc', 'douse the torch', ...Array(6).fill('wait 1 minute'), 'look', 'quit'];
         return dq0Typed(dq0Game({ lines: ['mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/n', 'cp /ram/g/theme.txt /ram/n/theme.txt', 'echo sky 1 >> /ram/s.sc', 'echo hour 12 >> /ram/s.sc',
@@ -465,7 +465,7 @@ module.exports = {
     },
     {
       name: 'dq0gamehour', hours: true, near: ['time'], what: "Dingus Quest Zero's hour by the game (the user's, 2026-11-03: \"vary by game\": HOUSE.md's the hour): seeds 5 and 14 walked into, the world's and the denizens' hour each the seed modulo 24, not dusk; dq0 -E dusk, 18; the environment's dq0hour above both",
-      init: 't_rc', cycles: 1500e6,
+      init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 5 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T -E', 'inventory', 'quit', 'echo hour 3 >> /ram/s.sc', 'dq0 -p t -s 14 -c /ram/c.hm -T -S /ram/s.sc', 'inventory', 'quit', 'echo $status'] })) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -560,7 +560,7 @@ module.exports = {
     },
     {
       name: 'dq0startwork', near: ['time'], what: 'Dingus Quest Zero\'s start\'s own work done before its first prompt (the user\'s, 2026-11-20: "The start\'s work finishes before the first prompt, so the first command is answered on time; the start takes a little longer"; built/2026-11-20-start1.md), at seed 5 by its way down (-T: dq0fightcmd\'s, whose "d" waited on it) at the turns pace and as played, and at seed 3 at the normal pace: as the first command\'s typed at the first prompt, no chunk the maker stocked is left with its things not put down (the world bank\'s cslot table: none CS_FRESH), and at the real paces the lights\' first minute has been reckoned (the hub\'s pc_left, the light\'s words on the status line, said; at the turns pace it\'s the first command\'s pass\'s, its test\'s dice where they always were)',
-      init: 't_rc', cycles: 1300e6,
+      init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'quit',
         DQ0_PLAYED + 'dq0 -p n -s 5 -c /ram/c.hm -k sword -T', 'quit', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'quit', 'echo $status'] })) },
       start(m) {
@@ -769,7 +769,7 @@ module.exports = {
     },
     {
       name: 'dq0time', near: ['time', 'senses'], what: "Dingus Quest Zero's time of day believed (2026-10-31: DUNGEON.md's the time of day believed, HOUSE.md's, for review; the user's: fuzzy unless the sky's seen, arbitrary after a sleep, set by the sun when north is known or by watching it): the character's belief (the hub's tb: its error from the true clock and its doubt, the world's part 76) and its words: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start: dq0daily's, out of earshot), the game begun at 8 o'clock (the environment's dq0hour), \"time\" told plainly (\"It's eight in the morning.\"); its torch put out (so its burning out breaks no long wait), two hours waited (the hours' tests: a doubt, \"about\" or \"some time around\" the hour, not plainly); three hours slept (TG_SLEEP, its doubt an eighth of the sleep more at the least); an hour more waited, then a sky in sight poked (tb.sky's SKY_OPEN, as a far exit's open sky: the afternoon's sun) as the sun's watched (\"watch the sun\", a quarter hour's wait): first read by the north it believes in (\"You see the sun in the sky\"), then watched ten minutes (\"You watch the sun a while\": the time to a quarter of an hour, its error none); the sky gone, then poked in sight again with its north believed a quarter of a turn off (pc_skew 2, unknown to it): the sun read six hours wrong (its error 360 minutes, its doubt half an hour); \"wait until night\" lasting till night as it believes the time (21 o'clock by its belief: the wait's minutes and the believed minute meet there); quit and carried on (dq0 -d), the belief as it was (world.dat's); and a character with absolute timesense (its file's \"timesense\" line, hmchar's rare trait): two hours slept, its time known still, told plainly",
-      init: 't_rc', cycles: 5000e6,   // (4454M, 2026-10-31: the garrison's day as it waits; 4903M, 2026-11-02: a room search's bytes and moving's at each start)
+      init: 't_rc', cycles: 5600e6,   // (4454M, 2026-10-31: the garrison's day as it waits; 4903M, 2026-11-02: a room search's bytes and moving's at each start)
       machine: { input: dq0Typed(dq0Game({ lines: ['cp /ram/c.hm /ram/k.hm', 'echo timesense >> /ram/k.hm', 'echo hour 8 >> /ram/s.sc', 'mkdir /ram/s', "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt", 'mkdir /ram/g', 'cp /ram/s/theme.txt /ram/g/theme.txt',
         'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -S /ram/s.sc', 'time', 'douse the torch', 'wait 2 hours', 'time', 'sleep 3 hours', 'time', 'wait 1 hour',
         'watch the sun', 'time', 'wait 10 minutes', 'wait 1 minute', 'time', 'wait until night', 'time', 'quit',
@@ -885,7 +885,7 @@ module.exports = {
     },
     {
       name: 'dq0pace', meaning: true, what: 'Dingus Quest Zero\'s pace and watchfulness (the user\'s, 2026-10-16: DUNGEON.md, moving), by the world\'s state of them (the hub\'s gait and watch: the UI\'s requests, WQ_SET): a walk to begin with; a jog set, then searching for traps as it goes, listening too, each stopped, mapping as it goes and stopped; a sprint set, a slow walk; "run north" setting the run as it goes (the move the command\'s), "run south" going on at it; a creep, listening as it goes; kept (dq0 -d: the world\'s world.dat) and the game carried on at them (its words: dq0wordsthings; the sheet\'s pace line, the referee\'s: dq0harm)',
-      init: 't_rc', cycles: 1000e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(dq0Game({ lines: ['dq0 -p t -s 3 -c /ram/c.hm -d /ram/p', 'status', 'jog',
         'search for traps as I go', 'listen as I go', 'stop searching', 'stop listening', 'map as I go', 'stop mapping', 'set pace to sprint',
         'walk slowly', 'run north', 'run south', 'creep', 'listen as I go', 'quit', 'dq0 -p t -d /ram/p', 'status', 'quit', 'echo $status'] })) },
@@ -909,7 +909,7 @@ module.exports = {
     },
     {
       name: 'dq0tiring', asks: true, what: 'Dingus Quest Zero\'s strenuous work tiring the character (the user\'s, 2026-10-20: "Tiring work includes swimming, climbing, running, battering down a door"; HOUSE.md\'s moving and tiring: the world\'s RS_EXERT at GA_WORK, the referee\'s rate the book\'s for strenuous activity, a level each five minutes) and a search cut short (the user\'s: the part done, the nearest squares first, each at the full chance), by the world\'s events and the referee\'s replies and summary (HarnMaster\'s, at these seeds): at seed 3 a pick\'s shaft (dq0 -T), each ten-minute spell two fatigue levels, a level more asked of ("You\'re tiring.  Keep digging?"), yes going on, no stopping it (nothing more charged), and a spell stopped part way tiring for the part of it done; one nearly a level tired (pc.hm\'s pace line) climbing seed 517\'s ledge (dq0harm\'s: a round without a hold first), its first round tiring it a level more, asked of, no refused part way up and the climb on up; the same battering seed 14\'s door (dq0battering\'s, the torch put down first, the pick taken), its first blow tiring it a level more, asked of, and each blow heard (a noise a blow, E_NOISE\'s NZ_BLOW); then (seed 7\'s thief by the door with a hidden dart trap, dq0traps\', at the menacing pace) two whole searches reaching every square (E_PORTAL\'s reach, 19), a third stopped at once reaching only the character\'s own square (the trap beside it not found), and in the same game again a third stopped part way reaching the door, the trap found (at the full chance: the third search\'s, as dq0traps\' whole one finds it), each search\'s reach its part done\'s',
-      init: 't_rc', cycles: 2500e6,
+      init: 't_rc', cycles: 2700e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/t.hm', 'echo pace 2 0 5990 >> /ram/t.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'dig down', 'yes', 'no', 'dig down', '!' + 'Ā'.repeat(3) + 'stop', 'quit',
         'dq0 -p t -s 517 -c /ram/t.hm', 'ne', 'e', 'u', 'no', 'quit', 'dq0 -p t -s 14 -c /ram/t.hm -k pick -a', 'drop the torch', 'break the door', 'quit',

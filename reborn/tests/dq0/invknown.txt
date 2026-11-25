@@ -7,3 +7,4 @@
 posts      .*  /senseless, posts/  the minds post a step behind the world, which makes a senseless body's intent a wait (dq0w/wbody.c)
 hands      .*  /held all the same/  the tests' kit (dq0 -k, things.c's s_kit) holds what has no room all the same, past the hands (B5)
 unseen     dq0par.*  /named, not seen \(> ask the/  an order's answer names the one ordered, seen or not (the sway's words, not the senses': interface-minds.md's 4.3)
+loose      .*  /^(?:game [0-9]+: )?(?!iron key ).* on denizen [0-9]+, neither worn nor held/  a thing a denizen took or was given with no room in its purse, its pack or its hands, "hung at its belt" as its own thing in nothing (den_hold's flags 0: a robber's takings, wfight.c's s_den_rob; a thing bought, given or fetched, wthings.c's, wtake.c's), not in the belt as a hung thing is (T1; fix3's loose invariant found it, 2026-11-25; a key loose on one, the lair's doors', fails)
