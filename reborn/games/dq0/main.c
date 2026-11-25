@@ -1280,9 +1280,10 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   it comes round, numb's) */
                 out_told |= k != V_STIR ? 2 : 0;
             } else if (k == V_STIR) {
-                if (HUB->tpr ? t_next () || inn || HUB->ui_cmd : !busy) {   /* (At the turns pace held as the character's
-                                                **   free, told at its E_READY or a line's own answer's end; told as it
-                                                **   comes as it's busy, the world waiting on the UI's seeing it (ui_eq):
+                if (HUB->tpr ? t_next () || inn || HUB->ui_cmd : !busy || asking) {   /* (At the turns pace held as the
+                                                **   character's free, told at its E_READY or a line's own answer's end;
+                                                **   or asking, told as its answer's taken, main's; told as it comes as
+                                                **   it's busy, the world waiting on the UI's seeing it (ui_eq):
                                                 **   whatever the keys' timing, lock2's) */
                     stir_held = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
@@ -3287,6 +3288,13 @@ int main (int argc, char* argv[])
                     l = 0;
                 }
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
+                if (stir_held && pace == PACE_TURNS) {
+                    stir_held = 0;              /* (A stir held as it asked: told as the answer's taken, its own, so a
+                                                **   look typed as the answer doesn't tell it again; the stir came after
+                                                **   the question, before the world's quiet, and the keys anywhere
+                                                **   about it: dq0tasks' rat told twice in one answer, lock2's) */
+                    stir ();
+                }
             }
             if (l && !held) {
                 heard_rep = 0;                  /* (A command typed, not held for the character before: the sounds
