@@ -15,6 +15,7 @@ const MID_MARK = '\u0104', NO_ROUND = 60e6, MID_GAP = 3e6;   // (dq0fightmid's: 
 const NO_ROUND_MID = 400e6;   // (dq0fightmid's own wait for a round, 2026-11-21, the coordinator's: its rat fights on, so a round comes; 60M let a line go with none met as the tasks' timing moved)
 const FIGHTMID = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'inventory', MID_MARK + 'go left'];   // (dq0fightmid's lines: dq0fightcmd's way to the rats, a rat engaged as inventory's typed, then lines typed mid-round: a look and what's carried told at once, the fight going on; a wait and a step held till its round's out, the fight stopped for them, and taken up again as the rat bites)
 const FELLED = ['d', 'wait', 'go right', 'inventory', MID_MARK + 'look', MID_MARK + 'look', MID_MARK + 'look', MID_MARK + 'wait', MID_MARK + 'go left'];   // (dq0felled's: dq0fightmid's way to the rats, a rat engaged and hurt as inventory's typed, then lines typed mid-round, a blow felling it as one waits)
+const PCFELLED = ['d', 'wait', 'go right', 'inventory', 'wait'];   // (dq0pcfelled's: dq0fightcmd's way to the rats, a rat engaged as inventory's typed, then a line typed at the prompt as it fights on, meeting the bite that fells the character; the game quit as that's told)
 const FIGHTCMD = ['d', 'wait', 'go right', 'attack the rat', 'inventory', 'wait', 'look', 'wait', 'inventory', 'wait', 'look'];   // (dq0fightcmd's lines: dq0fight's way to the rats, the fight begun, a rat engaged as the first command after's typed, then commands typed as it fights, waits between for its blows: every one timed, gw3's)
 
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the scene set then
@@ -2249,6 +2250,35 @@ module.exports = {
         notes.push('felled as a line waited, by game: ' + (felled.join(', ') || 'none'));
         if (games.length !== 3) f.push(games.length + ' games, not 3');
         dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], lines.map(l => ({ line: l, want: '*' })));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0pcfelled', near: ['fight', 'denizens'], what: "Dingus Quest Zero's character felled while a line waits (dice2's find, 2026-11-25: dq0fightcmd's \"wait\" typed as a run of keyed bites felled the character, 824,650-915,210 cycles to its first letter; the mirror of dq0felled's foe felled, P2): dq0fightcmd's way to the rats at seed 5, the character frail (STR, STA, WIL and END 1: any wound's shock roll fails), one rat put before it hostile and fighting it as inventory's typed, its bites rigged to land and the character's to miss; then lines typed at the prompt as it fights on (a player's pause before each), one of them meeting the bite that fells it (\"Everything goes black.\"): every first letter held to D17, at the turns pace, the menacing and as played (fix2's: a line held behind the round a command in hand, the news told before the next intent)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo att str 1 >> /ram/c.hm', 'echo att sta 1 >> /ram/c.hm', 'echo att wil 1 >> /ram/c.hm', 'echo att end 1 >> /ram/c.hm', 'echo b115200 >/dev/serctl',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', ...PCFELLED, 'wait', 'wait', ...dq0Paces('dq0 -p t -s 5 -c /ram/c.hm -k sword -T', [...PCFELLED, 'wait', 'wait']).filter(l => l !== 'quit'), 'echo $status'] })) },   // (Two waits more each: the bite to come as they're typed, if not before; after the quit, the shell's)
+      start(m) {
+        this.timer = dq0Timer(m);
+        dq0Asks(m, [3]);
+        dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true,   // (A rat before it, fighting it)
+          rig: [{ kind: 'ATTACK', actor: -1, faces: [99, 1] }, { kind: 'ATTACK', faces: [1, 99] }] })));   // (The character's blows miss, the
+        dq0FightPause(m);                       //   rat's land: a wound, its shock roll failed, the character felled as it fights on)
+        dq0OnWords(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, words: 'Everything goes black.', text: 'quit\r' })));   // (Quit as it's
+        //   told: senseless, the quit taken whatever (the user's, 2026-11-13); at the real paces no prompt comes till it comes round)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], notes = this.notes = [], o = dq0Prose(out), games = o.split(/% dq0 -p [tmn] -s 5/).slice(1), at = [];
+        games.forEach((g, i) => {
+          const segs = g.split(/> (?=wait|inventory)/), s = segs.findIndex(x => /Everything goes black\./.test(x));
+          if (s < 0) f.push('game ' + (i + 1) + ': the character not felled as a line waited');
+          else at.push((i + 1) + ': ' + segs[s].split(' ')[0]);
+        });
+        notes.push('felled in the answer of, by game: ' + (at.join(', ') || 'none'));
+        if (games.length !== 3) f.push(games.length + ' games, not 3');
+        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], PCFELLED.map(l => ({ line: l, want: '*' })));
         return f;
       },
       sdcard: true
