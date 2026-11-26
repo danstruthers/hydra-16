@@ -6843,7 +6843,10 @@ static void __fastcall__ task_for (unsigned char kind, unsigned long t)
 
 /* Stood still since it was last free (free_at: an intent's, and as the time it believes is seen to, part time_believed's): rest, or a
 ** load's tiring on its feet, the referee's (HOUSE.md's a load borne: standing or crouched, GA_STOOD; lying, sitting,
-** kneeling, asleep or senseless, GA_REST) */
+** kneeling, asleep or senseless, GA_REST).  Part rest_go's, small, its own (even2's, 2026-11-25: part intent_few's, 3,000 bytes
+** copied in before a climb or any intent not its, 17,000 cycles of dq0pcfelled's "d"'s first letter, F1) */
+#pragma code-name (push, "SW_rest_go_CODE")
+#pragma rodata-name (push, "SW_rest_go_RODATA")
 void s_rest_go (void)
 {
     if (HUB->pc_task.kind == LT_SLEEP && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
@@ -6861,6 +6864,8 @@ void s_rest_go (void)
         free_at = HUB->now;
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 void __fastcall__ swim_still (unsigned char dive);   /* (Part water's) */
 
@@ -7323,6 +7328,7 @@ void __fastcall__ s_intent_more (struct msg* m)
 
 
 #define BEHIND          (den_done != HUB->den_go)
+static void den_run (void);                     /* (The denizens' intents carried out: below) */
 
 static void turn (void)
 {
@@ -7341,7 +7347,7 @@ static void turn (void)
                                                 **   fix2, 2026-11-24: dq0sleepsenses's bandit come too late to ask) */
         }
         if (DEN_INTENTS ()) {
-            den_intents ();                     /* (Their intents carried out as they come: on its way, the wait
+            den_run ();                         /* (Their intents carried out as they come: on its way, the wait
                                                 **   begun again, so a long turn that's going isn't left late, only a
                                                 **   stuck one, thirty seconds with none) */
             t0 = hy_ticks ();
@@ -7903,6 +7909,51 @@ void s_burn_job (void)
 #pragma rodata-name (pop)
 void burn_job (void);                           /* (Its stub, bank.s's) */
 
+/* The denizens' intents carried out (part den_bodies's den_intents); but a denizen's things to make (I_KIT) at the
+** ring's tail made by part kit_run, part den_bodies not copied in for it, nor back after it as it gives way to a
+** command come (its intent left in the ring, kit_off's): a small part's copy instead, 3,000 cycles.  Part den_bodies's
+** 40,000 copied back to return through it were in a climb's first letter's window (dq0pcfelled's "d", played, F1:
+** even2's, 2026-11-25) */
+unsigned char kit_run (void);                   /* (Part kit_run's: 1, other intents to carry out after the kits) */
+static void den_run (void)
+{
+    hub_map (0);
+    if (HUB->di[HUB->di_tail].kind != I_KIT || kit_run ()) {
+        den_intents ();
+    }
+}
+
+/* (Part kit_run: the kits at the ring's tail, as den_intents does them, the bleeding seen to first, the minds rung
+** after; 1, an intent of another kind next) */
+#pragma code-name (push, "SW_kit_run_CODE")
+#pragma rodata-name (push, "SW_kit_run_RODATA")
+unsigned char s_kit_run (void)
+{
+    static struct msg km;
+    unsigned char t;
+
+    while (hub_map (0), (t = HUB->di_tail) != HUB->di_head && HUB->di[t].kind == I_KIT) {
+        if (den_held ()) {
+            return 0;
+        }
+        memcpy (&km, &HUB->di[t], sizeof km);
+        if (bleeds && (unsigned) HUB->now - bled_at >= 600) {
+            bled ();
+        }
+        den_other (&km);
+        hub_ring (T_DENIZENS);
+        if (kit_off & 2) {
+            kit_off &= 1;
+            return 0;                           /* (The rest after the UI's command's answer, this one again) */
+        }
+        hub_map (0);
+        HUB->di_tail = (t + 1) % DI_SIZE;
+    }
+    return t != HUB->di_head;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* The table, a row a job, in the order they're walked (row r: each column's [r]) */
 unsigned char (* const jobs_due[]) (void) = {
     /* Early: before the intents are taken */
@@ -7928,7 +7979,7 @@ unsigned char (* const jobs_held[]) (void) = {
 void (* const jobs_run[]) (void) = {
     stocks,                                     /* (Their things put down, marked so) */
     chart_job, trace_job,
-    den_intents,                                /* (The denizens' intents carried out) */
+    den_run,                                    /* (The denizens' intents carried out) */
     look_job, dseq_job, burn_job
 };
 #define JOBS_EARLY      (0 | 8 << 8)            /* (jobs' rows: the first's offset, the end's times 256, 2 a row) */

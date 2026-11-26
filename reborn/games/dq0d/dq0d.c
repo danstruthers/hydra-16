@@ -121,7 +121,7 @@ void rfound (void);                             /* Part body_found: a record's r
 void __fastcall__ told (unsigned char j);      /* Part morale's hook: a loss told (a body found, the day's) */
 unsigned char __fastcall__ found (unsigned char k);
 void hour (void);
-void enlist_near (void);                        /* Part enlist_near (the main RAM's room, 2026-10-31) */
+unsigned char enlist_near (void);               /* Part enlist_near (the main RAM's room, 2026-10-31): 1, broken off */
 unsigned char __fastcall__ plan (unsigned char k);   /* Part day's: an actor's day and its place (leisure's, 2026-10-31) */
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part day_kept's: a pastime let go */
 unsigned char __fastcall__ hid_mind (unsigned char k);   /* Part hiding: hiding oneself (HM_*: HOUSE.md's) */
@@ -1267,9 +1267,14 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 #pragma rodata-name (pop)
 
 /* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
+static unsigned char held (void);
+
 #pragma code-name (push, "SW_enlist_near_CODE") /* (2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW_enlist_near_RODATA")
-void s_enlist_near (void)
+/* (1: broken off, a command come in hand at the real paces as it went (held's): asked again from the start, those
+** enlisted already actors now; part day's 3,500 bytes copied in for the next one's day, and the part back after it,
+** were 53,000 cycles of the command's first letter's window, dq0pcfelled's "d", F1: even2's, 2026-11-25) */
+unsigned char s_enlist_near (void)
 {
     struct den* q = POP->den;
     unsigned char i, k = 0;
@@ -1287,6 +1292,10 @@ void s_enlist_near (void)
         den_get (i);
         if (k < NACTORS && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
             kind_get (D.kind);
+            if (held () && HUB->tpr) {
+                return 1;                       /* (Its day not asked, part day's not copied in: the rest after
+                                                **   the answer) */
+            }
             esl = sched (D.kind, D.id) == SC_SLEEP;
             enlist (i, k);                      /* (Its mind made fresh whole as it begins: then, as it's come near) */
             md.aday[k] = md.upto[k] = (unsigned) (now >> 8);   /* (Its day asked as it first decides: part day's; asleep by
@@ -1299,6 +1308,7 @@ void s_enlist_near (void)
         }
     }
     hub_map (0);
+    return 0;
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -3523,7 +3533,7 @@ static void tend (void)
     if (owe && !held ()) {
         owe = 0;                                /* (The denizens near made actors: not while the UI's command is in hand
                                                 **   at the real paces, part enlist_near's swap off its answer's path) */
-        enlist_near ();
+        owe = enlist_near ();                   /* (Broken off by a command come in hand: owed still) */
     }
 }
 

@@ -137,4 +137,6 @@ stub begin dungeon_begin
 scene          -      A test's scene, the world's part (wscene.c: the tests' harness's, scene1, 2026-11-24)
 wdice          -      The world's keyed dice: a thing let fall, a missile's stray and flight (wdice.c: dice2, 2026-11-24)
 lockstep       -      The lockstep turns pace's quiet (jobs.s's lockstep: lock1's, its part lock2's, 2026-11-25)
+rest_go        -      Stood still since it was last free: rest, or a load's tiring (intent's; part intent_few's copy, 17,000 cycles, spared every other intent: even2's F1, 2026-11-25)
+kit_run        -      A denizen's things made from the intents' ring's tail, part den_bodies not copied in for it (dq0w.c's den_run: even2's F1, 2026-11-25)
 stub lockstep lockstep
