@@ -2817,12 +2817,11 @@ unsigned char s_serve (void)
         }
         break;
     }
-    if (iq.result != IR_NOT_HERE && iq.result != IR_WHICH && !(iq.result == IR_NONE && (iq.kind == IO_GET || iq.kind == IO_DROP)) &&
+    if (iq.result != IR_NOT_HERE && iq.result != IR_WHICH &&
         (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
         iq.kind == IO_THROW || iq.kind == IO_PLACE || iq.kind == IO_EMPTY || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet; asked
                                                 **   which, nothing moved either: no light_now, nor its letters made again
-                                                **   and part tell_apart copied in, 260,000 cycles, even3's; none taken up
-                                                **   or put down, none there, nor moved: even4's) */
+                                                **   and part tell_apart copied in, 260,000 cycles, even3's) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     } else if (iq.result == IR_OK && (iq.kind == IO_FILL || iq.kind == IO_SHUT || iq.kind == IO_USE)) {
