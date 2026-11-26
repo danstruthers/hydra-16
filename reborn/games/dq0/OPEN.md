@@ -78,13 +78,18 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
   - dq0ahead's raw pokes (dq0saveout's gone: lock2's).
 - **F1. A "d" line's first letter as a denizen's kit is drawn** (fix2's open item 1; the fight-back round's part done
-  by lock2, built/2026-11-25-lock2.md). The world draws a denizen's kit (part outfit, den_limbs, den_bodies: 170K of
-  part copies) as the game's first "d" comes: 600-680K over the lag sweeps (dq0pcfelled's 657,158 in the last full
-  run, 91%; 657,119 after lock4: the minds' schedule, part 9, copied in its window as the give-way lets go).
-- **F2. The look across's pause at the real paces** (fix3, section 8; lock4's, built/2026-11-25-lock2.md section 12):
-  the senses' far look and its four parts' copies (some 225K). At the turns pace it's fixed (2.12M -> 1.38M: the UI's
-  and the background's naps). At the real paces dq0lookfar's worst typing is 1,539,714 (86%), 97% in round 3's filler
-  layout. No merge of the senses' parts saves a copy; the lever left is the far look's own work.
+  by lock2, built/2026-11-25-lock2.md). dq0pcfelled's first "d": 656,880-696,944 over even1's three layouts (91-97%).
+  Its window (even1's, built/2026-11-25-even1.md section 3): the world 205K (71K of part copies), the UI 178K, the
+  minds 70K (60K of part copies as their give-way lets go), the console 75K, the kernel 58K, the command parser's
+  task 29K (it starts in the window). The leads: the minds held off for the whole answer; the parser started before.
+- **F2. The look's pauses, the far look's work** (fix3, section 8; lock4's; even1's section 3): dq0lookrest's look at
+  once (the turns pace) 1,617,147 (90%) as built, 99% in both of even1's filler layouts; dq0lookfar's look across
+  80% as built, 94% played in the 37-byte layout (and its turn left, menacing, 95% there). The window: the senses'
+  four part copies (some 200K), the item store's finds for the 25 chunks round a character put in a new chunk (80K),
+  the UI's commands part copied back after its look's peep (48K). No merge of the senses' parts saves a copy.
+- **L1. The turns pace not yet exact** (even1's, its section 5): the bandits' errands (dq0denerrands, dq0dentakein)
+  part in even1's 91-byte layout; the question-and-answer cause of dq0digact and dq0wakeblow is closed (dq0lockwake
+  holds it). The lead: a mind's intent carried out by den_intents at a pass of the world's, outside a turn.
 - **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
   or a pack in their outfits, so what they take or are given goes in it, not "hung at the belt"; then invknown.txt's
   loose entry goes. Watch dq0trade, dq0farthing and dq0hoard.
