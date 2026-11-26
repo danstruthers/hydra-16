@@ -723,6 +723,8 @@ K_TASK_BOOT:
             sta         K0_CANDHI
             stz         K_FMASK
             stz         K_FMASK + 1
+            stz         K_SLP                               ; (No known sleepers: sched.s)
+            stz         K_SLP + 1
             jsr         K_MD_VALID
             bcc         :+
             TPRINT      T_S_NOMODS
