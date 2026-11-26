@@ -3274,6 +3274,17 @@ int main (int argc, char* argv[])
                                                 **   character, its first word still to come; else its Enter's ui_cmd now, or none) */
         k = events ();
         heard ();
+        if (HUB->tpr) {
+            HUB->ui_eq = (unsigned char) place; /* (The real paces: the news told, at once, not at the pass's end: the
+                                                **   world takes a line's intent as it's sent, not 8 ticks on, its
+                                                **   gate's look, ui_first's, having found the UI behind on news it had
+                                                **   told already: "played sit" 230,000 cycles, cmd1's) */
+            HUB->ui_dq = (unsigned char) dplace;
+            if (HUB->iq_head != HUB->iq_tail) {
+                hub_ring (T_WORLD);             /* (An intent its gate held for this news: taken now, the world not
+                                                **   left asleep its 8 ticks) */
+            }
+        }
         if (starting) {
             dots (1);                           /* (The game's start: its progress, then the help's line) */
         }
