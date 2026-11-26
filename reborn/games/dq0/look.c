@@ -346,7 +346,7 @@ void s_map_begin (void)
 void __fastcall__ s_map (const char* rules)
 {
     char line[LINE];                            /* (On the C stack: the main RAM's room) */
-    unsigned char y, n, k, held, drawn, k2;
+    unsigned char y, n, k, held, drawn, k2, fs = fored;
 
     make_panel (rules);
     cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
@@ -396,7 +396,7 @@ void __fastcall__ s_map (const char* rules)
     }
     hub_wait (&HUB->mapq);
     HUB->mapq.state = REQ_FREE;
-    fore_set (fored);
+    fore_set (fs);                              /* (As it was: fore_set keeps fored, cmd1's) */
     for (; side && k < np; ++k) {
         map_line (line, 0xFF, k);
     }

@@ -902,11 +902,17 @@ void __fastcall__ o_fore_set (unsigned char on)
                                                 **   the answer's CPU half and half, 450,000 cycles; the answer's own
                                                 **   blow worked as the UI waits for it.  But as the world waits on it
                                                 **   with a line's intent behind, FS_REF: o_fore_sync's) */
-    unsigned char k;
+    unsigned char k, was = fored;
 
-    hy_taskfore (hy_task (), (on & FS_UI) != 0);
+    fored = on;                                 /* (Each task told only as its own changes: a kernel call each, some
+                                                **   1,000 cycles, five at every Enter and every answer before, the
+                                                **   flags the same (TASKFORE sets them, and none but the UI sets
+                                                **   these), cmd1's) */
+    if ((on ^ was) & FS_UI) {
+        hy_taskfore (hy_task (), (on & FS_UI) != 0);
+    }
     for (k = 0; k < sizeof fg; ++k) {
-        if (task_[fg[k]] > 0) {
+        if (task_[fg[k]] > 0 && !(on & fm[k]) != !(was & fm[k])) {
             hy_taskfore (task_[fg[k]], on & fm[k]);
         }
     }
@@ -1044,7 +1050,7 @@ void o_fore_sync (void)
                                                 **   2026-11-25) */
     if (t && c && busy && !begun && r[0] == REQ_POSTED && r[1] == RS_ATTACK && !r[4] && (hub_mem (0, q, (const void*) &HUB->ui_eq, 2),
         hub_mem (0, r, (const void*) &HUB->eq_head, 1), hub_mem (0, r + 1, (const void*) &HUB->dq_head, 1), q[0] == r[0] && q[1] == r[1])) {
-        o_fore_set (fored = FS_UI | FS_SENS | FS_CMD);  /* (The referee out of the foreground meanwhile: the
+        o_fore_set (FS_UI | FS_SENS | FS_CMD);      /* (The referee out of the foreground meanwhile: the
                                                 **   words out first, not a slice each by turns with its blow's work) */
         fight_begin ();                         /* (The round a line's held behind: its blow's first words now, not
                                                 **   after the referee's answer, at the real paces: blows.c's, lock2's F1) */
@@ -1054,7 +1060,7 @@ void o_fore_sync (void)
                                                 **   line's parse in the background some 260,000 cycles of its 165,000,
                                                 **   dq0answer's "put the whetstone in the sack", speed8, 2026-11-21) */
     if (f != fored) {
-        o_fore_set (fored = f);
+        o_fore_set (f);
     }
     hub_mem (0, &k, (const void*) &HUB->look.ch, 1);
     if (k & LC_BEGIN) {
