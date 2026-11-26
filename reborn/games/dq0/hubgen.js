@@ -96,6 +96,8 @@ const ASM = {
     HUBO_DQ: 'hub.dq_head', HUBO_SEQ: 'hub.den_seq', HUBO_DITAIL: 'hub.di_tail', HUBO_MBEAT: 'hub.beat[T_DENIZENS]',
     HUBO_WIDLE: 'hub.w_idle', HUBO_WANT: 'hub.ui_want', T_UI: 'T_UI', T_DENIZENS: 'T_DENIZENS',
     WORLD_BANK: 'WORLD_BANK', W_CSUSED: 'wrec.cslot[0].used', CS_SIZE: 'sizeof cslot', NCSLOTS: 'NCSLOTS', CS_FRESH: 'CS_FRESH',
+    HUBO_TPR: 'hub.tpr', HUBO_PAUSED: 'hub.paused', HUBO_HOLD: 'hub.hold', HUBO_GIVING: 'hub.ui_giving', HUBO_COND: 'hub.pcsum.cond',
+    C_DEAD: 'C_DEAD', HUBO_QUIT: 'hub.quit', HUBO_UIEQ: 'hub.ui_eq', HUBO_UIDQ: 'hub.ui_dq',   // (ui_state's: even1's)
   },                                     // games/dq0/lbsaid.s: a look's sentences kept (dq0.h's)
   dice: {                                                       // games/dq0/dice.inc: the referees' keyed dice
     HUB_WINDOW: 'HUB_WINDOW', HUBO_NOW: 'hub.now', HUBO_DICE: 'hub.dice', HUBO_SEED: 'hub.seed', HUBO_SLOT: 'hub.slot',

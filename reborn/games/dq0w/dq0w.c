@@ -7401,44 +7401,74 @@ static unsigned char ready_now (void)
     return HUB->now >= HUB->pc_ready;
 }
 
-static unsigned char turns_run (void)
+/* At the turns pace, the events told the UI hasn't seen to yet (what it does about them, a question of a sound, a
+** senseless wait, its answer's intents: at this moment of the game whatever the tasks' timing, 2026-11-04): 1.  2, no
+** turn either: the real paces, paused, held, a command being given (it waits on the world) or dead.  0: quitting, or
+** none.  The world does nothing of its own while it's 1 (even1's, 2026-11-25): it waits at the top of the main loop's
+** pass and before its turn (ui_behind's), takes no intent after one that told the UI something, nor goes on with the
+** pass after it.  Its jobs run, its clock stepped, the intents taken one after another, as the UI was behind or not,
+** made a game turn on the tasks' timing: a sleep's question and its answer (dq0 -a's "go on") taken in one pass or in
+** two, the time believed reckoned before the answer or after it, the lights' minute's look at another moment, the
+** rolls after them another way (dq0wakeblow's and dq0digact's turns-pace games parted between two layouts) */
+unsigned char ui_state (void);                  /* (jobs.s's: in assembly, in the main RAM, its room; the hub's header in
+                                                **   the window) */
+
+unsigned char ui_behind (void);                 /* (Part lockstep's, below: s_ui_behind) */
+unsigned char turns_run (void);                 /* (Part lockstep's, below: s_turns_run) */
+#pragma code-name (push, "SW_lockstep_CODE")     /* (Part lockstep, with jobs.s's quiet: the main RAM's room, even1's) */
+#pragma rodata-name (push, "SW_lockstep_RODATA")
+unsigned char s_lockstep (void);
+
+/* ui_state's 1 waited out a tick at a time, the UI's things served meanwhile and nothing else: 1 as it waits.  A stuck
+** UI let go by after TURN_WAIT, as a turn's (its start's tick | 1, never 0: the first look "+ 1", or an even tick's
+** let it by at once, as the tasks' timing fell: even1's).  Else ui_state's */
+unsigned char s_ui_behind (void)
 {
     static unsigned ui_t;
-    unsigned long d;
-    unsigned s;
+    unsigned char k;
 
-    if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail ||
-        ((unsigned char) HUB->pcsum.cond & C_DEAD)) {
-        return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
-                                                **   the clock where it is, ui_giving's, 2026-10-31; dead, no more of
-                                                **   them either, the game's end its words') */
-    }
-    if (!HUB->quit && (HUB->ui_eq != (unsigned char) HUB->eq_head || HUB->ui_dq != (unsigned char) HUB->dq_head)) {
-        if (!ui_t) {
-            ui_t = hy_ticks () | 1;             /* (Events the UI hasn't seen to yet: what it does about them, a question
-                                                **   of a sound, a senseless wait, at this moment of the game whatever the
-                                                **   tasks' timing, 2026-11-04.  A stuck task's let go by, as a turn's) */
+    if ((k = ui_state ()) != 1) {
+        if (!k) {
+            ui_t = 0;
         }
-        if ((unsigned) (hy_ticks () - ui_t) < TURN_WAIT) {
-            if (hub_posted (&HUB->ireq)) {
-                things ();                      /* (The UI's things meanwhile, as turn's: what it does about an event
+        return k;
+    }
+    if (!ui_t) {
+        ui_t = hy_ticks () | 1;
+    }
+    if ((unsigned) (hy_ticks () + 1 - ui_t) < TURN_WAIT) {
+        if (hub_posted (&HUB->ireq)) {
+            things ();                          /* (The UI's things meanwhile, as turn's: what it does about an event
                                                 **   may ask them, a dig's tools (E_DIG's D_NO_TOOL, its to_hand), and
                                                 **   each waited on the other thirty seconds, the main loop's things
                                                 **   not come to: dq0answer's dig down, 2026-11-17) */
-            }
-            hub_ring (T_UI);
-            hub_sleep (1);
-            return 1;
         }
-    } else {
-        ui_t = 0;
+        hub_ring (T_UI);
+        hub_sleep (1);
+        return 1;
+    }
+    return 0;
+}
+
+unsigned char s_turns_run (void)
+{
+    unsigned long d;
+    unsigned s;
+
+    if ((s = s_ui_behind ()) == 1) {
+        return 1;
+    }
+    if (s || HUB->iq_head != HUB->iq_tail) {
+        return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
+                                                **   the clock where it is, ui_giving's, 2026-10-31; dead, no more of
+                                                **   them either, the game's end its words') */
     }
     if (HUB->eq_head != go_eq) {
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
         return 1;
     }
     if (ready_now ()) {
-        return lockstep ();                     /* (Free, or asking: its own jobs first at the turns pace, the rest of
+        return s_lockstep ();                   /* (Free, or asking: its own jobs first at the turns pace, the rest of
                                                 **   the pass after them; then all the UI set going done, its next line) */
     }
     d = HUB->pc_ready - HUB->now;
@@ -7452,6 +7482,8 @@ static unsigned char turns_run (void)
     turn ();
     return 1;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A long wait or a sleep under way, not asking (a wait longer than a round: its long task) */
 typedef char WAIT_ON[LT_SLEEP == LT_WAIT + 1 ? 1 : -1];
@@ -7905,6 +7937,9 @@ int main (int argc, char* argv[])
             scene ();                           /* (A test's scene, its part done here, no intent's body in hand:
                                                 **   part scene's, wscene.c) */
         }
+        if (!HUB->tpr && ui_behind () == 1) {
+            continue;                           /* (The turns pace: the UI behind on the events, its pass not run) */
+        }
         if (!(HUB->ui_keys | HUB->ui_cmd)) {
             kcut = kmore = 0;                   /* (Nothing in hand: all begun again) */
             kfree = kt0 = 0;
@@ -7944,7 +7979,7 @@ int main (int argc, char* argv[])
         dj = 0;
         hub_map (0);
         if (!uf || (HUB->ui_eq == (unsigned char) HUB->eq_head && HUB->ui_dq == (unsigned char) HUB->dq_head))
-        while (hub_take (&m)) {                    /* (A command in hand at the real paces, and news not yet seen to by the
+        while (ui_state () != 1 && hub_take (&m)) {                    /* (A command in hand at the real paces, and news not yet seen to by the
                                                 **   UI (a round's blow it's behind): its words told first, the next
                                                 **   intent's parts not copied in beside them, ui_first's hold (GW_CMD at
                                                 **   most; ui_cmd let go as the news says something, events'); dq0fightcmd's
@@ -7966,6 +8001,9 @@ int main (int argc, char* argv[])
                                                 **   whatever: 2026-11-13, the user's) */
             }
         }
+        if (ui_state () == 1) {
+            continue;                           /* (The turns pace: the UI to see to what the intents told first, ui_state's) */
+        }
         if (hub_posted (&HUB->wreq)) {
             answer ();                          /* (The UI's: the save, a close look) */
         }
@@ -7983,7 +8021,7 @@ int main (int argc, char* argv[])
         pc_ko = 0;
         ++HUB->beat[T_WORLD];
         wait_pace ();                           /* (A long wait at the real paces: as fast as the turns pace goes) */
-        if (turns_run ()) {
+        if (!HUB->tpr && turns_run ()) {
             continue;                           /* (The turns pace: the denizens catching up) */
         }
         if (move.on && ready_now () && !HUB->pc_task.asking && !pc_held ()) {

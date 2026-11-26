@@ -12,6 +12,8 @@ const {
 const { trend, target, D17 } = require('../../lib/trends.js');
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
 // (dq0lockstep's lines: the rats about the way down at seed 3 moving as the character waits, turns and looks)
+// (dq0lockwake's: dq0wakeblow's sleeper among the cultists, put to sleep in the dark; each game's lines' lag)
+const LOCK_WAKE = ['douse the torch', 'sleep'], LOCK_WAKE_LAGS = [0, 9000, 37000, 211000];
 const LOCK_LINES = ['look', 'wait 1 minute', 'turn around', 'wait 30 seconds', 'look', 'inventory', 'wait 1 minute', 'turn left', 'wait 2 minutes', 'look'];
 
 // Dingus Quest Zero's tasks' overlays as they are in their banks (at the first prompt: dq0starttime's), each the same as
@@ -1009,6 +1011,53 @@ module.exports = {
         }
         const dens = k => (m.dq0.games[k] || { dens: [] }).dens.map(e => [e.de, e.who, e.sx, e.sy, e.t].join(':')).join(' ');
         if (m.dq0.games.length >= 3) for (const k of [1, 2]) if (dens(k) !== dens(0)) f.push('game ' + (k + 1) + ': its denizens\' doings not the first game\'s');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lockwake', meaning: true, near: ['time', 'fight'], what: "Dingus Quest Zero's lockstep turns pace as a long task is asked about and broken off (even1's, 2026-11-25: the world ran its passes, its jobs among them, as it waited for the UI to see to the events it told, and let it by at once on an even tick: a sleep's question answered (\"go on\", dq0 -a's) before the time believed was reckoned or after it, as the tasks' timing had it, so dq0wakeblow's and dq0digact's turns-pace games parted between two layouts): dq0wakeblow's second game (seed 1, the character tough among hostile cultists in the dark) put to sleep and woken by their blows, played four times with the same lines, each line's first key 0, 9,000, 37,000 and 211,000 cycles after its prompt (acia.js's linePause: the UI's answers to the world's events at other phases of its ticks), the four games' stories the same, sentence for sentence, and the world's events, the denizens' doings and the referee's answers in them",
+      init: 't_rc', cycles: 3200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'echo sky 0 >> /ram/s.sc', 'echo hour 128 >> /ram/s.sc', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/d.hm',
+        'echo att str 99 >> /ram/d.hm', 'echo att sta 99 >> /ram/d.hm', 'echo att wil 99 >> /ram/d.hm', 'mkdir /ram/h', "echo 'faction | Foes | cultist | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt",
+        ...LOCK_WAKE_LAGS.flatMap(() => ['dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/h -S /ram/s.sc', ...LOCK_WAKE, 'quit']), 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '', g = -1;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) { if (/^dq0 -p t/.test(typed)) ++g; typed = ''; } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        a.linePause = () => g >= 0 && g < LOCK_WAKE_LAGS.length ? LOCK_WAKE_LAGS[g] : 0;
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Prose(out), gs = [], n = LOCK_WAKE_LAGS.length, ks = LOCK_WAKE_LAGS.map((x, k) => k).slice(1);
+        for (let i = s.indexOf('D I N G U S'); i >= 0; i = s.indexOf('D I N G U S', i + 1)) gs.push(i);
+        if (gs.length !== n || m.dq0.games.length !== n) return ['not ' + n + ' games: ' + gs.length + ', ' + m.dq0.games.length];
+        const game = k => { const t = s.slice(gs[k], k + 1 < gs.length ? gs[k + 1] : s.length), q = [t.indexOf('> quit'), t.indexOf('% ')].filter(x => x >= 0); return t.slice(0, Math.min(...q, t.length)); };   // (Its end: its quit, or the shell's prompt after the character's death)
+        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's)
+        const g0 = sents(game(0)), G = m.dq0.games;
+        if (!g0.some(x => /cultist/.test(x)) || !G[0].events.some(e => e.te === 'TE_HIT')) f.push('no cultist met, its blow not waking the sleeper (E_TASK TE_HIT): the case not met');
+        if (!G[0].events.some(e => e.te === 'TE_ASK_HEARD')) f.push('the sleep not asked about as it went (E_TASK TE_ASK_HEARD): the case not met');
+        for (const k of ks) {
+          const gk = sents(game(k));
+          let i = 0;
+          while (i < g0.length && i < gk.length && g0[i] === gk[i]) i++;
+          if (i < g0.length || i < gk.length) f.push('game ' + (k + 1) + ' (its lines ' + LOCK_WAKE_LAGS[k] + ' cycles after their prompts) not the first game\'s, from sentence ' + i + ': ' + JSON.stringify(g0.slice(i, i + 3)) + ' against ' + JSON.stringify(gk.slice(i, i + 3)));
+        }
+        // (What happened, in order: the world's events, the denizens', the referee's answers to the slots)
+        const evs = k => G[k].events.map(e => [e.kind, e.t, e.a, e.b, e.w1, e.w2].join(':')), dens = k => G[k].dens.map(e => [e.de, e.who, e.sx, e.sy, e.t].join(':'));
+        const refs = k => G[k].replies.filter(r => /^d?slot/.test(r.req)).map(r => [r.rs, r.actor, r.a, r.b, r.w1, r.result, r.grade].join(':'));
+        for (const k of ks) for (const [what, w] of [['the world\'s events', evs], ['the denizens\' doings', dens], ['the referee\'s answers', refs]]) {
+          const x = w(0), y = w(k);
+          let i = 0;
+          while (i < x.length && i < y.length && x[i] === y[i]) i++;
+          if (i < x.length || i < y.length) f.push('game ' + (k + 1) + ': ' + what + ' not the first game\'s, from ' + i + ': ' + x.slice(i, i + 2).join(' ') + ' against ' + y.slice(i, i + 2).join(' '));
+        }
         return f;
       },
       sdcard: true

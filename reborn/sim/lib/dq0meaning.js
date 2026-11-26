@@ -364,7 +364,12 @@ function createRecorder() {
     }
     return s;
   }
+  const STAMP = !!process.env.DQ0DUMP;   // (DQ0DUMP: each record stamped with its cycle, sim/test.js's dump)
   function hook(k, off, v) {
+    hook0(k, off, v);
+    if (STAMP && game) for (const a of [game.events, game.dens, game.intents, game.replies]) { const r = a[a.length - 1]; if (r && r.cyc === undefined) r.cyc = m.cpu.cyc; }
+  }
+  function hook0(k, off, v) {
     if (off === 1 && v === (L.magic >> 8) && m) {                // (A hub made: a game begun)
       const b = m.sharedBanks()[k];
       if (b && b[0] === (L.magic & 0xFF)) {
