@@ -187,6 +187,18 @@ static unsigned char giving (void)
     return gw_held (&gmk, 0);                   /* (The real paces: the one give-way, gw.s's, 2026-11-19) */
 }
 
+/* In the foreground or not, looked at again as a requested chunk's grown (make.c's ahead_check, the growers'
+** checkpoints): a scene a line waits on posted after the minds' request began (dq0felled's, even3's).  Called from the
+** overlay's code: the window put back as it was */
+void fore_again (void)
+{
+    unsigned w = hub_here ();
+
+    hub_map (0);
+    fore (asked ());
+    hub_back (w);
+}
+
 /* The chooser's give-way (ahead.c's ahead_next, at each actor, and make_ahead's start): 1, a request posted or a
 ** command in hand or a line being typed (giving's), the choice left to be looked at again as the maker next wakes; else
 ** 0.  Called from the overlay's code: the window put back as it was (2026-11-17: the chooser ran on into a line's
