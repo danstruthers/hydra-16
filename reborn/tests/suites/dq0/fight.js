@@ -2278,7 +2278,7 @@ module.exports = {
         dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true,   // (A rat before it, fighting it)
           rig: [{ kind: 'ATTACK', actor: -1, faces: [99, 1] }, { kind: 'ATTACK', faces: [1, 99] }] })));   // (The character's blows miss, the
         dq0FightPause(m);                       //   rat's land: a wound, its shock roll failed, the character felled as it fights on)
-        dq0OnWords(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, words: 'Everything goes black.', text: 'quit\r' })));   // (Quit as it's
+        dq0OnWords(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, words: 'Everything goes black.', text: 'quit\r', drop: true })));   // (Quit as it's
         //   told: senseless, the quit taken whatever (the user's, 2026-11-13); at the real paces no prompt comes till it comes round)
       },
       expect: ['% echo $status'],
@@ -2291,7 +2291,13 @@ module.exports = {
         });
         notes.push('felled in the answer of, by game: ' + (at.join(', ') || 'none'));
         if (games.length !== 3) f.push(games.length + ' games, not 3');
-        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], PCFELLED.map(l => ({ line: l, want: '*' })));
+        // (A line whose Enter came after its game's black-out was told is the test's typing into the game it's quitting
+        // (dq0OnWords' quit, at those words), not a line at the prompt: a bite landing at the prompt as the next line's
+        // being typed, the played game's as its answers came sooner, cmd1's; noted, not held)
+        const blacks = [...m.out.matchAll(/goes\s+black\./g)].map(x => x.index), starts = this.timer.enters.filter(e => /^(?:\S*\/)?dq0 /.test(e.line)).map(e => e.pos);
+        const after = (r, i) => r.pos === undefined ? blacks.some(b => b > starts[i] && (i + 1 >= starts.length || b < starts[i + 1])) :
+          blacks.some(b => b < r.pos && !starts.some(s => s > b && s < r.pos));   // (Or none, its keys let go as the game ended: drop)
+        dq0HeldPaces(this, f, notes, this.timer, [0, 1, 2], PCFELLED.map(l => ({ line: l, want: '*' })), after);
         return f;
       },
       sdcard: true
