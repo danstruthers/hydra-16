@@ -51,7 +51,7 @@
 
 harn_char h;
 static harn_char t;
-static char name[24];
+char name[24];
 char ab[40], occname[20], libdir[48];
 unsigned char quiet;
 const char* cname;
@@ -260,97 +260,7 @@ void __fastcall__ spend (unsigned char op, unsigned char own)
     }
 }
 
-/* ---- The profile */
-
-static const unsigned char attrs[] = {
-    HARN_STR, HARN_STA, HARN_DEX, HARN_AGL, HARN_EYE, HARN_HRG, HARN_SML, HARN_VOI, HARN_INT, HARN_AUR, HARN_WIL,
-    HARN_MOR
-};
-
-static void profile (void)
-{
-    unsigned char k, col = 0, w;
-
-    s ("\n");
-    if (name[0]) {
-        s (name);
-        s (", ");
-    }
-    s (harn_species_name (h.att[HARN_SP]));
-    s (" ");
-    s (harn_sex_name (h.att[HARN_SX]));
-    s (", born ");
-    n (h.att[HARN_BD] & 0xFF);
-    s (" ");
-    s (harn_month_name (h.att[HARN_BD] >> 8));
-    s (" (");
-    s (harn_sunsign_name (h.att[HARN_SS]));
-    s ("); ");
-    s (harn_culture_name (h.culture));
-    s (" ");
-    s (harn_class_name (h.social));
-    if (occname[0]) {
-        s (", ");
-        s (occname);
-    }
-    s ("\n");
-    n (h.sibrank);
-    s (" of ");
-    n (h.famsize);
-    s ("; ");
-    s (harn_parent_name (h.parent));
-    s (", ");
-    s (harn_estrangement_name (h.estrange));
-    s ("; clanhead: ");
-    s (harn_clanhead_name (h.clanhead));
-    s ("\n");
-    n (h.att[HARN_HT]);
-    s ("\", ");
-    s (harn_frame_name (h.att[HARN_FR]));
-    s (", ");
-    n (h.att[HARN_WT]);
-    s (" lb (size ");
-    n (harn_size (&h));
-    s ("); ");
-    named (harn_comeliness_name (h.att[HARN_CML]), h.att[HARN_CML], "; ");
-    s (harn_complexion_name (h.complexion));
-    s (", ");
-    s (harn_hair_name (h.hair));
-    s (" hair, ");
-    s (harn_eye_name (h.eyes));
-    s (" eyes\n");
-    for (k = 0; k < sizeof attrs; ++k) {
-        named (harn_attr_name (attrs[k]), h.att[attrs[k]], k == 7 || k + 1 == sizeof attrs ? "\n" : ", ");
-    }
-    named ("Endurance", harn_end (&h), ", ");
-    named ("Move", harn_move (&h), ", ");
-    named ("Piety", h.att[HARN_PTY], "");
-    if (h.att[HARN_DTY] != HARN_NODEITY) {      /* (The deity worshipped) */
-        s (" (");
-        s (harn_deity_name (h.att[HARN_DTY]));
-        s (")");
-    }
-    s ("; medical:");
-    for (k = 0; k < HARN_MEDMAX && h.med[k]; ++k) {
-        s (" ");
-        s (harn_medical_name (h.med[k]));
-    }
-    s (h.med[0] ? "\n" : " none\n");
-    s ("Skills (ML):");
-    for (k = 0; k < HARN_NSKILLS; ++k) {
-        if (h.ml[k]) {
-            w = strlen (harn_skill_name (k)) + 5;
-            if (col + w > 78) {
-                s ("\n ");
-                col = 1;
-            }
-            s (" ");
-            named (harn_skill_name (k), h.ml[k], "");
-            col += w;
-        }
-    }
-    s ("\n");
-}
+/* ---- The profile: its bank program's (bank/hmocc's profile, the main RAM's room: even2's, 2026-11-25) */
 
 /* ---- Names (-q's): two syllables of a few, Hârnic-sounding enough */
 
@@ -445,7 +355,7 @@ int main (int argc, char* argv[])
     static char path[64], line[48];
     const char* out = 0;
     unsigned char i, j, k, r, mask, sp = 0xFF;
-    struct bank_fn *occ, *cul;
+    struct bank_fn *occ, *cul, *pro;
     char* e;
     int fd;
 
@@ -480,7 +390,8 @@ int main (int argc, char* argv[])
         close (fd);
     }
     bank_setup (in (exppath, "hmchar.exp"), 0x60, 16);
-    if (!(occ = bank_fn (in (bppath, "hmocc.bp"), "occupation")) || !(cul = bank_fn (bppath, "culture"))) {
+    if (!(occ = bank_fn (in (bppath, "hmocc.bp"), "occupation")) || !(cul = bank_fn (bppath, "culture")) ||
+        !(pro = bank_fn (bppath, "profile"))) {
         err ("hmchar: its bank program (lib/hmchar/hmocc.bp) can't be loaded\n");
         return 1;
     }
@@ -494,7 +405,7 @@ int main (int argc, char* argv[])
         if (quiet) {
             break;
         }
-        profile ();
+        bank_call (pro, void (*)(void));
         ask ("\nKeep this character, or roll again (k or r)? ", ab, sizeof ab);
         if (ab[0] == 'k' || ab[0] == 'K') {
             break;
@@ -513,7 +424,7 @@ int main (int argc, char* argv[])
         while (!ask ("\nA name: ", name, sizeof name)) {
         }
     }
-    profile ();
+    bank_call (pro, void (*)(void));
 
     if (!out) {
         strcpy (path, name);

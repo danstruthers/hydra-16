@@ -10,6 +10,7 @@ extern harn_char h;                             /* The character */
 extern unsigned char quiet;                     /* -q: no questions */
 extern const char* cname;                       /* -c's occupation (NULL: none) */
 extern const char* uname;                       /* -u's culture (NULL: none) */
+extern char name[24];                           /* The character's name */
 extern char occname[20];                        /* The occupation (its name; the player's own, as it's called) */
 extern unsigned char ntongues, nscripts;        /* Its tongues and scripts (occupations.txt's tongues N, scripts N: the native
                                                 **   and N - 1 more, chosen as its file's written; 0 none said) */
@@ -36,5 +37,6 @@ void __fastcall__ spend (unsigned char op, unsigned char own);
 /* hmocc's entries.  culture: a human's culture rolled, or -u's (its class rolled for it): 0; or 1, -u's not a human
 ** culture.  occupation: the deity chosen (not -q's), then the occupation and its skills opened (occname): 0; or 1,
 ** -c's not one offered (or more than one begins so); 2, no occupations.txt */
+void profile (void);                            /* The character said (hmchar's, the main RAM's room) */
 unsigned char culture (void);
 unsigned char occupation (void);
