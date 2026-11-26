@@ -280,7 +280,9 @@ static unsigned char __fastcall__ kind_flags (unsigned char k)
     return CATALOGUE[k < NK ? k : 0].flags;
 }
 
-unsigned char take_first (void);                /* (Part take_which's: its stub) */
+static unsigned char take_one (void);
+unsigned char take_prep (void);                 /* (Part take_which's: their stubs) */
+unsigned char take_first (void);
 
 /* The UI's request answered (serve's, part things's; but what's carried listed, and a tool's wear, by their own part,
 ** 11, alone: an inventory's, a dig's every spell's) */
@@ -297,9 +299,8 @@ unsigned char things_req (void)
     } else if (k == IO_TOOLS) {
         tools ();                               /* (Part things's alone, as every thing handled tells the referee what's to
                                                 **   hand) */
-    } else if ((k & ~IO_STEPS) == IO_GET && *HUB->ireq.name != '#' && take_first ()) {
-        return 0;                               /* (A take of one asked which: part serve not copied in for it nor back,
-                                                **   61,000 cycles, even4's) */
+    } else if ((k & ~IO_STEPS) == IO_GET && take_prep () && take_one ()) {
+        return 0;                               /* (A take of one asked which, chosen here: take_one) */
     } else if (k == IO_LOOK) {
         look_on (look_pick ());                 /* (A thing looked at: part ui_requests's chooser, then part look_on's words, with no
                                                 **   part things to come back to, four swaps less before its first letter:
@@ -421,6 +422,25 @@ unsigned char __fastcall__ on_pc (unsigned i)
 }
 
 /* ==== Part things: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
+static unsigned pre_n;                          /* (A take's first chosen, take_one's, for s_moved: its number and 1;
+                                                **   0, none chosen yet) */
+
+/* A take of one (take_prep's, the request read as serve reads it): chosen here, part ui_requests copied in, none copied
+** back after it (the main RAM's), kept for s_moved (pre_n); several of the name lying about that differ, which asked, part
+** take_which's: 1, part serve not copied in for it, nor parts by_count and serve again after the chooser (dq0letwhich's,
+** even4's).  Else 0, serve's to answer, the one chosen kept */
+static unsigned char take_one (void)
+{
+    unsigned n = pick (iq.name, HW_GONE);
+
+    pre_n = n + 1;
+    if (wlist && n && csum > item_at (n)->qty && take_first ()) {
+        return 1;
+    }
+    wlist = 0;
+    return 0;
+}
+
 #pragma code-name (push, "SW_things_CODE")
 #pragma rodata-name (push, "SW_things_RODATA")
 
@@ -2469,8 +2489,6 @@ static char take_nm[16];                        /* (A count to take up, walked o
                                                 **   count, s_take_rest's) */
 static unsigned char take_sel, take_cnt;
 extern unsigned char tk_n;                      /* (Part inventory's: the kinds taken, s_moved's) */
-static unsigned pre_n;                          /* (A take's first chosen, take_which's, for s_moved: its number and 1;
-                                                **   0, none chosen yet) */
 
 #pragma code-name (push, "SW_take_which_CODE")   /* (A part of its own, even4's: part serve's copies, every request's, not
                                                 **   the bigger for it) */
@@ -2558,16 +2576,14 @@ unsigned char s_take_which (void)
     return 0;
 }
 
-/* The UI's take of one (IO_GET, no count, no selector, no letter: things_req's) asked which before part serve's copied
-** in, the character not hidden (serve's hid_op): the request read as serve reads it (its first lines', for that: by the
-** reach's steps, rs_ok; no reach owed, nothing handled); several that differ, which asked, the reply as serve ends it
-** (RO_REPLY's), 1; else 0, the one chosen kept for serve's s_moved (pre_n), serve's to answer as ever (the steps' state
-** set here, as serve would set it) */
-unsigned char s_take_first (void)
+/* The UI's take of one (IO_GET, no count, no selector, no letter: things_req's), the character not hidden (serve's
+** hid_op), read as serve reads it (its first lines': by the reach's steps, rs_ok; no reach owed, nothing handled), for
+** things_req to choose it (pick, the pass's finds kept, wlist, but for a letter's): 1; else 0, serve's as ever */
+unsigned char s_take_prep (void)
 {
     hub_map (0);
     if ((HUB->ireq.kind & ~IO_STEPS) != IO_GET || HUB->pc_hid || HUB->ireq.count || HUB->ireq.sel ||
-        *HUB->ireq.name == '#' || !*HUB->ireq.name) {
+        !*HUB->ireq.name) {
         return 0;
     }
     if (HUB->ireq.kind & IO_STEPS) {            /* (By the reach's steps: serve's first lines') */
@@ -2586,9 +2602,20 @@ unsigned char s_take_first (void)
     handled = 0;
     iq.result = IR_OK;
     wsel = wnot = win = wforce = 0;
-    if (s_take_which () != IR_WHICH) {
+    wlist = *iq.name != '#';
+    return 1;
+}
+
+/* Several of the name lying about (things_req's choice, its pass's finds in tbuf, wlist's): those that differ, which asked,
+** the reply as serve ends it (RO_REPLY's), 1; all alike, 0, the one chosen kept for serve's s_moved (pre_n) */
+unsigned char s_take_first (void)
+{
+    hub_map (0);
+    if ((HUB->pc_lump & (PL_MORE | PL_ALL)) || !which ()) {
         return 0;
     }
+    wlist = 0;
+    pre_n = take_cnt = tk_n = 0;                /* (As s_moved left them, asking: nothing taken) */
     rtime = roff = 0;
     rsteps = rbody = 0;
     hand_n = 0;
