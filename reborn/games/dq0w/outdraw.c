@@ -286,7 +286,8 @@ static void __fastcall__ line (const unsigned char* p, unsigned char mode)
 
 /* The section at off read, its head kept, drawn as mode says if its flags are those wanted: 1, or 0 */
 unsigned char ui_long (void);                   /* (dq0w.c's) */
-void kit_give (void);                           /* (jobs.s's) */
+void kit_give (void);                           /* (Part kit_run's, jobs.s: asked only in its call, kit_s) */
+extern unsigned char kit_s;
 unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
 {
     unsigned char k, n;
@@ -319,7 +320,9 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
         for (n = sec[7], k = 0; k < n && p < sec + SEC_MAX && *p; ++k, p += *p) {
             if (ost.kit && (hub_map (0), ui_long ())) {
                 ost.kit = 2;
-                kit_give ();                    /* (In kit_run's call: out of it at once, jobs.s's) */
+                if (kit_s) {
+                    kit_give ();
+                }
                 return 0;
             }
             line (p, mode);

@@ -210,14 +210,16 @@ _ui_state:
 ; through (outfit, den_limbs, kit_run: 63,000 cycles, F1's, a climb's first letter as played) not copied back in for their
 ; returns alone: the part in the area stays (swapped's), the next call's copy as ever; else (kit_s 0) a return (cmd2's,
 ; 2026-11-26)
-            .export     _kit_give, _kit_s, _kit_arm
+            .export     _s_kit_give, _kit_s, _kit_arm
             .importzp   swsp, c_sp
             .bss
 _kit_s:     .res        1           ; (s_kit_run's 6502 stack, 0 none: its return's, its stub's sw_back,
 _kit_c:     .res        2           ;   its C stack,
 kit_w:      .res        1           ;   its parts' calls' depth, swsp)
-            .code
-_kit_give:  ldx         _kit_s
+            .segment    "SW_kit_run_CODE"      ; (Part kit_run's, through its stub (parts.txt's): the main RAM's room, a
+                                    ;   copy of the small part as it's called, its callers asking only with kit_s set)
+_s_kit_give:
+            ldx         _kit_s
             beq         @none
             txs
             stz         _kit_s
@@ -236,7 +238,6 @@ _kit_give:  ldx         _kit_s
 @none:      rts
 
 ; void kit_arm (void): (part kit_run's, s_kit_run's first call) its caller's stacks and its parts' calls kept for kit_give
-            .segment    "SW_kit_run_CODE"
 _kit_arm:   tsx
             inx                             ; (s_kit_run's, its call's return off)
             inx

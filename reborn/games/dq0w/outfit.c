@@ -168,7 +168,8 @@ static unsigned char opened (void)
 ** every line given, each on its own die (its stratum's seed, its number and the section's: the same things each
 ** time), and made (part outmake's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
 unsigned char ui_long (void);                   /* (dq0w.c's) */
-void kit_give (void);                           /* (jobs.s's) */
+void kit_give (void);                           /* (Part kit_run's, jobs.s: asked only in its call, kit_s) */
+extern unsigned char kit_s;
 void __fastcall__ s_den_kit (const struct msg* m)
 {
     static const char pre[3] = { '#', '&', '%' };
@@ -231,7 +232,9 @@ void __fastcall__ s_den_kit (const struct msg* m)
                                                 **   drawn, its part copied in, its section found first, the line come
                                                 **   as it was looked for (cmd2's, 2026-11-26); and before anything's
                                                 **   made) */
-            kit_give ();                        /* (In kit_run's call: out of it at once, jobs.s's) */
+            if (kit_s) {
+                kit_give ();
+            }
             return;
         }
         if (off) {
