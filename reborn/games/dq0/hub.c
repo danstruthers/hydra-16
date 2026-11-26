@@ -12,12 +12,21 @@
 #include "hub.h"
 
 static unsigned char seg;
-#ifndef HUB_UX
+#if !defined (HUB_ATTACHED) || defined (HUB_MAP_ASM)
+#define HUB_ASM_MAP                             /* (hub_map in the task's assembly, bank.s's: the UI's, and a task that
+                                                **   defines HUB_MAP_ASM, the world's; its C pushed and popped its byte,
+                                                **   some 65 cycles a call to some 25: cmd1's, 2026-11-26) */
+#endif
+#if !defined (HUB_UX) && !defined (HUB_ASM_MAP)
 static
 #endif
 unsigned char hub_u[HUB_BANKS], hub_x[HUB_BANKS];  /* Each bank's U and $00 (SEG_MAP's), found once (HUB_UX: a task's
                                                 **   own code switching banks itself, the senses' sound layer's) */
-static unsigned char cur;                       /* The bank hub_map put in the window last */
+#ifndef HUB_ASM_MAP
+static
+#endif
+unsigned char hub_cur;                          /* The bank hub_map put in the window last */
+#define cur hub_cur
 static unsigned char self;                      /* This task's role (T_*: its doorbell) */
 unsigned char smask = MAXSTRATA - 1;            /* (world.h's SLOT: the strata's slots, less one) */
 static unsigned char seq;                       /* Its requests, counted (each one's seq) */
@@ -62,12 +71,14 @@ static int find_banks (void)
 int find_banks (void);                          /* (Its stub: bank.s's) */
 #endif
 
+#ifndef HUB_ASM_MAP
 void __fastcall__ hub_map (unsigned char bank)
 {
     cur = bank;
     *(volatile unsigned char*) 0xFFF1 = hub_u[bank];    /* U, then the bank (hydra.h's hy_seg_map, without the call) */
     *(volatile unsigned char*) 0 = hub_x[bank];
 }
+#endif
 
 #if defined (HUB_ZERO) || !defined (HUB_ATTACHED)
 void hub0 (void)                                /* (hub_map (0), two bytes less at each call and a little quicker: hub0.h's,

@@ -8,8 +8,8 @@
 ; swapped parts' calls (swap.inc): code run in the main RAM's top, a part at a time, copied there from its overlay's
 ; bank as it's called.  (bread and bwrite gone, 2026-10-30: ovl_load's alone used one, the main RAM's room)
 
-            .export     _setbank, _getbank, _ovbank, _said_b, _hub_mem
-            .import     popa, popax, incsp1, _memcpy, _hub_here, _hub_map, _hub_back
+            .export     _setbank, _getbank, _ovbank, _said_b, _hub_mem, _hub_map
+            .import     popa, popax, incsp1, _memcpy, _hub_here, _hub_back, _hub_u, _hub_x, _hub_cur
 
             .include    "zeropage.inc"
 OVL_BANKS   = OVMAX                 ; (The game's library, dq0lib.inc: the overlays' banks, a '.' after the first
@@ -116,6 +116,17 @@ _hub_mem:
             plx
             jsr         _hub_back
             jmp         incsp1              ; (The bank)
+
+; void __fastcall__ hub_map (unsigned char bank): the hub's bank at $8000 (hub.c's, HUB_ASM_MAP: its U, then the bank
+; register, as hub_u and hub_x have them, the bank kept in hub_cur for hub_here; cmd1's, 2026-11-26: its C some 65 cycles)
+_hub_map:
+            sta         _hub_cur
+            tay
+            lda         _hub_u,y
+            sta         $FFF1
+            lda         _hub_x,y
+            sta         $00
+            rts
 
 ; ---- The overlays' calls
 
