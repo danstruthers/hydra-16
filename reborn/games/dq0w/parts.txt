@@ -139,4 +139,6 @@ wdice          -      The world's keyed dice: a thing let fall, a missile's stra
 lockstep       -      The lockstep turns pace's quiet (jobs.s's lockstep: lock1's, its part lock2's, 2026-11-25)
 rest_go        -      Stood still since it was last free: rest, or a load's tiring (intent's; part intent_few's copy, 17,000 cycles, spared every other intent: even2's F1, 2026-11-25)
 kit_run        -      A denizen's things made from the intents' ring's tail, part den_bodies not copied in for it (dq0w.c's den_run: even2's F1, 2026-11-25)
+take_which     -      A take of one's chosen, several that differ asked which (things.c's take_which: parts by_count and serve not copied in and back for it, even4's, 2026-11-26)
+answer         -      The hub's wreq answered: the save, a portal looked at closely, the game begun (store.c's s_answer, look_at: part ui_requests's till even4's, 2026-11-26)
 stub lockstep lockstep

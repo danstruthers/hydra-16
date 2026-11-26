@@ -9,6 +9,7 @@
 ;   struct item* __fastcall__ item_at (unsigned i);                         item i's record, its bank in the window
 ;   unsigned __fastcall__ items (unsigned i, unsigned char in, unsigned x); the next after i (0: none), ip its record
 ;   unsigned char __fastcall__ den_draw (unsigned char want);                 the world's alone (wbody.h's): below
+;   unsigned __fastcall__ pick_next (unsigned i);                           the world's alone (things.c's pick_): below
 
             .export     _item_at, _items, _ip
             .import     _hub_map, incsp3
@@ -207,6 +208,125 @@ items_from  =           *                   ; (den_draw's: from the one after at
             rts
 
 .ifndef ITEMS_ALL
+; pick_next (i): the next record after i the chooser looks at (things.c's pick_: its first tests, in assembly, its records
+; gone through by their place, not found again each, some 40 cycles a record, not 300: dq0letwhich's, even4's): in use,
+; its kind not one the name's no name of (pk_no's, the chooser's no[]: bit 0), not a denizen's own (IW_DEN), not hidden
+; but known, and (pk_hash) its id pk_wid; its number (0: none before ihigh), ip its record, its bank in the window
+            .export     _pick_next, _pk_no, _pk_wid, _pk_hash
+            .importzp   ptr2
+            .segment    "SW_ui_requests_RODATA"   ; (Part ui_requests's, the chooser's: none of it in the main RAM)
+_pk_no:     .res        2
+_pk_wid:    .res        2
+_pk_hash:   .res        1
+pk_at:      .res        2               ; (The one it gave last, its record and its bank: the next from it, not
+pk_p:       .res        2               ;   found again)
+pk_bank:    .res        1
+            .segment    "SW_ui_requests_CODE"
+_pick_next: sta         at
+            stx         at + 1
+            ldy         _pk_no
+            sty         ptr2
+            ldy         _pk_no + 1
+            sty         ptr2 + 1
+            cmp         pk_at               ; (The one it gave last: on from its record, its bank
+            bne         @find               ;   put back)
+            cpx         pk_at + 1
+            bne         @find
+            ora         pk_at + 1
+            beq         @find
+            lda         pk_p
+            sta         ptr1
+            lda         pk_p + 1
+            sta         ptr1 + 1
+            lda         pk_bank
+            sta         bank
+            jsr         _hub_map
+            jmp         @next
+@find:      jsr         @inc
+            bcc         @first
+            jmp         @none
+@first:     jsr         find
+            lda         bank
+            sta         pk_bank
+            lda         _ip
+            sta         ptr1
+            lda         _ip + 1
+            sta         ptr1 + 1
+@look:      ldy         #I_KIND             ; In use,
+            lda         (ptr1),y
+            beq         @next
+            tay                             ;   its kind not one ruled out,
+            lda         (ptr2),y
+            lsr         a
+            bcs         @next
+            ldy         #I_WHERE            ;   not a denizen's own,
+            lda         (ptr1),y
+            cmp         #IW_DEN
+            bcs         @next
+            ldy         #I_FLAGS            ;   not hidden unknown,
+            lda         (ptr1),y
+            and         #I_HIDDEN | I_KNOWN
+            cmp         #I_HIDDEN
+            beq         @next
+            lda         _pk_hash            ;   its id the one named
+            beq         @found
+            ldy         #I_ID
+            lda         (ptr1),y
+            cmp         _pk_wid
+            bne         @next
+            iny
+            lda         (ptr1),y
+            cmp         _pk_wid + 1
+            beq         @found
+@next:      jsr         @inc                ; The next,
+            bcs         @none
+            lda         at                  ;   the second bank's first found
+            cmp         #<PER_BANK
+            bne         @step
+            lda         at + 1
+            cmp         #>PER_BANK
+            bne         @step
+            jsr         find
+            lda         bank
+            sta         pk_bank
+            lda         _ip
+            sta         ptr1
+            lda         _ip + 1
+            sta         ptr1 + 1
+            jmp         @look
+@step:      lda         ptr1                ;   else the record after it
+            clc
+            adc         #REC
+            sta         ptr1
+            bcc         @back
+            inc         ptr1 + 1
+@back:      jmp         @look
+@found:     lda         ptr1
+            sta         _ip
+            sta         pk_p
+            lda         ptr1 + 1
+            sta         _ip + 1
+            sta         pk_p + 1
+            lda         at
+            sta         pk_at
+            ldx         at + 1
+            stx         pk_at + 1
+            rts
+@none:      stz         pk_at               ; (None: the next pass from its first)
+            stz         pk_at + 1
+            lda         #0
+            tax
+            rts
+@inc:       inc         at                  ; (at the next: carry set at ihigh)
+            bne         @cmp
+            inc         at + 1
+@cmp:       lda         at
+            cmp         _ihigh
+            lda         at + 1
+            sbc         _ihigh + 1
+            rts
+            .code
+
 ; den_draw (want): body bd's weapon drawn as it strikes, or a thing of its own of kind want taken in hand (wbody.h's), by
 ; part den_things's den_draws, asked only of one with a thing of its own (a record IW_DEN, its owner and hide its did): none, 0,
 ; as den_draws's own first test has it (kit_next's), so a beast's every blow doesn't copy part den_things in over part fight_blows and
