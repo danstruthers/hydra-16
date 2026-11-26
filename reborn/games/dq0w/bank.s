@@ -15,6 +15,7 @@
 ;   unsigned __fastcall__ m2 (void* f, unsigned a, unsigned b); f (a, b)
 
             .export     _ovbank, _m0, _m1, _m2, _hub_map
+            .exportzp   swsp                ; (jobs.s's kit_try and kit_give)
             .import     popax, pushax, _cat_map, _hub_u, _hub_x, _hub_cur
 
             .include    "zeropage.inc"

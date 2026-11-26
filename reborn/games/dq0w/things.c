@@ -5423,28 +5423,55 @@ static void kit_keep (void)
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
 /* The last three overlays read in (dq0w.rop, ld65's, as they are: climbing, part climb_on; rope and grapples, parts rope_set, rope_tie, rope_untie; a denizen's weapon let fall, part den_drop; a tunneller's dig, part den_dig), as a climb, a
 ** dig, a rope, a dropped weapon or a tunneller first wants them: none of a game's start's time, the card's, for what most games come to late or never (dq0starttime,
-** 2026-11-04); carried on with a rope in place, at once.  Once (the hub's rope_in), its time then, some 3M cycles */
+** 2026-11-04); carried on with a rope in place, at once.  Once (the hub's rope_in: 1, in; 2 + k, k pieces of RP_SIZE in,
+** the file open, rfd), its time then, some 8M cycles of the card's.  give: a denizen's own (a tunneller's kit, part
+** den_limbs's), giving way to a line in hand before each piece (ui_long's), the rest read as it's asked again: 1, in; 0,
+** given way (a denizen's dig's in a climb's first letter's window, 8,300,000 cycles, cmd2's, 2026-11-26); 2, the file
+** opened alone, none read (the world's start's: its open the card's 650,000 cycles, past any give-way) */
+#define RP_SIZE         512                     /* (A piece: the card's block) */
+static unsigned char rfd;                       /* (The file's fd plus 1 while it's read part way; 0 none) */
 #pragma static-locals (push, off)
-static void ropes_in (void)
+static unsigned char __fastcall__ ropes_in (unsigned char give)
 {
     char p[40];
     int fd;
     unsigned char k;
 
     hub_map (0);
+    if (HUB->rope_in == 1) {
+        return 1;
+    }
     if (!HUB->rope_in) {
+        if (give && ui_long ()) {
+            return 0;
+        }
         strcpy (p, HUB->ldir);
         strcat (p, "/dq0w.rop");
-        if ((fd = open (p, O_RDONLY)) >= 0) {
-            for (k = OVBANKS - 3; k < OVBANKS; ++k) {
-                hy_bank (ovbank[k]);
-                read (fd, (void*) 0x8000, 0x2000);
-            }
-            close (fd);
+        if ((fd = open (p, O_RDONLY)) < 0) {
+            hub_map (0);
+            HUB->rope_in = 1;
+            return 1;
         }
+        rfd = fd + 1;
         hub_map (0);
-        HUB->rope_in = 1;
+        HUB->rope_in = 2;
     }
+    if (give == 2) {
+        return 1;
+    }
+    while ((k = HUB->rope_in - 2) < 3 * (0x2000 / RP_SIZE)) {
+        if (give && ui_long ()) {
+            return 0;
+        }
+        hy_bank (ovbank[OVBANKS - 3 + k / (0x2000 / RP_SIZE)]);
+        read (rfd - 1, (void*) (0x8000 + (k % (0x2000 / RP_SIZE)) * RP_SIZE), RP_SIZE);
+        hub_map (0);
+        ++HUB->rope_in;
+    }
+    close (rfd - 1);
+    rfd = 0;
+    HUB->rope_in = 1;
+    return 1;
 }
 #pragma static-locals (pop)
 
@@ -5455,8 +5482,7 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
     char b[6];
 
     if (mode == LM_ROPES) {
-        ropes_in ();
-        return IR_OK;
+        return ropes_in (n) ? IR_OK : IR_NONE;  /* (n 1: a denizen's, giving way; 2, the start's open) */
     }
     if (mode == LM_KIT) {
         kit_keep ();                            /* (The character's things kept: the world's save, wgame.c's) */

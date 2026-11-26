@@ -2607,8 +2607,9 @@ unsigned char s_arrive_a (void)
 
     move.on = 0;
     if (how == A_DIGGING || how == A_CLIMBING) {
-        if (!HUB->rope_in) {
-            look_more (0, LM_ROPES);            /* (Climbing's part read in, the first time: things.c's) */
+        if (HUB->rope_in != 1) {
+            look_more (0, LM_ROPES);            /* (Climbing's part read in, the first time: things.c's; or the
+                                                **   rest, a denizen's read given way part way) */
         }
         climb_on (how);                         /* (A spell of digging done, a round of climbing: part climb's) */
         return 1;
@@ -3499,6 +3500,9 @@ void __fastcall__ s_start (const char* dir)
     s_begin ();
     den_kit (0);                                /* (The outfits' file into its banks, if the start's own outfit didn't
                                                 **   open it: part outfit's, fix2, 2026-11-24) */
+    look_more (2, LM_ROPES);                    /* (dq0w.rop opened, none of it read: its open, 650,000 cycles of the
+                                                **   card's, not in a line's window as a tunneller's kit reads it in,
+                                                **   a piece at a time, cmd2's, 2026-11-26) */
     tr_flush (0);                               /* (The traces' store begun as the game starts, not at its first flush:
                                                 **   its two banks cleared, its kinds read, some 1.2M cycles, a command's
                                                 **   answer kept waiting behind it, 2026-10-27: dq0answer's normal pace,
@@ -7935,13 +7939,20 @@ static void den_run (void)
 ** after; 1, an intent of another kind next) */
 #pragma code-name (push, "SW_kit_run_CODE")
 #pragma rodata-name (push, "SW_kit_run_RODATA")
+extern unsigned char kit_s;                     /* (jobs.s's: kit_give's way back out of it, its stacks) */
+void kit_arm (void);
 unsigned char s_kit_run (void)
 {
     static struct msg km;
-    unsigned char t;
+    static unsigned char t;                     /* (Static, the main RAM's, as km: none of it on the C stack, kit_give's
+                                                **   way out; nor in the part's image, the parts it calls copied over it) */
 
+    kit_arm ();                                 /* (Its stacks as it's called, for kit_give: a draw given way to a
+                                                **   line in hand left at once, not through its parts copied back in,
+                                                **   cmd2's, 2026-11-26) */
     while (hub_map (0), (t = HUB->di_tail) != HUB->di_head && HUB->di[t].kind == I_KIT) {
         if (den_held ()) {
+            kit_s = 0;
             return 0;
         }
         memcpy (&km, &HUB->di[t], sizeof km);
@@ -7950,13 +7961,15 @@ unsigned char s_kit_run (void)
         }
         den_other (&km);
         hub_ring (T_DENIZENS);
-        if (kit_off & 2) {
-            kit_off &= 1;
+        if (kit_off & KO_GAVE) {
+            kit_off &= ~KO_GAVE;
+            kit_s = 0;
             return 0;                           /* (The rest after the UI's command's answer, this one again) */
         }
         hub_map (0);
         HUB->di_tail = (t + 1) % DI_SIZE;
     }
+    kit_s = 0;
     return t != HUB->di_head;
 }
 #pragma code-name (pop)

@@ -40,26 +40,34 @@ void __fastcall__ time_kept (unsigned n);       /* (Part time_drift's: past any 
 
 /* A section by its name (the hash outfits.js's): its offset in the file, 0 none; its flags (its index entry's) in fflags */
 static unsigned char fflags;
+static unsigned char fk, fn, fl, fh;            /* (find's: static, the entries' walk the quicker) */
+#pragma register-vars (push, on)                /* (Its entry's pointer in the zero page's register bank: an entry a
+                                                **   few cycles, not some 160, a denizen's kind's found past all the
+                                                **   named sections, 32,000 cycles in a climb's first letter's window:
+                                                **   cmd2's, 2026-11-26) */
 static unsigned __fastcall__ find (const char* p)
 {
-    unsigned h = 0, k, n;
-    unsigned char* q;
+    unsigned h = 0;
+    register const unsigned char* q;
 
     for (; *p; ++p) {
         h = h * 31 + (unsigned char) *p;
     }
+    fl = (unsigned char) h;
+    fh = h >> 8;
     hub_map (CAT_BANK);
-    n = OF_INDEX[3];
-    for (k = 0, q = OF_INDEX + 4; k < n; ++k, q += 5) {
-        if ((q[0] | q[1] << 8) == h) {
+    fn = OF_INDEX[3];
+    for (fk = 0, q = OF_INDEX + 4; fk < fn; ++fk, q += 5) {
+        if (q[0] == fl && q[1] == fh) {
             fflags = q[4];
-            ost.slen = OF_INDEX[4 + 5 * n + k];  /* (Its length, the index's table after its entries: read whole, no
-                                                **   more, 2026-10-27) */
+            ost.slen = OF_INDEX[4 + 5 * fn + fk];    /* (Its length, the index's table after its entries: read whole,
+                                                **   no more, 2026-10-27) */
             return q[2] | q[3] << 8;
         }
     }
     return 0;
 }
+#pragma register-vars (pop)
 
 /* Line n of the referee's reply (its occupation, then its skills, by their mastery) after pre, in b: 1, or 0 none */
 static char b[256];                             /* (256: the index read in the fewer pieces, the start the quicker) */
@@ -160,6 +168,7 @@ static unsigned char opened (void)
 ** every line given, each on its own die (its stratum's seed, its number and the section's: the same things each
 ** time), and made (part outmake's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
 unsigned char ui_long (void);                   /* (dq0w.c's) */
+void kit_give (void);                           /* (jobs.s's) */
 void __fastcall__ s_den_kit (const struct msg* m)
 {
     static const char pre[3] = { '#', '&', '%' };
@@ -198,25 +207,36 @@ void __fastcall__ s_den_kit (const struct msg* m)
     k = STRATUM (ost.hsn).age;
     ost.age = k > 50 ? 250 : 5 * k;
     for (k = 0; k < 4; ++k) {
+        off = 0;
+        if (k < 3) {
+            if (!(I_KIT_DRAW (*m) & 1 << k)) {
+                continue;
+            }
+            ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U ^ k * 0x3B1DU) | 1;
+            b[0] = pre[k];                      /* (Its name in the index: the section's mark and its kind's number) */
+            b[1] = I_KIT_DKIND (*m);
+            b[2] = 0;
+            if (!(off = find (b)) && k == 2) {  /* (No purse of its kind's own: its standing's) */
+                strcpy (b, "standing 0");
+                b[9] += I_KIT_STANDING (*m);
+                off = find (b);
+            }
+            if (!off) {
+                continue;                       /* (None: part outdraw not copied in for it) */
+            }
+        }
         hub_map (0);
         if (ost.kit == 2 || ui_long ()) {
             ost.kit = 2;                        /* (A command come: all drawn again after its answer: before a section's
-                                                **   read from the card, and before anything's made) */
+                                                **   drawn, its part copied in, its section found first, the line come
+                                                **   as it was looked for (cmd2's, 2026-11-26); and before anything's
+                                                **   made) */
+            kit_give ();                        /* (In kit_run's call: out of it at once, jobs.s's) */
             return;
         }
-        if (k == 3 || !(I_KIT_DRAW (*m) & 1 << k)) {
-            continue;
+        if (off) {
+            draw_at (off, MD_ALL);
         }
-        ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U ^ k * 0x3B1DU) | 1;
-        b[0] = pre[k];                          /* (Its name in the index: the section's mark and its kind's number) */
-        b[1] = I_KIT_DKIND (*m);
-        b[2] = 0;
-        if (!(off = find (b)) && k == 2) {      /* (No purse of its kind's own: its standing's) */
-            strcpy (b, "standing 0");
-            b[9] += I_KIT_STANDING (*m);
-            off = find (b);
-        }
-        draw_at (off, MD_ALL);
     }
     ost.kit = 0;
     hub_map (KIND_BANK);
