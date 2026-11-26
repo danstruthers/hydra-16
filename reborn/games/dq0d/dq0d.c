@@ -2119,6 +2119,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
 {
     unsigned char d = 0xFF, was, foe, ag, w, rng, of, al;
 
+    __asm__ ("jsr %w", HY_PREEMPT_ON);           /* (tend's, held looked at as it began) */
     kind_get (md.akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
     of = a.face;
@@ -3509,8 +3510,15 @@ static void tend (void)
             again = 1;
             continue;
         }
-        for (n = 0, r = q->ready; r <= now && q->name[0] && n < 64 && (!n || !held ()); ++n) {
+        for (n = 0, r = q->ready; r <= now && q->name[0] && n < 64; ++n) {
             mkey (q->did, r);                   /* (Its dice its own, by the moment it decides at) */
+            __asm__ ("jsr %w", HY_PREEMPT_OFF);   /* (The look for a line and the decision begun one step: a key
+                                                **   come between them, the UI run on it, let one decide by under
+                                                **   the line's keys, dq0hold's, cmd2's, 2026-11-26; decide lets go) */
+            if (held ()) {
+                __asm__ ("jsr %w", HY_PREEMPT_ON);
+                break;
+            }
             if (decide (k) && (r = a.ready) > now) {
                 break;                          /* (A wait only, the world's to carry out with the rest) */
             }
