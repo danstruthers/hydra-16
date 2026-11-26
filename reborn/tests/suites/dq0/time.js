@@ -1000,7 +1000,7 @@ module.exports = {
         for (let i = s.indexOf('D I N G U S'); i >= 0; i = s.indexOf('D I N G U S', i + 1)) gs.push(i);
         if (gs.length !== 3) return ['not three games: ' + gs.length];
         const game = k => { const t = s.slice(gs[k], k + 1 < gs.length ? gs[k + 1] : s.length); return t.slice(0, t.indexOf('> quit')); };
-        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's)
+        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').replace(/(?:\s+\.)+/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's: its spaced progress dots too, as many as its time gave, cmd2's)
         const g0 = sents(game(0));
         if (!g0.some(x => /giant rat/.test(x))) f.push('no rat met: the scene not set (' + game(0).slice(0, 400) + ')');
         for (const k of [1, 2]) {
@@ -1039,7 +1039,7 @@ module.exports = {
         for (let i = s.indexOf('D I N G U S'); i >= 0; i = s.indexOf('D I N G U S', i + 1)) gs.push(i);
         if (gs.length !== n || m.dq0.games.length !== n) return ['not ' + n + ' games: ' + gs.length + ', ' + m.dq0.games.length];
         const game = k => { const t = s.slice(gs[k], k + 1 < gs.length ? gs[k + 1] : s.length), q = [t.indexOf('> quit'), t.indexOf('% ')].filter(x => x >= 0); return t.slice(0, Math.min(...q, t.length)); };   // (Its end: its quit, or the shell's prompt after the character's death)
-        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's)
+        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').replace(/(?:\s+\.)+/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's: its spaced progress dots too, as many as its time gave, cmd2's)
         const g0 = sents(game(0)), G = m.dq0.games;
         if (!g0.some(x => /cultist/.test(x)) || !G[0].events.some(e => e.te === 'TE_HIT')) f.push('no cultist met, its blow not waking the sleeper (E_TASK TE_HIT): the case not met');
         if (!G[0].events.some(e => e.te === 'TE_ASK_HEARD')) f.push('the sleep not asked about as it went (E_TASK TE_ASK_HEARD): the case not met');
