@@ -74,7 +74,7 @@ unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part shaft's: dq0w.c) Th
 #define SA_END          0x2000
 #define SA_HERE         0x1000
 #define SA_WET          0x4000
-void it_near (void);                              /* The chunks round the character's in the store, as it comes into
+unsigned char it_near (void);                           /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
 unsigned char rope (void);                      /* (Part rope_tie's: wrope.c: IO_HIDE's, IO_ROPE) */
 unsigned char __fastcall__ rope2 (unsigned w);  /* (Part rope_untie's: wrope2.c) */

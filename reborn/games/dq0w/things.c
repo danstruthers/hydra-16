@@ -280,6 +280,10 @@ static unsigned char __fastcall__ kind_flags (unsigned char k)
     return CATALOGUE[k < NK ? k : 0].flags;
 }
 
+static unsigned char take_one (void);
+unsigned char take_prep (void);                 /* (Part take_which's: their stubs) */
+unsigned char take_first (void);
+
 /* The UI's request answered (serve's, part things's; but what's carried listed, and a tool's wear, by their own part,
 ** 11, alone: an inventory's, a dig's every spell's) */
 unsigned char things_req (void)
@@ -295,6 +299,8 @@ unsigned char things_req (void)
     } else if (k == IO_TOOLS) {
         tools ();                               /* (Part things's alone, as every thing handled tells the referee what's to
                                                 **   hand) */
+    } else if ((k & ~IO_STEPS) == IO_GET && take_prep () && take_one ()) {
+        return 0;                               /* (A take of one asked which, chosen here: take_one) */
     } else if (k == IO_LOOK) {
         look_on (look_pick ());                 /* (A thing looked at: part ui_requests's chooser, then part look_on's words, with no
                                                 **   part things to come back to, four swaps less before its first letter:
@@ -368,6 +374,8 @@ static unsigned __fastcall__ item_kind (unsigned i)
 ** 16), the thing it mustn't be nor be in (the first, as the other's chosen), the thing it must be in (HW_IN's; else
 ** one it mustn't be in already: a count's put in it), the one it's to be (a count's next, a part of a lot split off) */
 unsigned char wsel;
+unsigned char wlist;                            /* (1: the chooser's pass to keep all it found in tbuf, which's; then
+                                                **   0x80 and their count: s_moved's, even3's) */
 unsigned wnot, win, wforce;
 unsigned handled;                               /* (The thing a request handled last: a count's, as each is moved) */
 unsigned hand_n;                                /* (The thing serve's at_hand found, for the handling's own: s_at_hand's) */
@@ -399,26 +407,7 @@ static void __fastcall__ say (unsigned char n);   /* (The catalogue's bank's: it
 ** part ui_requests's named4, gone into this), the light's, the market's, the search's; the UI's main.c's name_is, the same.  ""
 ** names any (the chooser asks none with it).  (The catalogue's bank's code's; the main RAM's since 2026-11-04, the swap
 ** study's: part things copied thousands of times for it and on_pc) */
-static unsigned char __fastcall__ word_of (const char* k, const char* w, unsigned char n)
-{
-    for (;;) {
-        if ((*k == *w || !n) && !strncmp (k, w, n)) {
-            return 1;
-        }
-        if (!(k = strchr (k, ' '))) {
-            return 0;
-        }
-        ++k;
-    }
-}
-
-unsigned char __fastcall__ named (const char* k, const char* w)
-{
-    unsigned char n = strlen (w), m;
-
-    return word_of (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_of (k, w, n - 1) ||
-        (w[n - 2] == 'e' && word_of (k, w, n - 2)))) || (n > 3 && (m = strlen (k)) > n && !strcmp (k + m - n, w));
-}
+/* (named.s's, in assembly since even4's, 2026-11-26: the chooser asks it of every kind in the store) */
 
 
 /* The character's (on it, or in what it carries) */
@@ -433,6 +422,25 @@ unsigned char __fastcall__ on_pc (unsigned i)
 }
 
 /* ==== Part things: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
+static unsigned pre_n;                          /* (A take's first chosen, take_one's, for s_moved: its number and 1;
+                                                **   0, none chosen yet) */
+
+/* A take of one (take_prep's, the request read as serve reads it): chosen here, part ui_requests copied in, none copied
+** back after it (the main RAM's), kept for s_moved (pre_n); several of the name lying about that differ, which asked, part
+** take_which's: 1, part serve not copied in for it, nor parts by_count and serve again after the chooser (dq0letwhich's,
+** even4's).  Else 0, serve's to answer, the one chosen kept */
+static unsigned char take_one (void)
+{
+    unsigned n = pick (iq.name, HW_GONE);
+
+    pre_n = n + 1;
+    if (wlist && n && csum > item_at (n)->qty && take_first ()) {
+        return 1;
+    }
+    wlist = 0;
+    return 0;
+}
+
 #pragma code-name (push, "SW_things_CODE")
 #pragma rodata-name (push, "SW_things_RODATA")
 
@@ -2477,6 +2485,153 @@ static unsigned __fastcall__ held_lit (void)
     return lit;
 }
 
+static char take_nm[16];                        /* (A count to take up, walked over to first: its name, selector and
+                                                **   count, s_take_rest's) */
+static unsigned char take_sel, take_cnt;
+extern unsigned char tk_n;                      /* (Part inventory's: the kinds taken, s_moved's) */
+
+#pragma code-name (push, "SW_take_which_CODE")   /* (A part of its own, even4's: part serve's copies, every request's, not
+                                                **   the bigger for it) */
+#pragma rodata-name (push, "SW_take_which_RODATA")
+/* ---- Which one (the user's playtest, 2026-11-06: "if all three are on the ground, I should get a prompt for which one,
+** with longer descriptions of each"; the designators' step 5): of those lying about that a take's name fits (none
+** chosen by a selector, a count, a letter, "take all"), all found in the take's own pass (pick's wlist, their numbers in
+** tbuf), each one's kind, count and state as the inventory's words tell them (lit; spent, nearly spent, burning low; empty),
+** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
+** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
+#define NWHICH          4
+#pragma bss-name (push, "SW_take_which_RODATA") /* (Its locals the part's own: the main RAM's room) */
+static unsigned char which (void)
+{
+    static unsigned id[NWHICH], q[NWHICH];
+    static unsigned char kd[NWHICH], st[NWHICH];
+    static unsigned char j, m, n, k, f;
+    static char b[6];
+
+    n = wlist & 15;                             /* (Those the take's own pass found, kept, take_which's: no second pass
+                                                **   of the store (SL_WHICH's, before), nor part ui_requests copied in for
+                                                **   it and this one back after, 80,000 cycles: dq0letwhich's, even3's) */
+    for (j = m = 0; j < n; ++j) {
+        fetch (&rec, ((unsigned*) tbuf)[j]);
+        if (!rec.id) {
+            return 0;                           /* (One not its own yet: the chooser's) */
+        }
+        f = rec.flags & I_LIT ? WS_LIT : 0;
+        if (rec.fuel <= BURN_LOW && burn_of (rec.kind)) {   /* (A light or a fuel, low or burnt out: words.c's) */
+            f |= !(kind_of (rec.kind)->flags & K_LIGHT) ? (rec.fuel ? 0 : WS_EMPTY) : !rec.fuel ? WS_SPENT : f ? WS_LOW :
+                WS_NEARLY;
+        }
+        for (k = 0; k < m && (kd[k] != rec.kind || q[k] != rec.qty || st[k] != f); ++k) {
+        }
+        if (k == m && m < NWHICH) {             /* (Not alike one found already: a choice) */
+            id[m] = rec.id;
+            kd[m] = rec.kind;
+            q[m] = rec.qty;
+            st[m++] = f;
+        }
+    }
+    if (m < 2) {
+        return 0;
+    }
+    text_new ();
+    for (k = 0; k < m; ++k) {
+        put (utoa (id[k], b, 10));
+        put (" ");
+        put (utoa (kd[k], b, 10));
+        put (" ");
+        put (utoa (q[k], b, 10));
+        put (" ");
+        put (utoa (st[k], b, 10));
+        put ("|");
+    }
+    return IR_WHICH;
+}
+#pragma bss-name (pop)
+
+/* A take of one (no count, no selector, no letter: s_moved's IO_GET): the chooser's pass for it, all it found kept
+** (wlist's); several of the name that differ, which, asked (IR_WHICH); else 0, the one chosen kept for s_moved (pre_n).
+** Part take_which's, which with it, called from part serve: a take asked which copies in this small part and part
+** ui_requests, not part by_count too and back (82,000 cycles: dq0letwhich's, even4's); one taken, the chooser's part
+** copied in once, as before */
+unsigned char s_take_which (void)
+{
+    unsigned n;
+
+    wforce = 0;
+    wlist = 1;
+    n = pick (iq.name, HW_GONE);
+    pre_n = n + 1;
+    if (n && csum > item_at (n)->qty) {
+        hub_map (0);                            /* (Several of the name lying about, all told: which, perhaps; one, as
+                                                **   ever, no second pass of the store nor the parts' swaps for it: a
+                                                **   take's answer as quick as it was, 2026-11-06) */
+        if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
+            wlist = 0;
+            pre_n = take_cnt = tk_n = 0;        /* (As s_moved left them, asking: nothing taken) */
+            return IR_WHICH;                    /* (Several that differ: which, asked) */
+        }
+    }                                           /* (All alike: the chooser's choice, its pass's, as ever; none
+                                                **   asked of again, which's data its own) */
+    wlist = 0;
+    return 0;
+}
+
+/* The UI's take of one (IO_GET, no count, no selector, no letter: things_req's), the character not hidden (serve's
+** hid_op), read as serve reads it (its first lines': by the reach's steps, rs_ok; no reach owed, nothing handled), for
+** things_req to choose it (pick, the pass's finds kept, wlist, but for a letter's): 1; else 0, serve's as ever */
+unsigned char s_take_prep (void)
+{
+    hub_map (0);
+    if ((HUB->ireq.kind & ~IO_STEPS) != IO_GET || HUB->pc_hid || HUB->ireq.count || HUB->ireq.sel ||
+        !*HUB->ireq.name) {
+        return 0;
+    }
+    if (HUB->ireq.kind & IO_STEPS) {            /* (By the reach's steps: serve's first lines') */
+        rs_ok = HUB->pc_lump & (PL_NOSTEPS | PL_TOLD) ? 8 : 1;
+        HUB->ireq.kind &= ~IO_STEPS;
+        if (rs_after_on == 2) {
+            rs_after_on = 0;
+        } else if (!rs_live) {
+            rs_paid = rs_using = rs_redo = rs_free = naside = naq = 0;
+            rs_pack = 0;
+        }
+    }
+    memcpy (&iq, &HUB->ireq, sizeof iq);
+    rtime = roff = 0;                           /* (No reach owed yet: serve's rclear10) */
+    rsteps = rbody = 0;
+    handled = 0;
+    iq.result = IR_OK;
+    wsel = wnot = win = wforce = 0;
+    wlist = *iq.name != '#';
+    return 1;
+}
+
+/* Several of the name lying about (things_req's choice, its pass's finds in tbuf, wlist's): those that differ, which asked,
+** the reply as serve ends it (RO_REPLY's), 1; all alike, 0, the one chosen kept for serve's s_moved (pre_n) */
+unsigned char s_take_first (void)
+{
+    hub_map (0);
+    if ((HUB->pc_lump & (PL_MORE | PL_ALL)) || !which ()) {
+        return 0;
+    }
+    wlist = 0;
+    pre_n = take_cnt = tk_n = 0;                /* (As s_moved left them, asking: nothing taken) */
+    rtime = roff = 0;
+    rsteps = rbody = 0;
+    hand_n = 0;
+    hub_map (0);
+    HUB->ireq.result = IR_WHICH;
+    if (rs_ok && !(rs_pack | rs_using | naq | rs_st) && (HUB->ireq.qty != LT_DIP || !(rs_redo & RR_TWO))) {
+        rs_ok = rs_live = 0;                    /* (As serve ends it: RO_REPLY's end alone) */
+    } else if (rs_ok) {
+        reach_do (RO_REPLY);
+    }
+    return 1;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+unsigned char take_which (void);                /* (Its stub) */
 static unsigned char o_handle (void);
 unsigned char drag (void);                      /* (Part drag's: wdrag.c, IO_DRAG) */
 unsigned char build (void);                     /* (Part build's: wbuild.c, IO_BUILD) */
@@ -2518,6 +2673,9 @@ unsigned char s_serve (void)
         break;
     case IO_GET:                                /* (Taken up, put down: one, or as many as it says, part ui_requests's) */
     case IO_DROP:
+        if (!pre_n && iq.kind == IO_GET && !iq.count && !wsel && *iq.name != '#' && (iq.result = take_which ()) != 0) {
+            break;                              /* (Asked which: part by_count not copied in) */
+        }
         if ((iq.result = moved (iq.kind)) == IR_NO && iq.kind == IO_GET && !rs_st) {
             cat_map ();                         /* (Fixed where it stands: the words why) */
             o_handle ();
@@ -2659,8 +2817,11 @@ unsigned char s_serve (void)
         }
         break;
     }
-    if (iq.result != IR_NOT_HERE && (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
-        iq.kind == IO_THROW || iq.kind == IO_PLACE || iq.kind == IO_EMPTY || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
+    if (iq.result != IR_NOT_HERE && iq.result != IR_WHICH &&
+        (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
+        iq.kind == IO_THROW || iq.kind == IO_PLACE || iq.kind == IO_EMPTY || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet; asked
+                                                **   which, nothing moved either: no light_now, nor its letters made again
+                                                **   and part tell_apart copied in, 260,000 cycles, even3's) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     } else if (iq.result == IR_OK && (iq.kind == IO_FILL || iq.kind == IO_SHUT || iq.kind == IO_USE)) {
@@ -2698,7 +2859,11 @@ unsigned char s_serve (void)
     hand_n = 0;
     hub_map (0);
     HUB->ireq.result = iq.result;
-    if (rs_ok && reach_do (RO_REPLY)) {         /* (The reach's steps: part room_tests's, a step begun the reply's) */
+    if (rs_ok && !(rs_pack | rs_using | naq | rs_st) && (HUB->ireq.qty != LT_DIP || !(rs_redo & RR_TWO))) {
+        rs_ok = rs_live = 0;                    /* (No step begun, the pack on, no tool out, nothing set aside: RO_REPLY's
+                                                **   end alone, as reach_do would; part reach_do not copied in for it nor
+                                                **   this one back, 67,000 cycles: a take's, a which's, even3's, even4's) */
+    } else if (rs_ok && reach_do (RO_REPLY)) {  /* (The reach's steps: part room_tests's, a step begun the reply's) */
         return 0;
     }
     return changed && iq.kind != IO_KIT;
@@ -3018,20 +3183,24 @@ static unsigned char __fastcall__ name_comp (unsigned char k, const char* name)
     return named (kinds[k].name, name) ? 0 : comp_named (k, name);
 }
 
+unsigned __fastcall__ pick_next (unsigned i);   /* (items.s's: the next record the chooser looks at, ip its record) */
+extern unsigned char* pk_no;
+extern unsigned pk_wid;
+extern unsigned char pk_hash;
 #pragma bss-name (push, "SW_ui_requests_RODATA") /* (pick_'s locals, static: part ui_requests's own, none of its calls swapping a
                                                 **   part in; the main RAM's room, 2026-11-18) */
+#pragma register-vars (push, on)                /* (Its record's pointer and the tile's in the zero page's register bank: each
+                                                **   look at a record a few cycles, not some thirty, even4's) */
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no)
 {
     struct { unsigned n; unsigned char r; } c[NCAND];
-    unsigned char* t;
-    const struct item* p;
+    register unsigned char* t;
+    register const struct item* p;
     const struct kind* k;
     unsigned i = 0, x, y, px, py, dx, dy, wid;
-    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk, all = wsel == SL_WHICH;
+    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk, pr;
 
-    if (all) {
-        s = 0;                                  /* (Every one: which's, part by_count's) */
-    }
+    pr = 0xFE;                                  /* (The character's room, asked once a pass: none yet) */
     afar = 0;
     csum = 0;
     hand_n = 0;
@@ -3047,22 +3216,18 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         wid = wid * 10 + *t - '0';            /* (A thing by its id: a name given's, a letter's, the UI's "#" and the id;
                                                 **   the records' own looked at, none copied out, 2026-11-06) */
     }
-    p = 0;                                      /* (The store gone through here, not by items (): a kind passed over, or
-                                                **   a free record, some 70 cycles, not 1,400: a thing named answers the
-                                                **   sooner, the user's D17, 2026-11-03; p 0, its bank to be put back) */
-    for (i = 1; i < ihigh; ++i) {
-        if (!p || p == (const struct item*) 0x8000 + 0x2000 / sizeof (struct item)) {
-            p = item_at (i);
-        }
-        pk = p->kind;
-        ++p;
-        if (!pk || no[pk] || p[-1].where >= IW_DEN || (p[-1].flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
-            (*name == '#' && p[-1].id != wid)) {
-            continue;
-        }
-        p = 0;
-        if (*name != '#') {                     /* (A kind's name asked where it lies, once a kind: nothing copied out,
-                                                **   a thing named its first letter the sooner, the user's D17) */
+    pk_no = no;                                 /* (The store gone through by pick_next, items.s's: a kind passed over,
+                                                **   a free record, a denizen's, one hidden, 40 cycles, not 300, its
+                                                **   records by their place; 1,400 by items () before 2026-11-03: a
+                                                **   thing named answers the sooner, the user's D17; even4's) */
+    pk_wid = wid;
+    pk_hash = *name == '#';
+    for (i = 0; (i = pick_next (i)) != 0; ) {
+        pk = ip->kind;
+        if (*name != '#' && !no[pk]) {          /* (A kind's name asked where it lies, once a kind: nothing copied out,
+                                                **   a thing named its first letter the sooner, the user's D17; a kind
+                                                **   it fits kept too, 2, not asked again of each of its things: a
+                                                **   dungeon's torches, each in its sconce, even4's) */
             hub_map (KIND_BANK);
             if (*name ? !named ((const char*) kinds + ((unsigned) pk << 5) + ((unsigned) pk << 2) + pk, name) : how != HW_IN) {
                                                 /* (The main RAM's named, the one rule, no swap; "" names none here, but
@@ -3075,9 +3240,10 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
                     continue;                   /* (Named by a compartment of its, "the drawer": the user's, 2026-11-16;
                                                 **   a hidden one not found, none) */
                 }
+            } else {
+                no[pk] = 2;
             }
         }
-        fetch (&rec, i);
         if (d = chain (i), cnot && s != SL_NTH) {
             continue;                           /* (Not the first, nor in it, unless it's the nth said: "the second
                                                 **   sack" of them all, not of the rest) */
@@ -3093,6 +3259,12 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
             pw = IW_ACTOR;                      /* (Off for a handling, at its feet: part reach_steps's) */
             px = 0;
         }
+        if (how != HW_IN && pw != IW_ACTOR && (how == HW_CARRIED || ps != sn || px - x + 20 > 40 || py - y + 20 > 40)) {
+            continue;                           /* (Lying about too far off, or in another stratum: passed by before
+                                                **   it's copied out, as the tests below pass it: a dungeon's every torch
+                                                **   in its sconce, even4's) */
+        }
+        fetch (&rec, i);
         if (how == HW_IN) {
             if (rec.where != IW_ITEM || rec.x != win || (wcin && ic_of (i) != wcin) ||
                 (!*name && (j = icomp (i)) != 0 && unseen (win, j))) {
@@ -3125,7 +3297,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
                                                 **   each level open, its reach a level's time more each (part reach's):
                                                 **   the user's H17, 2026-11-21) */
                 !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
-                (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
+                (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != (pr != 0xFE ? pr : (pr = room_of (sn, x, y)))))) {
                 continue;                       /* (Lying about, or on a surface there, in sight, or remembered there
                                                 **   in the room it's in, as HW_HAND and those after it ask; not in a
                                                 **   thing, but to hand in an open one it knows of) */
@@ -3164,11 +3336,13 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
     }
     look_q = 0;
-    if (all) {
-        for (j = 0; j < m; ++j) {               /* (Their numbers, the most to hand first, in tbuf: which's) */
+    if (wlist) {
+        for (j = 0; j < m; ++j) {               /* (Their numbers, the most to hand first, in tbuf, kept by a take's
+                                                **   own pass for which (wlist's): its one pass, even3's; SL_WHICH's
+                                                **   second pass before) */
             ((unsigned*) tbuf)[j] = c[j].n;
         }
-        return m;
+        wlist = 0x80 | m;
     }
     j = s == SL_NTH ? wsel >> 4 : s == SL_OTHER && !wnot ? 2 : 1;
     if (!j || j > m) {
@@ -3192,6 +3366,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     }
     return i;
 }
+#pragma register-vars (pop)
 #pragma bss-name (pop)
 
 /* The first thing named that the character carries; that it sees lying about; that's to hand (carried, or seen within
@@ -3497,9 +3672,6 @@ unsigned __fastcall__ s_join (unsigned n)
 ** o_handle), joined to one alike where it went, and its time; their words by the count ("You take 4 rations."; fewer
 ** than asked: "There are only 3 rations."), the one's as they are (none for one taken up or put down: the UI's).  The
 ** result: IR_OK if any moved, else the first one's */
-static char take_nm[16];                        /* (A count to take up, walked over to first: its name, selector and
-                                                **   count, s_take_rest's) */
-static unsigned char take_sel, take_cnt;
 static void take_keep (void)
 {
     strcpy (take_nm, iq.name);
@@ -3507,61 +3679,6 @@ static void take_keep (void)
     take_cnt = iq.count;
 }
 
-/* ---- Which one (the user's playtest, 2026-11-06: "if all three are on the ground, I should get a prompt for which one,
-** with longer descriptions of each"; the designators' step 5): of those lying about that a take's name fits (none
-** chosen by a selector, a count, a letter, "take all"), all found in one pass (pick's SL_WHICH, their numbers in
-** tbuf), each one's kind, count and state as the inventory's words tell them (lit; spent, nearly spent, burning low; empty),
-** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
-** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
-#define NWHICH          4
-#pragma bss-name (push, "SW_by_count_RODATA")   /* (Its locals the part's own: the main RAM's room) */
-static unsigned char which (void)
-{
-    static unsigned id[NWHICH], q[NWHICH];
-    static unsigned char kd[NWHICH], st[NWHICH];
-    static unsigned char j, m, n, k, f;
-    static char b[6];
-
-    wsel = SL_WHICH;
-    n = (unsigned char) pick (iq.name, HW_GONE);
-    wsel = 0;                                   /* (As it was: none said, s_moved's; this part's data copied in again by
-                                                **   the chooser's call) */
-    for (j = m = 0; j < n; ++j) {
-        fetch (&rec, ((unsigned*) tbuf)[j]);
-        if (!rec.id) {
-            return 0;                           /* (One not its own yet: the chooser's) */
-        }
-        f = rec.flags & I_LIT ? WS_LIT : 0;
-        if (rec.fuel <= BURN_LOW && burn_of (rec.kind)) {   /* (A light or a fuel, low or burnt out: words.c's) */
-            f |= !(kind_of (rec.kind)->flags & K_LIGHT) ? (rec.fuel ? 0 : WS_EMPTY) : !rec.fuel ? WS_SPENT : f ? WS_LOW :
-                WS_NEARLY;
-        }
-        for (k = 0; k < m && (kd[k] != rec.kind || q[k] != rec.qty || st[k] != f); ++k) {
-        }
-        if (k == m && m < NWHICH) {             /* (Not alike one found already: a choice) */
-            id[m] = rec.id;
-            kd[m] = rec.kind;
-            q[m] = rec.qty;
-            st[m++] = f;
-        }
-    }
-    if (m < 2) {
-        return 0;
-    }
-    text_new ();
-    for (k = 0; k < m; ++k) {
-        put (utoa (id[k], b, 10));
-        put (" ");
-        put (utoa (kd[k], b, 10));
-        put (" ");
-        put (utoa (q[k], b, 10));
-        put (" ");
-        put (utoa (st[k], b, 10));
-        put ("|");
-    }
-    return IR_WHICH;
-}
-#pragma bss-name (pop)
 
 /* ---- Stowed, no place said (the user's, 2026-11-06: "when stowing something, it should ask where if there is more than
 ** one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should
@@ -3696,15 +3813,13 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     text_new ();
     for (;;) {
         wforce = 0;
-        n = op == IO_TAKE && !win ? 0 : pick (iq.name, mode);
-        if (op == IO_GET && !times && n && csum > item_at (n)->qty && !iq.count && !wsel && *iq.name != '#') {
-            hub_map (0);                        /* (Several of the name lying about, all told: which, perhaps; one, as
-                                                **   ever, no second pass of the store nor the parts' swaps for it: a
-                                                **   take's answer as quick as it was, 2026-11-06) */
-            if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
-                return IR_WHICH;                /* (Several that differ: which, asked) */
-            }
-            n = pick (iq.name, mode);           /* (All alike: the chooser's, as ever; rec and the rest its again) */
+        if (pre_n) {
+            n = pre_n - 1;                      /* (A take of one: chosen by part serve's take_which, asked which
+                                                **   there, its pass's choice: no second pass, nor part ui_requests copied
+                                                **   in again) */
+            pre_n = 0;
+        } else {
+            n = op == IO_TAKE && !win ? 0 : pick (iq.name, mode);
         }
         if (!times && iq.count == CT_HALF) {
             want = csum > 1 ? csum >> 1 : 1;    /* (Half of all there are: a lot's count, or the things alike) */

@@ -231,12 +231,15 @@ static unsigned char aheading;                  /* (A chunk being made ahead: th
 unsigned char ahead_wanted (void);              /* (dq0m.c's: a request posted, or a command: 1) */
 void ahead_mark (void);                         /* (bank.s's) */
 void ahead_back (void);
+void fore_again (void);                         /* (dq0m.c's: in the foreground or not, as the requests are now) */
 
 void ahead_check (void)
 {
     unsigned w;
 
     if (!aheading) {
+        fore_again ();                          /* (A requested chunk: its asker waited on by the foreground since,
+                                                **   a test's scene: even3's) */
         return;
     }
     w = hub_here ();

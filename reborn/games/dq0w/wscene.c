@@ -19,10 +19,37 @@
 
 #define W_SLOT          HUB->slot[SLOT_WORLD]
 
+void den_intents (void);                        /* (Part den_bodies's: wbody.h's) */
+extern unsigned char sc_look;                   /* (dq0w.c's: the scene's intents held for the look at it) */
+extern unsigned char den_done;                  /* (wbody.h's: the minds' turn done) */
+
+/* At the turns pace, the scene in place whole (scene_d: the maker's part and the minds' done, after the world's)
+** before the world goes on with its pass, and the intents the minds posted for it (SO_INTENT) held through this pass
+** (sc_look, den_held's): the look at the bodies the scene moved (den_seq's, the late jobs') first, then what they
+** do, as a mind's intent is carried out after the bodies it saw were looked at, whatever the tasks' timing.  Its pass
+** went on as the minds were at their part, the look at the bodies before their intent was carried out or after it as
+** the timing fell: a bandit's errand told or not, in one layout of the code and not in another (dq0denerrands',
+** dq0dentakein's, dq0thingact's: OPEN.md's L1; even2's, 2026-11-25).  Thirty seconds at most, a turn's wait (a
+** stuck task's); the ring full, its intents carried out (the minds wait on it).  Its own scene, s: the harness's
+** next posted (hub.scene) as soon as it's in place */
+static void __fastcall__ whole (unsigned char s)
+{
+    unsigned t0 = hy_ticks ();
+
+    while (hub_map (0), HUB->scene_d != s && !HUB->quit && (unsigned) (hy_ticks () + 1 - t0) < 30 * HY_TICK_HZ) {
+        hub_sleep (1);
+        if (hub_map (0), (HUB->di_head + 1) % DI_SIZE == HUB->di_tail) {
+            den_intents ();
+        }
+    }
+    sc_look = 1;
+    hub_map (0);
+}
+
 void s_scene (void)
 {
     static unsigned at;
-    static unsigned char s, k, n, mk, md;
+    static unsigned char s, k, n, mk, md, q;
     static unsigned char b[80];                 /* (An op's payload, copied out of CMD_BANK) */
 
     hub_map (0);
@@ -63,6 +90,13 @@ void s_scene (void)
         }
     }
     hub_map (0);
+    q = md && !HUB->tpr && den_done == HUB->den_go && HUB->di_tail == HUB->di_head;
+                                                /* (The minds quiet, their turn done: asked before
+                                                **   the scene's own parts are let go, scene_m's and scene_w's: once let go,
+                                                **   the minds post its intents, and a world slower than they are found
+                                                **   the ring not empty and went on, the take carried out before the look
+                                                **   at the bodies, dq0lockerrand's game 5 in the 37-byte layout: even5's,
+                                                **   2026-11-26) */
     if (!mk) {
         HUB->scene_m = s;                       /* (None of the maker's: the minds' next) */
         if (!md) {
@@ -71,4 +105,9 @@ void s_scene (void)
     }
     HUB->scene_w = s;                           /* (Its part done: the maker's now, if it has one, then the minds') */
     hub_ring (mk ? T_MAKER : T_DENIZENS);
+    if (q) {
+        whole (s);                              /* (The minds quiet, their turn done: else as ever, their turn's intents
+                                                **   the world's to carry out as it goes, dq0stray's shot mid-fight; the turns pace's: the
+                                                **   scene whole before the world goes on) */
+    }
 }

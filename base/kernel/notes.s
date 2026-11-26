@@ -124,6 +124,11 @@ K_NOTE_QUEUED:
             bpl         @group
             rts
 
+q_srch:                                                     ; (q_post's: free, or not started; here, in its branches'
+            sty         T_REGISTER                          ;   reach, CAND_SET the longer since even3's)
+            plp
+            FAIL        E_SRCH
+
 ; The note (TQ_MASK in byte TQ_INDEX) to task .X: pending, and the task woken if it waits (or its next PAUSE won't:
 ; between a look for notes and a PAUSE).  OUT: C = 0; or C = 1, .A = E_PERM (the kernel task, a driver), E_SRCH
 ; (free, or not started).  Keeps .X
@@ -137,9 +142,9 @@ q_post:
             sei
             stx         T_REGISTER                          ; ---- The task: one to take notes?
             lda         TK_STATE
-            beq         @srch
+            beq         q_srch
             cmp         #ST_NEW
-            beq         @srch
+            beq         q_srch
             lda         TK_FLAGS
             and         #TF_DRIVER
             bne         @perm_back
@@ -202,11 +207,6 @@ q_post:
             plp
             clc
             rts
-
-@srch:
-            sty         T_REGISTER
-            plp
-            FAIL        E_SRCH
 
 @perm_back:
             sty         T_REGISTER

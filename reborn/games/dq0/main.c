@@ -1078,17 +1078,21 @@ void o_fore_sync (void)
 ** the world's quiet and the replies ring it as ever; only the keys wait the longer: each look at them the UI's loop and
 ** the console's call, some 13,000 cycles a fourth tick, a sixth of a look's CPU.  Not all an answer at the turns pace: a
 ** line that breaks off a long task or a reach's steps, typed meanwhile, landing later (dq0reachflee2's flee; lock4's,
-** 2026-11-25) */
+** 2026-11-25).  And at the real paces as a command's intent's answer is awaited (owed, ui_cmd: its news not come; not
+** busy, a long task a stop may be typed in; no line's keys since, ui_keys): its news rings it, the world the CPU meanwhile, not three of the UI's looks at the keys, 11,000
+** cycles each, in a climb's first letter's window (dq0pcfelled's "d", F1: even2's, 2026-11-25) */
 unsigned char o_nap_long (void)
 {
-    unsigned char r[2], w[2], k;
+    unsigned char r[2], w[2], k, c[2];
     unsigned t;
 
     hub_mem (0, &t, (const void*) &HUB->tpr, 2);
     hub_mem (0, w, (const void*) &HUB->ui_want, 2);        /* (ui_want, w_idle) */
     hub_mem (0, &k, (const void*) &HUB->pc_task.kind, 1);
     hub_mem (0, r, (const void*) &HUB->look.state, 2);     /* (Its state, kind: RQH's) */
-    return (!t && w[0] != w[1] && !k && !reach) || (r[0] == REQ_POSTED && (unsigned char) (r[1] - LK_WAY) <= (t ? LK_NEAR : LK_REST) - LK_WAY);
+    hub_mem (0, c, (const void*) &HUB->ui_cmd, 1);
+    hub_mem (0, c + 1, (const void*) &HUB->ui_keys, 1);
+    return (!t && w[0] != w[1] && !k && !reach) || (t && c[0] && owed && !busy && !c[1]) || (r[0] == REQ_POSTED && (unsigned char) (r[1] - LK_WAY) <= (t ? LK_NEAR : LK_REST) - LK_WAY);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)

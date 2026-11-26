@@ -30,7 +30,11 @@
 ; more: a task goes in as it's switched out (it ran, whatever state it left in), as another task makes it ready
 ; (WAKE, a note, its start: CAND_SET), and leaves it only as a look finds it in none of those states and serving
 ; no call (a call's end puts back the state the task had before it, a wait the pick ends maybe).
-; docs/03-base/kernel.md, "The scheduler".
+; The known sleepers (K_SLP, K_SLPT, even3's, 2026-11-25): a task switched out asleep goes in a second set, the earliest
+; of their times kept; till it comes the looks pass them by (a sleeper whose time's to come: its look would pass it
+; by), some five of a pick's seven candidates with one program busy, 950 cycles a tick.  Its time come, the set's walked
+; at the next pick, those whose time has come taken out (looked at as ever), the earliest of the rest found; a task
+; another makes ready leaves it (CAND_SET).  docs/03-base/kernel.md, "The scheduler".
 
 .include "kdefs.inc"
 
@@ -178,11 +182,60 @@ K_SCHED_NOTED:
 ; only between.  IN, OUT: IRQs off (a moment on between its looks).  OUT: .A = the task.  Modifies .X, .Y
 K_SCHED_PICK:
             ldy         T_REGISTER                          ; .Y = this task, throughout
+            ldx         TK_STATE                            ; (Its state as it's switched out)
             stz         T_REGISTER                          ; ---- The kernel task's
             lda         cand_lo,Y                           ; This task a candidate, maybe (it ran)
             tsb         K0_CANDLO
             lda         cand_hi,Y
             tsb         K0_CANDHI
+            cpx         #ST_SLEEP                           ; Gone to sleep: a known sleeper, its time the earliest
+            bne         @awake                              ;   if it's before theirs (its time - theirs < 0)
+            lda         K_SLP
+            ora         K_SLP + 1
+            beq         @earliest
+            lda         K_WAKE_LO,Y
+            cmp         K_SLPT
+            lda         K_WAKE_HI,Y
+            sbc         K_SLPT + 1
+            bpl         @slept
+@earliest:
+            lda         K_WAKE_LO,Y
+            sta         K_SLPT
+            lda         K_WAKE_HI,Y
+            sta         K_SLPT + 1
+@slept:
+            lda         cand_lo,Y
+            tsb         K_SLP
+            lda         cand_hi,Y
+            tsb         K_SLP + 1
+            sty         T_REGISTER                          ; ---- This task
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            stz         T_REGISTER                          ; ---- The kernel task's
+            bra         @known
+
+@awake:                                                     ; Not asleep: not a known sleeper (a sleeper called,
+            lda         cand_lo,Y                           ;   ST_READY as the call runs in it: call.s)
+            trb         K_SLP
+            lda         cand_hi,Y
+            trb         K_SLP + 1
+@known:
+            lda         K_SLP                               ; The earliest's time come?  (Now - it >= 0)  Then
+            ora         K_SLP + 1                           ;   those whose time has come aren't known sleepers
+            beq         @place                              ;   any more (looked at as ever), and the earliest of
+            lda         K0_TICKS                            ;   the rest found
+            cmp         K_SLPT
+            lda         K0_TICKS + 1
+            sbc         K_SLPT + 1
+            bmi         @place
+            sty         T_REGISTER                          ; ---- This task (its JSR and RTS)
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            jsr         slp_walk
+            stz         T_REGISTER                          ; ---- The kernel task's
+@place:
             cpy         K0_FPICK                            ; (The round robin's place: this task, unless the
             beq         :+                                  ;   foreground picked it)
             sty         K0_RR
@@ -317,54 +370,127 @@ round:
 
 ; The next candidate after task .X, within K_LIM, as they are now (a WAKE in a moment for interrupts counts).  IN,
 ; OUT: T = this task (.Y).  OUT: C = 1, none; else C = 0, .X = it.  Modifies .A
+; The known sleepers (K_SLP) are passed by while the earliest of their times hasn't come (K_SLPT): each is asleep,
+; its time to come, so its look would pass it by and change nothing (even3's, 2026-11-25: some five of a pick's seven
+; candidates as one task works and the rest wait, 950 cycles a tick)
 next:
             stz         T_REGISTER                          ; ---- The kernel task's
+            lda         K0_TICKS                            ; (Now - the earliest < 0: none's time come)
+            cmp         K_SLPT
+            lda         K0_TICKS + 1
+            sbc         K_SLPT + 1
+            bpl         @all
+            lda         K_SLP
+            eor         #$FF
+            and         K0_CANDLO
+            and         K_LIM
+            and         above_lo,X
+            bne         @lo
+            lda         K_SLP + 1
+            eor         #$FF
+            and         K0_CANDHI
+            bra         @hi
+@all:
             lda         K0_CANDLO
             and         K_LIM
             and         above_lo,X
-            sta         K_M
+            bne         @lo
             lda         K0_CANDHI
+@hi:
             and         K_LIM + 1
             and         above_hi,X
-            sta         K_M + 1
-            bra         first0
-
-; The first task in the set K_M (bit = task).  IN, OUT: T = this task (.Y).  OUT: C = 1, none; else C = 0, .X =
-; it.  Modifies .A
-first:
-            stz         T_REGISTER                          ; ---- The kernel task's
-first0:
-            ldx         #0                                  ; (.X: the byte's first task)
-            lda         K_M
-            bne         :+
-            ldx         #8
-            lda         K_M + 1
-            beq         @none
-:
-            bit         #$0F                                ; (Its low nibble, else its high)
-            bne         :+
-            lsr         a
-            lsr         a
-            lsr         a
-            lsr         a
-            inx
-            inx
-            inx
-            inx
-:
-            stx         K_NIB                               ; (A moment)
-            and         #$0F
+            beq         none
             tax
-            lda         lsb4,X
-            ora         K_NIB                               ; (0, 4, 8 or 12: no carries)
+            lda         lsb8,X
+            ora         #8
+            bra         got
+@lo:
+            tax
+            lda         lsb8,X
+got:
             tax
             sty         T_REGISTER                          ; ---- This task
             clc
             rts
 
-@none:
+; The first task in the set K_M (bit = task).  IN, OUT: T = this task (.Y).  OUT: C = 1, none; else C = 0, .X =
+; it.  Modifies .A
+first:
+            stz         T_REGISTER                          ; ---- The kernel task's
+            ldx         K_M
+            beq         :+
+            lda         lsb8,X
+            bra         got
+:
+            ldx         K_M + 1
+            beq         none
+            lda         lsb8,X
+            ora         #8
+            bra         got
+
+none:
             sty         T_REGISTER                          ; ---- This task
             sec
+            rts
+
+; The known sleepers walked, the earliest's time come: those whose time has come taken out (looked at as ever), the
+; earliest of the rest's time in K_SLPT (none: K_SLP empty).  IN, OUT: T = this task (.Y), IRQs off (a moment on after
+; each).  Modifies .A, .X
+slp_walk:
+            stz         T_REGISTER                          ; ---- The kernel task's
+            lda         K_SLP
+            sta         K_M
+            lda         K_SLP + 1
+            sta         K_M + 1
+            stz         K_SLPF
+@next:
+            sty         T_REGISTER                          ; ---- This task
+            jsr         first
+            bcs         @done
+            stz         T_REGISTER                          ; ---- The kernel task's
+            lda         cand_lo,X                           ; (Looked at)
+            trb         K_M
+            lda         cand_hi,X
+            trb         K_M + 1
+            lda         K0_TICKS                            ; Its time come?  (Now - its time >= 0)
+            cmp         K_WAKE_LO,X
+            lda         K0_TICKS + 1
+            sbc         K_WAKE_HI,X
+            bmi         @later
+            lda         cand_lo,X                           ; Not a known sleeper: its look's
+            trb         K_SLP
+            lda         cand_hi,X
+            trb         K_SLP + 1
+            bra         @moment
+
+@later:
+            lda         K_SLPF                              ; The earliest yet?  (Its time - that one's < 0)
+            beq         @new
+            lda         K_WAKE_LO,X
+            cmp         K_SLPN
+            lda         K_WAKE_HI,X
+            sbc         K_SLPN + 1
+            bpl         @moment
+@new:
+            lda         K_WAKE_LO,X
+            sta         K_SLPN
+            lda         K_WAKE_HI,X
+            sta         K_SLPN + 1
+            inc         K_SLPF
+@moment:
+            sty         T_REGISTER                          ; ---- This task
+            cli                                             ; (A moment for interrupts)
+            nop
+            sei
+            bra         @next
+
+@done:
+            stz         T_REGISTER                          ; ---- The kernel task's
+            lda         K_SLPN
+            sta         K_SLPT
+            lda         K_SLPN + 1
+            sta         K_SLPT + 1
+            sty         T_REGISTER                          ; ---- This task
             rts
 
 ; Task .X looked at by the round's look: the round robin's (TK_PICKS: the flags it passes by), or the foreground's
@@ -511,12 +637,28 @@ fseen:
 .segment "KRODATA"
 
 ; Each task's bit in a set of tasks (low byte, high byte: the kernel task's none: CAND_SET's too); the tasks after
-; each (above_lo, above_hi); the lowest bit set in each nibble (lsb4)
+; each (above_lo, above_hi); the lowest bit set in each byte (lsb8: a set's first task in one look, even3's)
 cand_lo:    .byte       $00, $02, $04, $08, $10, $20, $40, $80, $00, $00, $00, $00, $00, $00, $00, $00
 cand_hi:    .byte       $00, $00, $00, $00, $00, $00, $00, $00, $01, $02, $04, $08, $10, $20, $40, $80
 above_lo:   .byte       $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00, $00, $00, $00, $00, $00, $00
 above_hi:   .byte       $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00
-lsb4:       .byte       $00, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+lsb8:
+            .byte       $00, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $05, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $06, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $05, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $07, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $05, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $06, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $05, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
+            .byte       $04, $00, $01, $00, $02, $00, $01, $00, $03, $00, $01, $00, $02, $00, $01, $00
 
 .segment "KCODE"
 
@@ -640,6 +782,15 @@ K_TICKS:
             plp
             clc
             rts
+
+; TICKS, as programs call it: a note pending taken on the way out (K_NOTE_CHECK).  A tick that came in its IRQs-off
+; time is taken just after it, at its RTS, and a switch there takes the notes (K_SCHED_NOTED); but one that came as it
+; began (its JMP, its PHP) left the task in the kernel past any look, its note waiting for a switch that found it in
+; its own code, a tick or two more by how the ticks fell (t_note's kill of a task spinning on TICKS; even3's,
+; 2026-11-25, the scheduler's cost changed).  Keeps .A, .X; modifies .Y
+K_UTICKS:
+            jsr         K_TICKS
+            jmp         K_NOTE_CHECK
 
 ; SLEEP: .A/.X = ticks (0-32767).  OUT: C = 0; or C = 1, .A = E_INTR (a note woke it early: taken on the way out)
 K_SLEEP:

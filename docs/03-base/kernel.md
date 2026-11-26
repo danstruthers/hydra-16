@@ -152,6 +152,13 @@ waiting.
   The pick's moments for interrupts are taken with `T` the task being switched out's (the stack page goes with `T`).
   `base/tools/schedcheck.js` checks it on any run: each pick against a model of the old one, on the memory as the
   pick began, and the set against the states.
+* **The known sleepers** (2026-11-25): a task switched out asleep (`SLEEP`, its time to come) goes in a second set, and
+  the earliest of their times is kept; till that time comes the pick's looks pass the set by, each of them a sleeper
+  whose look would pass it by and change nothing (with one program busy and the rest waiting, some five of a pick's
+  seven candidates).  Once it's come, the set is walked at the next pick: those whose time has come leave it (looked at
+  as ever, made ready), the earliest of the rest found.  A task another makes ready (`WAKE`, a note, its start) leaves
+  it.  A set's first task is one table look (the lowest bit of a byte).  The picks are the old ones still:
+  `schedcheck.js` holds them so.
 * **Task 0** runs only when nothing else can (its idle loop: `WAI`), or when interrupt handlers have queued notes for it
   to deliver.
 * **`PREEMPT_OFF`** holds the CPU for timing-critical work (interrupts still run; a switch that comes due waits for

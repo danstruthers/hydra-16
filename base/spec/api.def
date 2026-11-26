@@ -174,7 +174,7 @@ call SLEEP_UNTIL task impl=K_SLEEP_UNTIL
   hl:     .A/.X=n ->
   doc:    Sleep until the tick count reaches a value: for steady timing (a time that's passed returns at once).
 
-call TICKS task impl=K_TICKS
+call TICKS task impl=K_UTICKS
   in:     -
   out:    .A/.X = the tick count (TICK_HZ a second; it wraps after about 5.5 minutes)
   errors: -

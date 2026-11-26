@@ -363,14 +363,15 @@ function windowChecked(sources) {
 // a program with less main RAM free than its floor fails the build (floorOf, the user's floors: GAME-CRITIQUE.md's
 // 6.2 and 7.4; the UI's, dq0's, 3,000; every other task of Dingus Quest Zero's, dq0*, 2,048, as they run together and
 // grow; the theme compiler and the theme generator 512, tools run alone between dungeons and by the build, not in
-// play beside the tasks, the user's of 2026-11-13); another game's program short of TASK_FLOOR (hmchar: run alone,
-// most of it the harn library's), only a warning.  And the headroom (the user's standing rule, 2026-11-17: a part or
+// play beside the tasks, the user's of 2026-11-13; hmchar too, the game's character generator, run alone before a
+// game's world starts and on its own: the same class, even2's, 2026-11-25); another game's program short of TASK_FLOOR,
+// only a warning.  And the headroom (the user's standing rule, 2026-11-17: a part or
 // bank under 64 bytes free has its room won back before the next feature): each main RAM within HEADROOM of its
 // floor, each overlay's and swapped part's bank with under HEADROOM free (marked !), listed.  Nothing else of a
 // task's is past its BSS's end: no heap (a dq0 task that takes in malloc fails: cc65's heap runs from the BSS's end
 // to the stack's, over the swap area, and isn't counted), the C stack's least room (__STACKMIN__) above the measure's
 // top, its arguments at TASK_ARGS ($0350).  OUT: { text, faults }
-const TASK_FLOOR = 2048, FLOORS = { dq0: 3000, themec: 512, themegen: 512 }, HEADROOM = 64;
+const TASK_FLOOR = 2048, FLOORS = { dq0: 3000, themec: 512, themegen: 512, hmchar: 512 }, HEADROOM = 64;
 const floorOf = name => FLOORS[name] !== undefined ? FLOORS[name] : TASK_FLOOR;
 const floored = name => /^dq0/.test(name) || FLOORS[name] !== undefined;     // (Below its floor, the build fails)
 function headroom(names) {
@@ -426,7 +427,7 @@ function headroom(names) {
     if (short.length) lows.push(name + "'s " + short.join(' and '));
   }
   const text = ["The games' room (bytes free: the main RAM's, from the BSS's end; at least " + FLOORS.dq0 + " for the UI, " + TASK_FLOOR +
-    " for dq0's other tasks, " + FLOORS.themec + ' for themec and themegen; ! short, or an ' +
+    " for dq0's other tasks, " + FLOORS.themec + ' for themec, themegen and hmchar; ! short, or an ' +
     'overlay or a part under ' + HEADROOM + '):', ...rows, ...warns.map(w => '  warning: ' + w),
     ...(lows.length ? ['  headroom (the standing rule: room won back before the next feature), under ' + HEADROOM + ' bytes free or within ' +
       HEADROOM + ' of a floor:', ...lows.map(l => '    ' + l)] : [])].join('\n');

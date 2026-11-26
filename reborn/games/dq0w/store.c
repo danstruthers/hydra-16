@@ -275,8 +275,9 @@ void s_stocked (void)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW_ui_requests_CODE")
-#pragma rodata-name (push, "SW_ui_requests_RODATA")
+#pragma code-name (push, "SW_answer_CODE")      /* (Part answer's, its own: part ui_requests's till even4's, the chooser's
+                                                **   room, 2026-11-26) */
+#pragma rodata-name (push, "SW_answer_RODATA")
 
 /* The portal on the hub's wreq's square looked at closely (the UI's request, PA_EXAMINE: the square one it sees, on
 ** the character's stratum): its record copied into the hub's pview, its bar 1 if the character's on its bar's side;
