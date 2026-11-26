@@ -242,12 +242,17 @@ void __fastcall__ s_it_flush (unsigned char sn)
 }
 
 /* The chunks round the character's (two each way, in its stratum) in the store, as it comes into a chunk (as it's
-** moved: the chunk it was in last in the table's) */
-void s_it_near (void)
+** moved: the chunk it was in last in the table's): 1 if it looked (0, the chunk it was in).  Those in
+** the table already found in one pass of it (inm), each wanted now in the same order (its stamp): not a find each,
+** the record store's, 25 of them some 120,000 cycles of a look's pause (F2: even2's, 2026-11-25) */
+unsigned char s_it_near (void)
 {
+    static unsigned char inm[25];
     struct stratum* s;
+    struct ires* r;
     unsigned w, h;
     signed char x, y;
+    unsigned char k, d;
 
     pc_chunk ();
     own ();
@@ -258,7 +263,7 @@ void s_it_near (void)
             sky_note ();
         }
         hub_map (0);
-        return;
+        return 0;
     }
     IPG->lsn = pcs + 1;
     IPG->lcx = pcx;
@@ -266,17 +271,35 @@ void s_it_near (void)
     s = &STRATUM (pcs);
     w = (s->w + CW - 1) >> CW_BITS;
     h = (s->h + CW - 1) >> CW_BITS;
+    memset (inm, 0, sizeof inm);
+    d = rad << 1;
+    own ();
+    for (k = 0, r = IPG->r; k < NIRES; ++k, ++r) {
+        if (r->used && r->sn == pcs && (unsigned) (r->cx - pcx + rad) <= d && (unsigned) (r->cy - pcy + rad) <= d) {
+            x = (signed char) (r->cx - pcx) + rad;
+            y = (signed char) (r->cy - pcy) + rad;
+            if (!inm[y * 5 + x]) {
+                inm[y * 5 + x] = k + 1;     /* (The first, as the record store finds it) */
+            }
+        }
+    }
     for (y = -rad; y <= rad; ++y) {
         for (x = -rad; x <= rad; ++x) {
             pc_chunk ();
             if (pcx + x < w && pcy + y < h) {
-                s_it_need (pcs, pcx + x, pcy + y);
+                own ();
+                if ((k = inm[(y + rad) * 5 + x + rad]) != 0) {
+                    IPG->r[k - 1].stamp = ++IPG->stamp;   /* (Wanted now: s_it_need's, found) */
+                } else {
+                    s_it_need (pcs, pcx + x, pcy + y);   /* (None round it put out for one read in: make_room's) */
+                }
             }
         }
     }
     sky_list ();                          /* (The daylight's emitters near it: part shaft's; last, this part's own data
                                                 **   as it was, copied back) */
     hub_map (0);
+    return 1;
 }
 
 #pragma bss-name (pop)
