@@ -6818,6 +6818,14 @@ static void __fastcall__ intent (struct msg* m)
     case I_TURN:
         intent_few (m);                         /* (Part intent_few's) */
         break;
+    case I_RISE:
+        if (!(I_RISE_POS (*m) & POS_HIDE)) {    /* (Up, or down: part legs's straight, as part intent_more's I_RISE,
+                                                **   its intent kept as it keeps it; not that part copied in and back
+                                                **   round it, 45,000 cycles of "sit"'s, cmd1's) */
+            memcpy (&lw_m, m, sizeof lw_m);
+            legs (0x80 | I_RISE_POS (*m));
+            break;
+        }
     default:
         intent_more (m);                        /* (The rest: part intent_more's) */
         break;
