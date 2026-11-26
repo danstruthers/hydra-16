@@ -77,19 +77,22 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
     senses' RAM; dq0p is 242 bytes over its floor);
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
   - dq0ahead's raw pokes (dq0saveout's gone: lock2's).
-- **F1. A "d" line's first letter as a denizen's kit is drawn** (fix2's open item 1; the fight-back round's part done
-  by lock2, built/2026-11-25-lock2.md). dq0pcfelled's first "d": 656,880-696,944 over even1's three layouts (91-97%).
-  Its window (even1's, built/2026-11-25-even1.md section 3): the world 205K (71K of part copies), the UI 178K, the
-  minds 70K (60K of part copies as their give-way lets go), the console 75K, the kernel 58K, the command parser's
-  task 29K (it starts in the window). The leads: the minds held off for the whole answer; the parser started before.
-- **F2. The look's pauses, the far look's work** (fix3, section 8; lock4's; even1's section 3): dq0lookrest's look at
-  once (the turns pace) 1,617,147 (90%) as built, 99% in both of even1's filler layouts; dq0lookfar's look across
-  80% as built, 94% played in the 37-byte layout (and its turn left, menacing, 95% there). The window: the senses'
-  four part copies (some 200K), the item store's finds for the 25 chunks round a character put in a new chunk (80K),
-  the UI's commands part copied back after its look's peep (48K). No merge of the senses' parts saves a copy.
-- **L1. The turns pace not yet exact** (even1's, its section 5): the bandits' errands (dq0denerrands, dq0dentakein)
-  part in even1's 91-byte layout; the question-and-answer cause of dq0digact and dq0wakeblow is closed (dq0lockwake
-  holds it). The lead: a mind's intent carried out by den_intents at a pass of the world's, outside a turn.
+- **F1. A "d" line's first letter as a denizen's kit is drawn**: even2 (built/2026-11-25-even2.md sections 2 and 9) took
+  four costs off it; dq0pcfelled's "d, played" is 90-91% in its two filler layouts still, dq0fightcmd's "d" 92% in one.
+- **F2. The look's pauses, the far look's work** (fix3, section 8; lock4's; even1's section 3; even2's section 3):
+  dq0lookrest's look at once (the turns pace) 97-98% of D17's 1.79M in all three of even2's layouts; dq0lookfar's
+  look across and turn left, by the layout (even2's section 5). The window: the senses' four part copies (210,000
+  cycles), the world's parts in and back for it_near and sky_list (128,000), the UI's look_way and commands parts
+  (82,000), and the kernel's scheduler walking every task each tick, a fifth of the CPU (230,000: base/kernel's, the
+  biggest lever). it_near's 25 finds are one pass of the table now (even2). The leads: the kernel's tick; it_near's
+  missing chunks (two finds each); a look ending in the part the next begins with.
+- **L1** (the turns pace not exact: the bandits' errands) was closed by even2 (the three-layout table the same but
+  dq0stopsweep) (section 1): a test's scene put in place
+  whole at the turns pace, the look at the bodies it moved before their intents; dq0lockerrand holds it.
+- **E3. The suite's real-pace failures after even2** (built/2026-11-25-even2.md sections 5 and 9): dq0letwhich's
+  "take the torch, menacing" 212-220% in all three layouts (the chooser's parts by_count and ui_requests in and back
+  three times), dq0felled's and dq0letcmd's "inventory" with no first letter, dq0hold's job late; one of even2's
+  real-pace give-ways (1ec2aaef) moved those games. To win back before the next feature.
 - **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
   or a pack in their outfits, so what they take or are given goes in it, not "hung at the belt"; then invknown.txt's
   loose entry goes. Watch dq0trade, dq0farthing and dq0hoard.
