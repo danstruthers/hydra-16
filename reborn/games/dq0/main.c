@@ -642,16 +642,8 @@ static void __fastcall__ load_names (void)
 
 /* ---- The hub; the referee started, the character loaded, the theme read in, and the world started */
 
-/* Bytes copied between one of the hub's banks and the main RAM (to or from in the window), the window put back as it
-** was: the hub reached from an overlay's code (theme.c's) */
-void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n)
-{
-    unsigned b = hub_here ();
-
-    (hub_map) (bank);
-    memcpy (to, from, n);
-    hub_back (b);
-}
+/* (hub_mem, bytes copied between one of the hub's banks and the main RAM, the window put back as it was: bank.s's, in
+** assembly since cmd1, 2026-11-26) */
 
 #pragma code-name (push, "SW_start_end_CODE")
 #pragma rodata-name (push, "SW_start_end_RODATA")

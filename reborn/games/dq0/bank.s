@@ -8,8 +8,8 @@
 ; swapped parts' calls (swap.inc): code run in the main RAM's top, a part at a time, copied there from its overlay's
 ; bank as it's called.  (bread and bwrite gone, 2026-10-30: ovl_load's alone used one, the main RAM's room)
 
-            .export     _setbank, _getbank, _ovbank, _said_b
-            .import     popa, popax
+            .export     _setbank, _getbank, _ovbank, _said_b, _hub_mem
+            .import     popa, popax, incsp1, _memcpy, _hub_here, _hub_map, _hub_back
 
             .include    "zeropage.inc"
 OVL_BANKS   = OVMAX                 ; (The game's library, dq0lib.inc: the overlays' banks, a '.' after the first
@@ -90,6 +90,32 @@ _said_b:
 @e0:        ldy         _ovbank + 30
             sbc         #$60               ; (Carry set: past $E000, overlay 31's)
             bra         @in
+
+; void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n): n bytes copied between the
+; hub's bank and the main RAM (to or from in the window), the window put back as it was (hub_here's, hub_back's): the
+; hub reached from an overlay's code.  (main.c's C till cmd1, 2026-11-26, its call some 170 cycles longer: some 28 calls
+; a command's answer.)  to and from are on the C stack as memcpy takes them, the bank under them
+_hub_mem:
+            phx                             ; (n, kept)
+            pha
+            jsr         _hub_here           ; (The window as it is)
+            sta         tmp1
+            stx         tmp2
+            ldy         #4                  ; (The bank)
+            lda         (c_sp),y
+            jsr         _hub_map
+            ply                             ; (n)
+            plx
+            lda         tmp2                ; (The window, kept)
+            pha
+            lda         tmp1
+            pha
+            tya
+            jsr         _memcpy             ; (to, from: off the C stack)
+            pla
+            plx
+            jsr         _hub_back
+            jmp         incsp1              ; (The bank)
 
 ; ---- The overlays' calls
 
