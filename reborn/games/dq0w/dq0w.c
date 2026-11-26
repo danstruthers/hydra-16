@@ -7462,6 +7462,11 @@ unsigned char s_turns_run (void)
     unsigned long d;
     unsigned s;
 
+    if (HUB->iq_head != HUB->iq_tail && ui_state () != 1) {
+        return 0;                               /* (An intent of the UI's not taken yet, the UI round to the events: taken
+                                                **   first, at once; the look at once's answer waited on the UI's pass
+                                                **   else, 150,000 cycles, dq0lookrest's pause 97% of D17's) */
+    }
     if ((s = s_ui_behind ()) == 1) {
         return 1;
     }
