@@ -7685,8 +7685,13 @@ unsigned char ui_long (void)
 ** go on.  Each line's own (the hub's ui_keys, as the minds' gks and the senses' hks): a line let go and typed again
 ** before a pass saw no keys held again, not the last's hold run out, 2026-11-14.  1, held */
 static unsigned char dj;                        /* (The early jobs walked: the denizens' intents main's job, main's) */
+unsigned char sc_look;                          /* (A test's scene in place at the turns pace: its intents held till the
+                                                **   pass's late jobs have looked at the bodies it moved, wscene.c's whole) */
 unsigned char den_held (void)
 {
+    if (sc_look && dj) {
+        return 1;                               /* (As main's job alone: a turn's wait takes them) */
+    }
     hub_map (0);
     if ((HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d) {
         return 0;                               /* (A line's test scene to put in place: the minds' intents carried out,
@@ -8022,6 +8027,7 @@ int main (int argc, char* argv[])
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
         jobs (JOBS_LATE);                       /* (The late jobs: a body fallen, the denizens' bodies, the lights' minute) */
+        sc_look = 0;                            /* (A scene's bodies looked at: its intents now, wscene.c's whole) */
         kburn = 0;
         if (!(((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS) | pc_ko)) {
             pc_down = 0;                        /* (A blow's knockout latched as its reply came, wfight.c's: seen

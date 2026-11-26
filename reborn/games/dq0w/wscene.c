@@ -19,6 +19,31 @@
 
 #define W_SLOT          HUB->slot[SLOT_WORLD]
 
+void den_intents (void);                        /* (Part den_bodies's: wbody.h's) */
+extern unsigned char sc_look;                   /* (dq0w.c's: the scene's intents held for the look at it) */
+
+/* At the turns pace, the scene in place whole (scene_d: the maker's part and the minds' done, after the world's)
+** before the world goes on with its pass, and the intents the minds posted for it (SO_INTENT) held through this pass
+** (sc_look, den_held's): the look at the bodies the scene moved (den_seq's, the late jobs') first, then what they
+** do, as a mind's intent is carried out after the bodies it saw were looked at, whatever the tasks' timing.  Its pass
+** went on as the minds were at their part, the look at the bodies before their intent was carried out or after it as
+** the timing fell: a bandit's errand told or not, in one layout of the code and not in another (dq0denerrands',
+** dq0dentakein's, dq0thingact's: OPEN.md's L1; even2's, 2026-11-25).  Thirty seconds at most, a turn's wait (a
+** stuck task's); the ring full, its intents carried out (the minds wait on it) */
+static void whole (void)
+{
+    unsigned t0 = hy_ticks ();
+
+    while (hub_map (0), HUB->scene_d != HUB->scene && !HUB->quit && (unsigned) (hy_ticks () + 1 - t0) < 30 * HY_TICK_HZ) {
+        hub_sleep (1);
+        if (hub_map (0), (HUB->di_head + 1) % DI_SIZE == HUB->di_tail) {
+            den_intents ();
+        }
+    }
+    sc_look = 1;
+    hub_map (0);
+}
+
 void s_scene (void)
 {
     static unsigned at;
@@ -71,4 +96,7 @@ void s_scene (void)
     }
     HUB->scene_w = s;                           /* (Its part done: the maker's now, if it has one, then the minds') */
     hub_ring (mk ? T_MAKER : T_DENIZENS);
+    if (md && !HUB->tpr) {
+        whole ();                               /* (The turns pace: the scene whole before the world goes on) */
+    }
 }

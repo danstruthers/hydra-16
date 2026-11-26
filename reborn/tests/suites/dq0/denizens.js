@@ -14,6 +14,9 @@ const {
 } = require('../../lib/dq0.js');
 const { target, D17 } = require('../../lib/trends.js');   // (The user's targets, D17, at 115,200 baud: each measure kept, those over and past 90% listed after the tests)
 const TESTS = path.join(__dirname, '..', '..');   // (The tests' folder: their fixtures')
+// (dq0lockerrand's: each game's task slowed through its scene's line, its extra cycles an instruction: none; the minds by
+// 3 and 20; the world by 3, 8 and 20 (8 and 20 part the games at db6be65d))
+const LOCK_ERRAND_SLOW = [[null, 0], ['T_DENIZENS', 3], ['T_DENIZENS', 20], ['T_WORLD', 3], ['T_WORLD', 8], ['T_WORLD', 20]];
 // (dq0fetch's seed 21 rat won over in two coaxes, dice2: the character's P_ANIMALS tests rigged, a pass (wary to
 // indifferent) then a critical success (indifferent to allied), as the game was written for)
 const RAT_WON = [{ kind: 'TEST', a: 'P_ANIMALS', actor: -1, uses: 1, grade: 'pass' }, { kind: 'TEST', a: 'P_ANIMALS', actor: -1, uses: 1, grade: 'well' }];
@@ -3979,6 +3982,78 @@ module.exports = {
         if (t1 !== A.takeout.t + 20) f.push('its take not the takeout row\'s time and the sack\'s level (' + (A.takeout.t + 20) + '): ' + t1);
         if (c2.some(i => its(q2, i, 2))) f.push('the crowns in the sack tied shut taken: unseen, they should be left');
         this.notes = ['its time ' + t1];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lockerrand', outfit: true, meaning: true, near: ['denizens', 'time'], what: "Dingus Quest Zero's lockstep turns pace as a test's scene sets a denizen to an errand (even2's, 2026-11-25: OPEN.md's L1, a scene's world part done, its pass gone on as the minds were at theirs, the look at the bodies the scene moved before the minds' intent was carried out or after it as the tasks' timing fell, so dq0denerrands' and dq0dentakein's turns-pace games parted between layouts of the code: now the scene whole, the look first, then its intents, wscene.c's whole): dq0dentakein's first game (seed 1, the crowns in the kit's sack set down open, a bandit put beside it, its take posted, I_TAKE TW_LOOT, as its mind would) played six times with the same lines, a task slowed through the scene's line in five of them (each of its instructions 3 or 20 cycles the longer in the minds, 3, 8 or 20 in the world: their parts of the scene, and the world's pass, at other moments of one another's, as another layout of the code has them: at db6be65d the world's 8 and 20 parted, the take untold); the six games' stories the same, sentence for sentence, and the world's events, the denizens' doings and the referee's answers in them, the crowns taken in each, told as seen",
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: dq0Typed(dq0Game({ lines: ['echo hour 128 >> /ram/s.sc', 
+        ...LOCK_ERRAND_SLOW.flatMap((x, k) => ['mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns -S /ram/s.sc', 'drop the sack', 'put the crowns in the sack', 'wait', 'wait', 'quit', 'rm -r /ram/g']), 'echo $status'] })) },
+      start(m) {
+        const S = m.tin = { k: {} }, a = m.acia, read = a.read;
+        let typed = '', g = -1;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) { if (/^dq0 -p t/.test(typed)) ++g; typed = ''; } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        let slow = null, line = '';
+        a.read = (rd => (r, t) => {
+          if (r === 0 && a.rdrf && a.rx === 13) { slow = line === 'wait' && !slow && g >= 0 && LOCK_ERRAND_SLOW[g][0] ? LOCK_ERRAND_SLOW[g] : null; line = ''; }
+          else if (r === 0 && a.rdrf && a.rx >= 32 && a.rx < 127) line += String.fromCharCode(a.rx);
+          return rd(r, t);
+        })(a.read);
+        const cpu = m.cpu, step = cpu.step.bind(cpu);
+        cpu.step = v => {   // (The slowed task's instructions the longer, IRQs on: its timing against the others' another's)
+          const i0 = cpu.P & 4, x = step(v), h = slow && m.dq0 && m.dq0.bank(0);
+          if (h && !i0 && !(cpu.P & 4) && m.T === h[m.dq0.layout().L.task + m.dq0.layout().K[slow[0]]]) cpu.cyc += slow[1];
+          return x;
+        };
+        const put = g => (h, L, K, at, named) => {   // (dq0dentakein's: the bandit beside the open sack, quiet, its take posted)
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          dq0Alone(m, h, L, K, at, k);
+          S.k[g] = k;
+          const R = dq0Rec(m), q = R.at(h[at(k) + L.aDen]);
+          h[at(k) + L.aAttitude] = R.mem[q + R.ATTITUDE] = K.AT_INDIFFERENT;
+          h[at(k) + L.aDoing] = K.DO_WAIT;
+          const far = 3000 + (h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16);
+          for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = far >>> (8 * i) & 255;
+          dq0Intent(h, L, K.I_TAKE, k, { a: 4, b: 0 });   // (TW_LOOT)
+        };
+        dq0Scene(m, LOCK_ERRAND_SLOW.flatMap((x, i) => [{ g: i + 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g: i + 1, line: 'wait', n: 1, call: put(i + 1) }]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Prose(out), gs = [], n = LOCK_ERRAND_SLOW.length, ks = LOCK_ERRAND_SLOW.map((x, k) => k).slice(1), G = m.dq0.games;
+        for (let i = s.indexOf('D I N G U S'); i >= 0; i = s.indexOf('D I N G U S', i + 1)) gs.push(i);
+        if (gs.length !== n || G.length !== n) return ['not ' + n + ' games: ' + gs.length + ', ' + G.length];
+        const game = k => { const t = s.slice(gs[k], k + 1 < gs.length ? gs[k + 1] : s.length), q = t.indexOf('> quit'); return t.slice(0, q >= 0 ? q : t.length); };
+        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's)
+        const g0 = sents(game(0));
+        for (let k = 0; k < n; k++) {
+          if (m.tin.k[k + 1] === undefined) f.push('game ' + (k + 1) + ': the scene not set');
+          else if (!G[k].dens.some(e => e.kind === 'E_BEAT' && e.beat === 'WB_TAKES' && e.thing === m.dq0.layout().K.KI_CROWNS)) f.push('game ' + (k + 1) + ': the crowns not taken from the sack (E_BEAT WB_TAKES): the case not met');
+        }
+        if (!g0.some(x => /takes the crowns from the sack/.test(x))) f.push('the take not told in the first game: the bandit, put in sight, not seen as it took them');
+        for (const k of ks) {
+          const gk = sents(game(k));
+          let i = 0;
+          while (i < g0.length && i < gk.length && g0[i] === gk[i]) i++;
+          if (i < g0.length || i < gk.length) f.push('game ' + (k + 1) + ' (' + JSON.stringify(LOCK_ERRAND_SLOW[k]) + ' slowed) not the first game\'s, from sentence ' + i + ': ' + JSON.stringify(g0.slice(i, i + 3)) + ' against ' + JSON.stringify(gk.slice(i, i + 3)));
+        }
+        const evs = k => G[k].events.map(e => [e.kind, e.t, e.a, e.b, e.w1, e.w2].join(':')), dens = k => G[k].dens.map(e => [e.kind, e.de || e.beat, e.who, e.sx, e.sy, e.t].join(':'));
+        const refs = k => G[k].replies.filter(r => /^d?slot/.test(r.req)).map(r => [r.rs, r.actor, r.a, r.b, r.w1, r.result, r.grade].join(':'));
+        for (const k of ks) for (const [what, w] of [['the world\'s events', evs], ['the denizens\' doings', dens], ['the referee\'s answers', refs]]) {
+          const x = w(0), y = w(k);
+          let i = 0;
+          while (i < x.length && i < y.length && x[i] === y[i]) i++;
+          if (i < x.length || i < y.length) f.push('game ' + (k + 1) + ': ' + what + ' not the first game\'s, from ' + i + ': ' + x.slice(i, i + 2).join(' ') + ' against ' + y.slice(i, i + 2).join(' '));
+        }
         return f;
       },
       sdcard: true
