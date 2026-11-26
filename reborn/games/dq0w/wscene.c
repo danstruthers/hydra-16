@@ -49,7 +49,7 @@ static void __fastcall__ whole (unsigned char s)
 void s_scene (void)
 {
     static unsigned at;
-    static unsigned char s, k, n, mk, md;
+    static unsigned char s, k, n, mk, md, q;
     static unsigned char b[80];                 /* (An op's payload, copied out of CMD_BANK) */
 
     hub_map (0);
@@ -90,6 +90,13 @@ void s_scene (void)
         }
     }
     hub_map (0);
+    q = md && !HUB->tpr && den_done == HUB->den_go && HUB->di_tail == HUB->di_head;
+                                                /* (The minds quiet, their turn done: asked before
+                                                **   the scene's own parts are let go, scene_m's and scene_w's: once let go,
+                                                **   the minds post its intents, and a world slower than they are found
+                                                **   the ring not empty and went on, the take carried out before the look
+                                                **   at the bodies, dq0lockerrand's game 5 in the 37-byte layout: even5's,
+                                                **   2026-11-26) */
     if (!mk) {
         HUB->scene_m = s;                       /* (None of the maker's: the minds' next) */
         if (!md) {
@@ -98,7 +105,7 @@ void s_scene (void)
     }
     HUB->scene_w = s;                           /* (Its part done: the maker's now, if it has one, then the minds') */
     hub_ring (mk ? T_MAKER : T_DENIZENS);
-    if (md && !HUB->tpr && den_done == HUB->den_go && HUB->di_tail == HUB->di_head) {
+    if (q) {
         whole (s);                              /* (The minds quiet, their turn done: else as ever, their turn's intents
                                                 **   the world's to carry out as it goes, dq0stray's shot mid-fight; the turns pace's: the
                                                 **   scene whole before the world goes on) */
