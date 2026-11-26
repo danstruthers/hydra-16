@@ -168,3 +168,38 @@ _s_lockstep:
             lda         #T_DENIZENS
             jsr         _hub_ring
             jmp         @nap
+
+; unsigned char ui_state (void): dq0w.c's (its comment there): at the turns pace the events told the UI hasn't seen to
+; yet, 1; 2 no turn either (a real pace, paused, held, a command being given, dead); 0 quitting, or none.  In the main
+; RAM, in assembly: its room (even1's, 2026-11-25).  The hub's header put in the window
+            .export     _ui_state
+            .code
+_ui_state:
+            jsr         _hub0                   ; (The hub's header in the window: a part's may be, after an intent)
+            ldx         #0
+            lda         HUB_WINDOW + HUBO_TPR
+            ora         HUB_WINDOW + HUBO_TPR + 1
+            ora         HUB_WINDOW + HUBO_PAUSED
+            ora         HUB_WINDOW + HUBO_HOLD
+            ora         HUB_WINDOW + HUBO_GIVING
+            bne         @two
+            lda         HUB_WINDOW + HUBO_COND
+            and         #C_DEAD
+            bne         @two
+            lda         HUB_WINDOW + HUBO_QUIT
+            bne         @none
+            lda         HUB_WINDOW + HUBO_UIEQ
+            cmp         HUB_WINDOW + HUBO_EQ
+            bne         @one
+            lda         HUB_WINDOW + HUBO_UIDQ
+            cmp         HUB_WINDOW + HUBO_DQ
+            beq         @none
+@one:
+            lda         #1
+            rts
+@two:
+            lda         #2
+            rts
+@none:
+            txa
+            rts

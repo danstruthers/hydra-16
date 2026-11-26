@@ -139,6 +139,11 @@ function instrument(t) {
 // (tests/noise.txt)
 const TRANSCRIPTS = process.env.TRANSCRIPTS || '';
 function transcript(t, m) {
+  if (process.env.DQ0DUMP && m.dq0) try {                // (DQ0DUMP=DIR: what happened, m.dq0's games, in DIR/NAME.json: two
+    fs.mkdirSync(process.env.DQ0DUMP, { recursive: true });   //   layouts' compared, the first record where a game parts)
+    fs.writeFileSync(path.join(process.env.DQ0DUMP, t.name + '.json'), JSON.stringify({ lines: m.dq0.lines, games: m.dq0.games.map(g =>
+      ({ events: g.events, dens: g.dens, intents: g.intents, replies: g.replies, snaps: g.snaps })) }));
+  } catch (e) { console.error('DQ0DUMP: ' + t.name + ': ' + e.message); }
   if (!TRANSCRIPTS) return;
   try { fs.mkdirSync(TRANSCRIPTS, { recursive: true }); fs.writeFileSync(path.join(TRANSCRIPTS, t.name + '.txt'), m.out, 'latin1'); }
   catch (e) { console.error('TRANSCRIPTS: ' + t.name + ': ' + e.message); }
