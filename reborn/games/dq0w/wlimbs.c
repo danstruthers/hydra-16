@@ -336,6 +336,8 @@ static void keys_home (void)
     }
 }
 
+void kit_give (void);                           /* (Part kit_run's, jobs.s: asked only in its call, kit_s) */
+extern unsigned char kit_s;
 void __fastcall__ s_den_other (const struct msg* m)
 {
     if (I_KIT_DRAW (*m) == KT_TRAPS) {
@@ -344,7 +346,15 @@ void __fastcall__ s_den_other (const struct msg* m)
         return;
     }
     if (I_KIT_DRAW (*m) & KT_DIG) {
-        look_more (0, LM_ROPES);                /* (Part den_dig read in, the first time: things.c's) */
+        if (look_more (1, LM_ROPES) != IR_OK) {   /* (Part den_dig read in, the first time: things.c's; a piece
+                                                **   at a time, giving way to a line in hand, the rest as it's asked
+                                                **   again, cmd2's, 2026-11-26) */
+            if (kit_s) {
+                kit_give ();
+            }
+            kit_off |= KO_GAVE;
+            return;
+        }
         den_dig (m);                            /* (Not things: a tunneller's dig, part den_dig's, slice 4.11's) */
         return;
     }
@@ -353,15 +363,21 @@ void __fastcall__ s_den_other (const struct msg* m)
         return;                                 /* (dq0 -K's, the tests': none of theirs) */
     }
     if (ui_long ()) {
-        kit_off |= 2;                           /* (A command come: its answer first, this intent left in the ring: all
+        kit_off |= KO_GAVE;                     /* (A command come: its answer first, this intent left in the ring: all
                                                 **   of it a million cycles and more, the card's reads in it, on whichever
                                                 **   answer it fell, the user's D17, 2026-11-03: wbody.c's) */
         return;
     }
-    if ((I_KIT_DRAW (*m) & KT_LAIR) && !(kit_off & 1)) {
-        kit_off = 1;
+    if ((I_KIT_DRAW (*m) & KT_LAIR) && !(kit_off & KO_KEYS)) {
         den_more (m);                           /* (Its lair's locked doors' keys, its first denizen's: part den_doors's; once,
                                                 **   the kit drawn again if a command comes between: kit_off) */
+        if (!(kit_off & KO_KEYS)) {
+            if (kit_s) {
+                kit_give ();
+            }                                   /* (Given way between its keys: the rest as it's asked again) */
+            kit_off |= KO_GAVE;
+            return;
+        }
     }
     if (has_role (m)) {
         ost.did = I_KIT_ID (*m);
@@ -385,7 +401,10 @@ void __fastcall__ s_den_other (const struct msg* m)
             ost.kit = 2;
         }
         if (ost.kit == 2) {
-            kit_off |= 2;                       /* (Given way to a command: its intent left in the ring, wbody.c's) */
+            if (kit_s) {
+                kit_give ();
+            }
+            kit_off |= KO_GAVE;                 /* (Given way to a command: its intent left in the ring, wbody.c's) */
             return;
         }
         keys_home ();

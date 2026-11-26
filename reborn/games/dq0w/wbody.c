@@ -204,8 +204,8 @@ void s_den_intents (void)
                                                 **   denizen's things made: part den_things's) */
             if (m.kind == I_KIT) {
                 den_other (&m);
-                if (kit_off & 2) {
-                    kit_off &= 1;
+                if (kit_off & KO_GAVE) {
+                    kit_off &= ~KO_GAVE;
                     break;                      /* (The rest after the UI's command's answer, this one again) */
                 }
             } else {

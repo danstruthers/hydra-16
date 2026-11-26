@@ -1050,7 +1050,13 @@ function dq0OnWords(m, list) {
     if (story.includes(norm(armed.words))) {
       if (armed.call) armed.call();             // (A scene's own at those words, not a line typed, 2026-11-03)
       else {
-        a.rxQueue.unshift(...armed.text);
+        if (armed.drop && (typed || (a.rxQueue.length && a.rxQueue[0] >= ' ' && a.rxQueue[0] < '\x7f'))) {   // (drop: a line being typed, or due, as the words came, the rest of it let go
+          const k = a.rxQueue.indexOf('\r');    //   and what's typed of it cleared, Ctrl-U, before the text: not typed to
+          a.rxQueue.splice(0, k + 1);           //   rc after the game's end, cmd1's)
+          a.rxQueue.unshift('\x15');
+          typed = '';
+        }
+        a.rxQueue.unshift(...(armed.drop && a.rxQueue[0] === '\x15' ? [a.rxQueue.shift(), ...armed.text] : armed.text));
         a.promptFrom = -1;
       }
       armed = null;
@@ -1168,7 +1174,7 @@ function dq0Timer(m) {
                                                 //   the UI's line waits for it, the test's own setting up, not the game's work;
                                                 //   at the turns pace from the line taken at the world's quiet after it, its
                                                 //   reaction to the setting up the setting up's, sceneDone's: lock2's)
-    return { line: c.line, first: w < 0 ? null : at[idx[w]] - t, whole: w < 0 || last < w ? null : at[idx[last]] - t, pause, pauseAt, busy: e.busy,
+    return { line: c.line, first: w < 0 ? null : at[idx[w]] - t, whole: w < 0 || last < w ? null : at[idx[last]] - t, pause, pauseAt, busy: e.busy, pos: e.pos,
       pauseFrom: pauseFrom === null ? null : pauseFrom - t };   // (Where its longest pause begins: lineprof.js's --pause)
   }
 }
@@ -1381,9 +1387,13 @@ function dq0PlayLetters(m, own, played) {
 // first, the others' ", menacing" and ", played" after the line); the first typing's words its want, the others' '*'
 // (their answers their own: the kit, the hour, the questions of a game without the switches).  gs the three games'
 // places among those typed (0 on)
-function dq0HeldPaces(t, f, notes, timer, gs, cmds) {
+function dq0HeldPaces(t, f, notes, timer, gs, cmds, after) {
   [['', cmds], [', menacing', null], [', played', null]].forEach(([sfx, cs], i) => {
     for (const r of timer.game(gs[i], cs || cmds.map(c => ({ line: c.line, want: '*' })))) {
+      if (after && after(r, i)) {     // (Its Enter after the game's end began, the test's own: not a
+        notes.push(r.line + sfx + ': typed after the game\'s end began, not held: first letter ' + r.first);   //   line at its prompt, cmd1's)
+        continue;
+      }
       notes.push(r.line + sfx + ': first letter ' + r.first + (r.busy ? ' (typed as it was busy)' : ''));
       if (target(t, r.line + sfx + ': first letter', r.first, D17.first)) f.push(r.line + sfx + ': its first letter ' + r.first + ' cycles from Enter (the user\'s 720,000)');
     }

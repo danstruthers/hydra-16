@@ -286,6 +286,8 @@ static void __fastcall__ line (const unsigned char* p, unsigned char mode)
 
 /* The section at off read, its head kept, drawn as mode says if its flags are those wanted: 1, or 0 */
 unsigned char ui_long (void);                   /* (dq0w.c's) */
+void kit_give (void);                           /* (Part kit_run's, jobs.s: asked only in its call, kit_s) */
+extern unsigned char kit_s;
 unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
 {
     unsigned char k, n;
@@ -294,12 +296,15 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
     if (!off) {
         return 0;
     }
-    for (k = 0; k < SEC_MAX; ++k, ++off) {      /* (From the file's banks, read in as it was opened: outfit.c's; not
+    n = ost.slen;                               /* (From the file's banks, read in as it was opened: outfit.c's; not
                                                 **   the card's seek and read, some 140,000 cycles, fix2, 2026-11-24;
-                                                **   its offset the index's, in the file, 14K) */
-        hy_bank (OF_BANK (off >> 13));
-        sec[k] = *(const unsigned char*) (0x8000 | (off & 0x1FFF));
-    }
+                                                **   its offset the index's, in the file, 14K.  Its own length alone,
+                                                **   find's, in one copy, no section across the banks' edge (outfits.js
+                                                **   lays them so): not 255 bytes, each its bank's switch and its
+                                                **   offset made again, 53,000 cycles a section, a kit's draw in a
+                                                **   climb's first letter's window, cmd2's, 2026-11-26) */
+    hy_bank (OF_BANK (off >> 13));
+    memcpy (sec, (const void*) (0x8000 | (off & 0x1FFF)), n);
     hub_map (0);
     ost.sflags = sec[0];
     ost.bent = sec[1];
@@ -315,6 +320,9 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
         for (n = sec[7], k = 0; k < n && p < sec + SEC_MAX && *p; ++k, p += *p) {
             if (ost.kit && (hub_map (0), ui_long ())) {
                 ost.kit = 2;
+                if (kit_s) {
+                    kit_give ();
+                }
                 return 0;
             }
             line (p, mode);

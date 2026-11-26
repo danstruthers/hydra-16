@@ -4033,7 +4033,7 @@ module.exports = {
         for (let i = s.indexOf('D I N G U S'); i >= 0; i = s.indexOf('D I N G U S', i + 1)) gs.push(i);
         if (gs.length !== n || G.length !== n) return ['not ' + n + ' games: ' + gs.length + ', ' + G.length];
         const game = k => { const t = s.slice(gs[k], k + 1 < gs.length ? gs[k + 1] : s.length), q = t.indexOf('> quit'); return t.slice(0, q >= 0 ? q : t.length); };
-        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's)
+        const sents = t => t.replace(/ ?\.{3,}/g, ' ...').replace(/(?:\s+\.)+/g, ' ...').split(/(?<=[.!?:])\s+/).map(x => x.trim()).filter(Boolean);   // (The start's dots its real time's: its spaced progress dots too, as many as its time gave, cmd2's)
         const g0 = sents(game(0));
         for (let k = 0; k < n; k++) {
           if (m.tin.k[k + 1] === undefined) f.push('game ' + (k + 1) + ': the scene not set');

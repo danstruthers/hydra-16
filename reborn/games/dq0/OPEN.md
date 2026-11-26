@@ -78,19 +78,24 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
   - dq0ahead's raw pokes (dq0saveout's gone: lock2's).
 - **F1. A "d" line's first letter as a denizen's kit is drawn**: even2 took four costs off it, even3 the kernel's
-  pick's; at even4's run (built/2026-11-25-even2.md section 11.3) dq0pcfelled's "d, played" 90% in the 37-byte layout,
-  "d, menacing" 94% as built and 91% in the 91-byte layout: moved by the take path's timing, to win back.
+  pick's. At cmd1's runs (built/2026-11-26-cmd1.md sections 3, 10) **over D17 in all three layouts at the played pace**:
+  dq0felled "d, played" 807,665 (112%) as built, 775,025 (108%) 37-byte, 801,727 (111%) 91-byte; dq0fightmid 777,326 (108%) as
+  built, 799,887 (111%) 91-byte; dq0fightcmd 798,666 (111%) 37-byte, 785,424 (109%) 91-byte. The kit's draw (part outfit,
+  outdraw) begun during the line's parse, the intent taken after it; moved onto by hub_map's quicker calls (24f62aea).
 - **F2. The look's pauses, the far look's work**: won back by even3 (section 10.4); under 90% in all three layouts
   at even4's run too. Its other leads stay (even2's section 3) for the next pause.
 - **L1** (the turns pace not exact: the bandits' errands) was closed by even2 (the three-layout table the same but
   dq0stopsweep) (section 1): a test's scene put in place
   whole at the turns pace, the look at the bodies it moved before their intents; dq0lockerrand holds it.
 - **E3. The suite's real-pace failures after even2**: dq0felled, dq0letcmd, dq0hold mended by even3; dq0letwhich's
-  slow path by even4 (section 11.1: under 100% in all three layouts and every lag tried, 88-98%, not under 90%). Left
-  (section 11.8): in the 37-byte layout **dq0lockerrand** (its slowed game tells the bandit's take, the first not: L1's
-  scene look again) and **dq0answer "played go up"** 750,847 (104%); "played stand" 95% as built. The turns pace's
-  dq0antidote and dq0scene parts: cause found (section 11.2, a line typed into a long task taken at the round the
-  tasks' timing gives), not parting at even4's head, not closed.
+  slow path by even4; dq0lockerrand closed by even5 (6a354b06). At cmd1's runs: dq0answer "played sit" 69-73% (99.5% at
+  3249c653: the world's gate, cmd1's 4abfb789); dq0letwhich and dq0pcfelled under 90% in all three layouts. Past 90%: F1's
+  "d, played" above; and **dq0hold** as built, its decide run once not held back as a line was typed again.
+- **Ti4. At the turns pace a line typed during a long task is taken at a moment the tasks' timing gives**, not at a set
+  moment of game time (built/2026-11-25-even2.md section 11.2): dq0antidote's "drink the antidote" typed in a fight, as
+  "there's venom in it." appears, stops it at the round the world is in when the key comes. The rule for the fix: such a
+  line taken at the character's next turn (its round's end), whatever the CPU's timing; with a lockstep check that types
+  into a long task. dq0scene's game 1 (a fight) the same case, its two sentences parting against the base at cmd1's run.
 - **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
   or a pack in their outfits, so what they take or are given goes in it, not "hung at the belt"; then invknown.txt's
   loose entry goes. Watch dq0trade, dq0farthing and dq0hoard.

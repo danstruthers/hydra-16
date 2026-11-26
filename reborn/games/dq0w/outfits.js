@@ -202,11 +202,12 @@ function compile({ src, names, out, dens }) {
       b.push(lb.length + 1, ...lb);
     }
     if (b.length > 255) fail(s.ln, 'a section of ' + b.length + ' bytes (outdraw.c reads 255 at most)');
-    offs.push(at);
-    body.push({ at, b });
+    if ((at & 0x1FFF) + b.length > 0x2000) at = (at | 0x1FFF) + 1;   // (None across the banks' edge: outdraw.c reads one
+    offs.push(at);                                      //   in a single copy from the bank it begins in, cmd2's, 2026-11-26;
+    body.push({ at, b });                               //   the bytes before it zeros)
     at += b.length;
   }
-  if (at > 0xFFFF) throw new Error(src + ': the outfits ' + at + ' bytes, past a 16-bit offset');
+  if (at > 0x4000) throw new Error(src + ': the outfits ' + at + ' bytes, past the world\'s two banks for them (outfit.c\'s opened)');
   const file = Buffer.alloc(at);
   file.write('OF', 0, 'latin1');
   file[2] = VERSION;

@@ -3,6 +3,7 @@
 */
 
 #define HUB_ZERO                                /* (hub0.h's) */
+#define HUB_MAP_ASM                             /* (hub_map bank.s's: cmd1's, 2026-11-26) */
 #define HUB_ATTACHED                            /* (Attached, not made: no hub_create, no hub_spawn) */
 #define HUB_DWRITE                              /* (The denizens' events: the world's to write, its bodies') */
 #define HUB_NO_ISEND                            /* (Intents taken, none sent: the world's room, 2026-10-27; */

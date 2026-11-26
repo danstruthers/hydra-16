@@ -14,8 +14,9 @@
 ;   unsigned __fastcall__ m1 (void* f, unsigned a);             f (a)
 ;   unsigned __fastcall__ m2 (void* f, unsigned a, unsigned b); f (a, b)
 
-            .export     _ovbank, _m0, _m1, _m2
-            .import     popax, pushax, _cat_map
+            .export     _ovbank, _m0, _m1, _m2, _hub_map
+            .exportzp   swsp                ; (jobs.s's kit_try and kit_give)
+            .import     popax, pushax, _cat_map, _hub_u, _hub_x, _hub_cur
 
             .include    "zeropage.inc"
 OVL_BANKS   = OVBANKS + 6           ; (The game's library, ../dq0/dq0lib.inc: ovl_load, num; the overlays and
@@ -50,6 +51,18 @@ keepx:      .res        1
 arga:       .res        2           ;   m2's a)
 
             .code
+
+; void __fastcall__ hub_map (unsigned char bank): the hub's bank at $8000 (hub.c's, HUB_MAP_ASM: its U, then the bank
+; register, as hub_u and hub_x have them, the bank kept in hub_cur; cmd1's, 2026-11-26: its C some 65 cycles a call, the
+; world's some 280 calls in a take's answer)
+_hub_map:
+            sta         _hub_cur
+            tay
+            lda         _hub_u,y
+            sta         $FFF1
+            lda         _hub_x,y
+            sta         $00
+            rts
 
 _m0:
             sta         fn

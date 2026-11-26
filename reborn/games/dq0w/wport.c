@@ -338,7 +338,9 @@ back:
 
 /* The keys of a lair's locked doors (I_KIT's KT_LAIR: m's t its first denizen's number, w1 w2 its lair's home
 ** square, x[2] its stratum): each locked door of the home's chunk (a lock it can be locked by) a key (KEYS_MAX at
-** most), that denizen's own (IW_DEN, filed at its home) */
+** most), that denizen's own (IW_DEN, filed at its home).  Each key after a look for a line in hand (ui_long's): given
+** way, the keys made so far kept (kit_off's count, wbody.h's KO_KEY), the rest made as it's asked again; all made, kit_off's
+** KO_KEYS (each some 400,000 cycles of the item store's, a climb's first letter's window as played, cmd2's, 2026-11-26) */
 static void __fastcall__ door_keys (const struct msg* m)
 {
     unsigned px[KEYS_MAX], py[KEYS_MAX];
@@ -348,6 +350,7 @@ static void __fastcall__ door_keys (const struct msg* m)
 
     if (!at (I_KIT_SN (*m), I_KIT_X (*m), I_KIT_Y (*m))) {
         hub_map (0);
+        kit_off = KO_KEYS;
         return;
     }
     x0 = I_KIT_X (*m) - cx_;                    /* (The chunk's first square) */
@@ -358,7 +361,10 @@ static void __fastcall__ door_keys (const struct msg* m)
             py[n++] = y0 + q->y;
         }
     }
-    for (k = 0; k < n; ++k) {
+    for (k = kit_off / KO_KEY; k < n; ++k) {
+        if (ui_long ()) {
+            return;                             /* (Given way: the keys so far kept, kit_off's) */
+        }
         if (!(i = lay_body (KI_KEY, I_KIT_SN (*m), I_KIT_X (*m), I_KIT_Y (*m)))) {
             break;
         }
@@ -376,5 +382,7 @@ static void __fastcall__ door_keys (const struct msg* m)
         ip->size = (unsigned char) id;
         ip->thick = id >> 8;
         hub_map (0);
+        kit_off += KO_KEY;
     }
+    kit_off = KO_KEYS;
 }

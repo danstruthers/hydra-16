@@ -142,3 +142,4 @@ kit_run        -      A denizen's things made from the intents' ring's tail, par
 take_which     -      A take of one's chosen, several that differ asked which (things.c's take_which: parts by_count and serve not copied in and back for it, even4's, 2026-11-26)
 answer         -      The hub's wreq answered: the save, a portal looked at closely, the game begun (store.c's s_answer, look_at: part ui_requests's till even4's, 2026-11-26)
 stub lockstep lockstep
+stub kit_give kit_run

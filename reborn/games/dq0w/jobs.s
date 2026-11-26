@@ -203,3 +203,50 @@ _ui_state:
 @none:
             txa
             rts
+
+; void kit_give (void): a denizen's things given way to a line in hand as they're drawn (part outdraw's, outfit's, den_limbs's),
+; in part kit_run's call (s_kit_run's kit_s): back out of it at once, its 0 (the stacks as it found them, the parts' calls
+; as s_kit_run found them; the intent left in the ring, the minds rung, as s_kit_run would after it), the parts the draw went
+; through (outfit, den_limbs, kit_run: 63,000 cycles, F1's, a climb's first letter as played) not copied back in for their
+; returns alone: the part in the area stays (swapped's), the next call's copy as ever; else (kit_s 0) a return (cmd2's,
+; 2026-11-26)
+            .export     _s_kit_give, _kit_s, _kit_arm
+            .importzp   swsp, c_sp
+            .bss
+_kit_s:     .res        1           ; (s_kit_run's 6502 stack, 0 none: its return's, its stub's sw_back,
+_kit_c:     .res        2           ;   its C stack,
+kit_w:      .res        1           ;   its parts' calls' depth, swsp)
+            .segment    "SW_kit_run_CODE"      ; (Part kit_run's, through its stub (parts.txt's): the main RAM's room, a
+                                    ;   copy of the small part as it's called, its callers asking only with kit_s set)
+_s_kit_give:
+            ldx         _kit_s
+            beq         @none
+            txs
+            stz         _kit_s
+            lda         _kit_c
+            sta         c_sp
+            lda         _kit_c + 1
+            sta         c_sp + 1
+            lda         kit_w
+            sta         swsp
+            lda         #0
+            jsr         _hub_map
+            lda         #2                  ; (T_DENIZENS: the minds rung, as s_kit_run rings them)
+            jsr         _hub_ring
+            lda         #0
+            tax
+@none:      rts
+
+; void kit_arm (void): (part kit_run's, s_kit_run's first call) its caller's stacks and its parts' calls kept for kit_give
+_kit_arm:   tsx
+            inx                             ; (s_kit_run's, its call's return off)
+            inx
+            stx         _kit_s
+            lda         c_sp
+            sta         _kit_c
+            lda         c_sp + 1
+            sta         _kit_c + 1
+            lda         swsp
+            sta         kit_w
+            rts
+            .code

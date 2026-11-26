@@ -642,16 +642,8 @@ static void __fastcall__ load_names (void)
 
 /* ---- The hub; the referee started, the character loaded, the theme read in, and the world started */
 
-/* Bytes copied between one of the hub's banks and the main RAM (to or from in the window), the window put back as it
-** was: the hub reached from an overlay's code (theme.c's) */
-void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n)
-{
-    unsigned b = hub_here ();
-
-    (hub_map) (bank);
-    memcpy (to, from, n);
-    hub_back (b);
-}
+/* (hub_mem, bytes copied between one of the hub's banks and the main RAM, the window put back as it was: bank.s's, in
+** assembly since cmd1, 2026-11-26) */
 
 #pragma code-name (push, "SW_start_end_CODE")
 #pragma rodata-name (push, "SW_start_end_RODATA")
@@ -910,11 +902,17 @@ void __fastcall__ o_fore_set (unsigned char on)
                                                 **   the answer's CPU half and half, 450,000 cycles; the answer's own
                                                 **   blow worked as the UI waits for it.  But as the world waits on it
                                                 **   with a line's intent behind, FS_REF: o_fore_sync's) */
-    unsigned char k;
+    unsigned char k, was = fored;
 
-    hy_taskfore (hy_task (), (on & FS_UI) != 0);
+    fored = on;                                 /* (Each task told only as its own changes: a kernel call each, some
+                                                **   1,000 cycles, five at every Enter and every answer before, the
+                                                **   flags the same (TASKFORE sets them, and none but the UI sets
+                                                **   these), cmd1's) */
+    if ((on ^ was) & FS_UI) {
+        hy_taskfore (hy_task (), (on & FS_UI) != 0);
+    }
     for (k = 0; k < sizeof fg; ++k) {
-        if (task_[fg[k]] > 0) {
+        if (task_[fg[k]] > 0 && !(on & fm[k]) != !(was & fm[k])) {
             hy_taskfore (task_[fg[k]], on & fm[k]);
         }
     }
@@ -1052,7 +1050,7 @@ void o_fore_sync (void)
                                                 **   2026-11-25) */
     if (t && c && busy && !begun && r[0] == REQ_POSTED && r[1] == RS_ATTACK && !r[4] && (hub_mem (0, q, (const void*) &HUB->ui_eq, 2),
         hub_mem (0, r, (const void*) &HUB->eq_head, 1), hub_mem (0, r + 1, (const void*) &HUB->dq_head, 1), q[0] == r[0] && q[1] == r[1])) {
-        o_fore_set (fored = FS_UI | FS_SENS | FS_CMD);  /* (The referee out of the foreground meanwhile: the
+        o_fore_set (FS_UI | FS_SENS | FS_CMD);      /* (The referee out of the foreground meanwhile: the
                                                 **   words out first, not a slice each by turns with its blow's work) */
         fight_begin ();                         /* (The round a line's held behind: its blow's first words now, not
                                                 **   after the referee's answer, at the real paces: blows.c's, lock2's F1) */
@@ -1062,7 +1060,7 @@ void o_fore_sync (void)
                                                 **   line's parse in the background some 260,000 cycles of its 165,000,
                                                 **   dq0answer's "put the whetstone in the sack", speed8, 2026-11-21) */
     if (f != fored) {
-        o_fore_set (fored = f);
+        o_fore_set (f);
     }
     hub_mem (0, &k, (const void*) &HUB->look.ch, 1);
     if (k & LC_BEGIN) {
@@ -3274,6 +3272,17 @@ int main (int argc, char* argv[])
                                                 **   character, its first word still to come; else its Enter's ui_cmd now, or none) */
         k = events ();
         heard ();
+        if (HUB->tpr) {
+            HUB->ui_eq = (unsigned char) place; /* (The real paces: the news told, at once, not at the pass's end: the
+                                                **   world takes a line's intent as it's sent, not 8 ticks on, its
+                                                **   gate's look, ui_first's, having found the UI behind on news it had
+                                                **   told already: "played sit" 230,000 cycles, cmd1's) */
+            HUB->ui_dq = (unsigned char) dplace;
+            if (HUB->iq_head != HUB->iq_tail) {
+                hub_ring (T_WORLD);             /* (An intent its gate held for this news: taken now, the world not
+                                                **   left asleep its 8 ticks) */
+            }
+        }
         if (starting) {
             dots (1);                           /* (The game's start: its progress, then the help's line) */
         }
