@@ -7414,6 +7414,8 @@ unsigned char ui_state (void);                  /* (jobs.s's: in assembly, in th
                                                 **   the window) */
 
 unsigned char ui_behind (void);                 /* (Part lockstep's, below: s_ui_behind) */
+unsigned char ui_stuck;                         /* (ui_behind's: the UI stuck, let by: TURN_WAIT waited, till it's seen to the
+                                                **   events) */
 unsigned char turns_run (void);                 /* (Part lockstep's, below: s_turns_run) */
 #pragma code-name (push, "SW_lockstep_CODE")     /* (Part lockstep, with jobs.s's quiet: the main RAM's room, even1's) */
 #pragma rodata-name (push, "SW_lockstep_RODATA")
@@ -7429,7 +7431,7 @@ unsigned char s_ui_behind (void)
 
     if ((k = ui_state ()) != 1) {
         if (!k) {
-            ui_t = 0;
+            ui_t = ui_stuck = 0;
         }
         return k;
     }
@@ -7443,10 +7445,15 @@ unsigned char s_ui_behind (void)
                                                 **   each waited on the other thirty seconds, the main loop's things
                                                 **   not come to: dq0answer's dig down, 2026-11-17) */
         }
+        if (hub_posted (&HUB->wreq)) {
+            answer ();                          /* (Its save, a close look: what it waits on) */
+        }
         hub_ring (T_UI);
         hub_sleep (1);
         return 1;
     }
+    ui_stuck = 1;                               /* (Let by: the main loop's intents and its pass as ever, till it's seen to
+                                                **   them) */
     return 0;
 }
 
@@ -7979,7 +7986,7 @@ int main (int argc, char* argv[])
         dj = 0;
         hub_map (0);
         if (!uf || (HUB->ui_eq == (unsigned char) HUB->eq_head && HUB->ui_dq == (unsigned char) HUB->dq_head))
-        while (ui_state () != 1 && hub_take (&m)) {                    /* (A command in hand at the real paces, and news not yet seen to by the
+        while ((ui_stuck || ui_state () != 1) && hub_take (&m)) {                    /* (A command in hand at the real paces, and news not yet seen to by the
                                                 **   UI (a round's blow it's behind): its words told first, the next
                                                 **   intent's parts not copied in beside them, ui_first's hold (GW_CMD at
                                                 **   most; ui_cmd let go as the news says something, events'); dq0fightcmd's
@@ -8001,7 +8008,7 @@ int main (int argc, char* argv[])
                                                 **   whatever: 2026-11-13, the user's) */
             }
         }
-        if (ui_state () == 1) {
+        if (!ui_stuck && ui_state () == 1) {
             continue;                           /* (The turns pace: the UI to see to what the intents told first, ui_state's) */
         }
         if (hub_posted (&HUB->wreq)) {

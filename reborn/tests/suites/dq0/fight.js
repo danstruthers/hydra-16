@@ -2221,8 +2221,13 @@ module.exports = {
       start(m) {
         this.timer = dq0Timer(m);
         dq0Asks(m, [3]);
+        const D_DODGE = require('../../../sim/lib/dq0meaning.js').constants().names.D_DODGE;
         dq0Scene(m, [1, 2, 3].map(g => ({ g, line: 'inventory', n: 1, k: 0, beside: 'face', engage: true, hurt: 8,   // (A rat before it, fighting it, its every shock roll failed)
-          rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 99, 1] }] })));   // (The character's first blow a light hit, AH(1) and a 1: the rat felled, not killed, dice2's keyed dice had its counterstrike kill it)
+          hub: { pcStance: D_DODGE }, rig: [{ kind: 'ATTACK', actor: -1, uses: 1, faces: [1, 99, 1] }, { kind: 'ATTACK', faces: [99, 99] }] })));
+        // (The character's first blow a light hit, AH(1) and a 1: the rat felled, not killed, dice2's keyed dice had its counterstrike
+        // kill it.  And the rat's bites before it nothing: a marginal failure dodged by a marginal failure, a miss (the character's
+        // stance a dodge, the rat untouched by its defence).  As keyed, a bite the sword fended off struck the rat back, hurt so that
+        // any wound fells it: in the 37-byte layout the normal game's rat fell so before a line was typed (even1's, 2026-11-25))
         const H = require(path.join(TESTS, '..', 'games', 'dq0', 'hubgen.js')).load(), a = m.acia, tick = a.tick, self = this;
         const ST = H.off('hub', 'slot.state'), KD = H.off('hub', 'slot.kind'), AC = H.off('hub', 'slot.actor');
         let since = -1;

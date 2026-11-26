@@ -877,6 +877,8 @@ static void stop_world (void)
     unsigned char t;
 
     m.kind = I_QUIT;
+    HUB->ui_eq = (unsigned char) HUB->eq_head;  /* (All it does about the events done: the */
+    HUB->ui_dq = (unsigned char) HUB->dq_head;  /* (world not waiting on it, its quit taken, even1's) */
     hub_send (&m);
     for (t = T_WORLD; t < NTASKS; ++t) {
         if (task_[t] > 0) {

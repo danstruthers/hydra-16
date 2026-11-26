@@ -112,14 +112,14 @@ function dq0LookFarTest(turns) {
       const lbl = fs.readFileSync(path.join(TESTS, '..', 'obj', 'games', 'dq0m', 'dq0m.lbl'), 'latin1');
       const sym = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16), make = sym('_make_chunk'), grow = sym('_grow'), reply = sym('_hub_reply');
       const ahK = sym('_ah_k'), ahF = sym('_ah_f'), nSn = sym('_nsn'), nCx = sym('_ncx'), nCy = sym('_ncy'), csp = sym('sp');
-      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], grown = this.grown = [], asked = this.asked = [], put = this.put = {}, put2 = this.put2 = {};
+      const cpu = m.cpu, step = cpu.step.bind(cpu), made = this.made = [], grown = this.grown = [], growK = this.growK = [], asked = this.asked = [], put = this.put = {}, put2 = this.put2 = {};
       let inMake = null;                        // (A grow in a reader's make_chunk, before its reply: the look's own, its chunk's place
                                                 //   (make_chunk's cx on the C stack, its cy in A and X); else one made ahead)
       cpu.step = v => {
         const pc = cpu.PC;
         if ((pc === make || pc === grow || pc === reply) && m.dq0 && m.dq0.bank && m.dq0.bank(0) && m.T === m.dq0.bank(0)[12 + 5]) {
           const R = m.taskRam[m.T], s = R[csp] | R[csp + 1] << 8;
-          if (pc === make) { made.push(cpu.cyc); inMake = (R[s] | R[s + 1] << 8) + ',' + (cpu.A | cpu.X << 8); } else if (pc === reply) inMake = null; else if (inMake) asked.push({ t: cpu.cyc, k: inMake }); else grown.push(cpu.cyc);
+          if (pc === make) { made.push(cpu.cyc); inMake = (R[s] | R[s + 1] << 8) + ',' + (cpu.A | cpu.X << 8); } else if (pc === reply) inMake = null; else if (inMake) asked.push({ t: cpu.cyc, k: inMake }); else { grown.push(cpu.cyc); growK.push({ t: cpu.cyc, k: (R[nCx] | R[nCx + 1] << 8) + ',' + (R[nCy] | R[nCy + 1] << 8) }); }   // (A grow ahead: its chunk, the maker's choice, ahead.c's)
         }
         return step(v);
       };
@@ -156,7 +156,17 @@ function dq0LookFarTest(turns) {
       // (As it listens; and as the look at once is typed, the chunk past the edge not made ahead either, nor being made,
       // its light poked to 12 squares: the passage lit past the edge, its rest's words "Peering on, ...", L8's)
       // (Its sight 0 at those Enters too: the referee's summary, hub.pcsum, its RS_SCENE SCN_HUB's)
-      dq0Scene(m, games.flatMap((x, g) => [{ g: g + 1, line: 'listen', n: 1, call: (h, L) => { place(h, L, put, g, new Set()); h[L.pcsum + L.sSight] = 0; } },
+      // (The listen's chunk none the maker has made ahead or is making, ahead's (even1's, 2026-11-25: the scene chose among
+      // the chunks not made, one made ahead already among them, and the check below counted any grow begun in the pause:
+      // one begun just before it, the map's timing or any other's, made it fail.  Now the chunk on the line ahead is one the
+      // making ahead has yet to come to; and a chunk the maker was growing ahead as the listen began is its work meanwhile too,
+      // busy: the maker, not the look, at work on the chunks round it, as the check means)
+      const busy = (h, sn) => {                 // (The chunk the maker's growing ahead now, not made yet: its place, or null)
+        const r = m.taskRam[h[12 + 5]], u16 = o => r[o] | r[o + 1] << 8, k = u16(nCx) + ',' + u16(nCy);
+        for (let j = 0; j < 24; j++) if (r[ahF + j] & 0x80 && r[ahK + j * 5] === sn && u16(ahK + j * 5 + 1) + ',' + u16(ahK + j * 5 + 3) === k) return null;
+        return r[nSn] === sn && growK.length && growK[growK.length - 1].k === k ? k : null;
+      };
+      dq0Scene(m, games.flatMap((x, g) => [{ g: g + 1, line: 'listen', n: 1, call: (h, L) => { place(h, L, put, g, ahead(h, h[L.pcSn])); if (put[g]) put[g].busy = busy(h, h[L.pcSn]); h[L.pcsum + L.sSight] = 0; } },
         { g: g + 1, line: 'look ahead', n: 4, call: (h, L) => { place(h, L, put2, g, new Set()); h[L.pcLight] = 12; h[L.pcsum + L.sSight] = 0; } }]));
     },
     check(m, out) {
@@ -190,7 +200,7 @@ function dq0LookFarTest(turns) {
         if (turns) return r;                   // (The turns pace: its chunks made as its looks need them, the rest's in the answer)
         if (ahead) f.push('typing ' + (g + 1) + ': the first look ahead, a wall in the way, made ' + ahead + ' chunks');
         if (!this.put[g]) f.push('typing ' + (g + 1) + ': no straight run to a chunk\'s edge in the scene');
-        else if (!before || by1.includes(this.put[g].to)) f.push('typing ' + (g + 1) + ': the chunk on the line ahead, ' + this.put[g].to + ', not made ahead as the character listened (grown then ' + before + ', by the look ' + by1.join(' ') + ')');
+        else if (!(before || this.put[g].busy) || by1.includes(this.put[g].to)) f.push('typing ' + (g + 1) + ': the chunk on the line ahead, ' + this.put[g].to + ', not made ahead as the character listened (grown then ' + before + ', under way as it began ' + this.put[g].busy + ', by the look ' + by1.join(' ') + ')');
         // (The look at once: put as it's typed where the line ahead reaches a chunk not made, nor made ahead, nor being
         // made; that chunk grown for its asking, the whole look one way made at once, no last look standing there)
         const once = within(at(6), at(7)), by2 = by(at(6), at(7));
