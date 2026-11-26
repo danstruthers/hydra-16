@@ -368,6 +368,8 @@ static unsigned __fastcall__ item_kind (unsigned i)
 ** 16), the thing it mustn't be nor be in (the first, as the other's chosen), the thing it must be in (HW_IN's; else
 ** one it mustn't be in already: a count's put in it), the one it's to be (a count's next, a part of a lot split off) */
 unsigned char wsel;
+unsigned char wlist;                            /* (1: the chooser's pass to keep all it found in tbuf, which's; then
+                                                **   0x80 and their count: s_moved's, even3's) */
 unsigned wnot, win, wforce;
 unsigned handled;                               /* (The thing a request handled last: a count's, as each is moved) */
 unsigned hand_n;                                /* (The thing serve's at_hand found, for the handling's own: s_at_hand's) */
@@ -2659,8 +2661,10 @@ unsigned char s_serve (void)
         }
         break;
     }
-    if (iq.result != IR_NOT_HERE && (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
-        iq.kind == IO_THROW || iq.kind == IO_PLACE || iq.kind == IO_EMPTY || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
+    if (iq.result != IR_NOT_HERE && iq.result != IR_WHICH && (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
+        iq.kind == IO_THROW || iq.kind == IO_PLACE || iq.kind == IO_EMPTY || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet; asked
+                                                **   which, nothing moved either: no light_now, nor its letters made again
+                                                **   and part tell_apart copied in, 260,000 cycles, even3's) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     } else if (iq.result == IR_OK && (iq.kind == IO_FILL || iq.kind == IO_SHUT || iq.kind == IO_USE)) {
@@ -3027,11 +3031,8 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     const struct item* p;
     const struct kind* k;
     unsigned i = 0, x, y, px, py, dx, dy, wid;
-    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk, all = wsel == SL_WHICH;
+    unsigned char m = 0, j, r, d, sn, s = wsel & 15, pw, ps, pk;
 
-    if (all) {
-        s = 0;                                  /* (Every one: which's, part by_count's) */
-    }
     afar = 0;
     csum = 0;
     hand_n = 0;
@@ -3164,11 +3165,13 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
     }
     look_q = 0;
-    if (all) {
-        for (j = 0; j < m; ++j) {               /* (Their numbers, the most to hand first, in tbuf: which's) */
+    if (wlist) {
+        for (j = 0; j < m; ++j) {               /* (Their numbers, the most to hand first, in tbuf, kept by a take's
+                                                **   own pass for which (wlist's): its one pass, even3's; SL_WHICH's
+                                                **   second pass before) */
             ((unsigned*) tbuf)[j] = c[j].n;
         }
-        return m;
+        wlist = 0x80 | m;
     }
     j = s == SL_NTH ? wsel >> 4 : s == SL_OTHER && !wnot ? 2 : 1;
     if (!j || j > m) {
@@ -3509,7 +3512,7 @@ static void take_keep (void)
 
 /* ---- Which one (the user's playtest, 2026-11-06: "if all three are on the ground, I should get a prompt for which one,
 ** with longer descriptions of each"; the designators' step 5): of those lying about that a take's name fits (none
-** chosen by a selector, a count, a letter, "take all"), all found in one pass (pick's SL_WHICH, their numbers in
+** chosen by a selector, a count, a letter, "take all"), all found in the take's own pass (pick's wlist, their numbers in
 ** tbuf), each one's kind, count and state as the inventory's words tell them (lit; spent, nearly spent, burning low; empty),
 ** those alike once: two or more that differ, each one's id, kind, count and state (WS_*) into the text for the UI to
 ** word and ask ("12 7 1 1|13 7 1 2|"), IR_WHICH; else 0 (one, or all alike: the chooser's, as ever) */
@@ -3522,10 +3525,9 @@ static unsigned char which (void)
     static unsigned char j, m, n, k, f;
     static char b[6];
 
-    wsel = SL_WHICH;
-    n = (unsigned char) pick (iq.name, HW_GONE);
-    wsel = 0;                                   /* (As it was: none said, s_moved's; this part's data copied in again by
-                                                **   the chooser's call) */
+    n = wlist & 15;                             /* (Those the take's own pass found, kept, s_moved's: no second pass
+                                                **   of the store (SL_WHICH's, before), nor part ui_requests copied in for
+                                                **   it and this one back after, 80,000 cycles: dq0letwhich's, even3's) */
     for (j = m = 0; j < n; ++j) {
         fetch (&rec, ((unsigned*) tbuf)[j]);
         if (!rec.id) {
@@ -3696,16 +3698,20 @@ unsigned char __fastcall__ s_moved (unsigned char op)
     text_new ();
     for (;;) {
         wforce = 0;
+        wlist = r = op == IO_GET && !times && !iq.count && !wsel && *iq.name != '#';   /* (All this pass finds
+                                                **   kept, which's: one pass for both, even3's) */
         n = op == IO_TAKE && !win ? 0 : pick (iq.name, mode);
-        if (op == IO_GET && !times && n && csum > item_at (n)->qty && !iq.count && !wsel && *iq.name != '#') {
+        if (r && n && csum > item_at (n)->qty) {
             hub_map (0);                        /* (Several of the name lying about, all told: which, perhaps; one, as
                                                 **   ever, no second pass of the store nor the parts' swaps for it: a
                                                 **   take's answer as quick as it was, 2026-11-06) */
             if (!(HUB->pc_lump & (PL_MORE | PL_ALL)) && which ()) {
+                wlist = 0;
                 return IR_WHICH;                /* (Several that differ: which, asked) */
             }
-            n = pick (iq.name, mode);           /* (All alike: the chooser's, as ever; rec and the rest its again) */
-        }
+        }                                       /* (All alike: the chooser's choice, its pass's, as ever; none
+                                                **   asked of again, which's data its own) */
+        wlist = 0;
         if (!times && iq.count == CT_HALF) {
             want = csum > 1 ? csum >> 1 : 1;    /* (Half of all there are: a lot's count, or the things alike) */
         }
