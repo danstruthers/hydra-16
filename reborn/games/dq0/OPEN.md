@@ -78,20 +78,19 @@ The engineer's, under WORLD-MODEL.md's section 8, and not asked: listed so they 
   - blindness a referee fact a scene sets (RS_SCENE), so dq0blind and dq0darklook stop overriding the summary;
   - dq0ahead's raw pokes (dq0saveout's gone: lock2's).
 - **F1. A "d" line's first letter as a denizen's kit is drawn**: even2 took four costs off it, even3 the kernel's
-  pick's (built/2026-11-25-even2.md section 10.4); every "d" under 90% but dq0pcfelled's "d, played" in the 37-byte
-  layout, 657,022 (91%).
-- **F2. The look's pauses, the far look's work**: won back by even3 (the kernel's pick passes the known sleepers by,
-  built/2026-11-25-even2.md section 10.4): dq0lookrest's look at once and dq0lookfar's look across under 90% in all
-  three layouts (as built 1,502,900, 84%). Its other leads stay (even2's section 3) for the next pause.
+  pick's; at even4's run (built/2026-11-25-even2.md section 11.3) dq0pcfelled's "d, played" 90% in the 37-byte layout,
+  "d, menacing" 94% as built and 91% in the 91-byte layout: moved by the take path's timing, to win back.
+- **F2. The look's pauses, the far look's work**: won back by even3 (section 10.4); under 90% in all three layouts
+  at even4's run too. Its other leads stay (even2's section 3) for the next pause.
 - **L1** (the turns pace not exact: the bandits' errands) was closed by even2 (the three-layout table the same but
   dq0stopsweep) (section 1): a test's scene put in place
   whole at the turns pace, the look at the bodies it moved before their intents; dq0lockerrand holds it.
-- **E3. The suite's real-pace failures after even2**: dq0felled, dq0letcmd and dq0hold mended by even3 (a line waiting on a
-  test's scene, the minds on the maker's chunk in the background: section 10.2). Left: **dq0letwhich**'s menacing game,
-  "take the torch" with two torches at the feet remembered from across the room 856-872K (119-121%) and "2" 770-813K
-  in all three layouts (section 10.3 and the handover, 10.9: the chooser's one pass 265K, the parts' copies 180K, the
-  UI's and the parser's 400K). And the 91-byte layout parts dq0antidote's game 0 and dq0scene's game 1 at the turns
-  pace (section 10.5): a lockstep gap to find before the next feature.
+- **E3. The suite's real-pace failures after even2**: dq0felled, dq0letcmd, dq0hold mended by even3; dq0letwhich's
+  slow path by even4 (section 11.1: under 100% in all three layouts and every lag tried, 88-98%, not under 90%). Left
+  (section 11.8): in the 37-byte layout **dq0lockerrand** (its slowed game tells the bandit's take, the first not: L1's
+  scene look again) and **dq0answer "played go up"** 750,847 (104%); "played stand" 95% as built. The turns pace's
+  dq0antidote and dq0scene parts: cause found (section 11.2, a line typed into a long task taken at the round the
+  tasks' timing gives), not parting at even4's head, not closed.
 - **F3. Carriers for takings and stock** (T5: a creature carries what its life needs). Sellers and robbers get a sack
   or a pack in their outfits, so what they take or are given goes in it, not "hung at the belt"; then invknown.txt's
   loose entry goes. Watch dq0trade, dq0farthing and dq0hoard.
