@@ -154,10 +154,14 @@ static unsigned char asked (void)
 ** turn there as it was the UI's to give (main.c's fore_sync, FS_MAKE, before 2026-11-17): at the real paces, for the
 ** map, and for the rest while no command's in hand (one in hand, the world's, the command parser's and the referee's
 ** time first: its answer's first letter); and for a request from one in the foreground (the world, the senses, the
-** UI's), not the denizens' minds' alone; never as it makes a chunk ahead for no one */
+** UI's), not the denizens' minds' alone; never as it makes a chunk ahead for no one.  But the minds' while a line
+** waits on a test's scene (SCENE_LINE, not in place): the UI waits on the minds' part of it, and they on this request,
+** in the foreground's wait as one waited on by it (the maker in the background's rest of a tick, an eighth of the CPU:
+** dq0felled's line 50M cycles waiting, even3's, 2026-11-25) */
 static void __fastcall__ fore (unsigned char on)
 {
-    on = HUB->tpr && ((on & 0x10) || ((on & ASK_FORE) && !HUB->ui_cmd));
+    on = HUB->tpr && ((on & 0x10) || ((on & ASK_FORE) && !HUB->ui_cmd) ||
+        ((on & 1 << ASK_DENIZENS) && (HUB->scene & SCENE_LINE) && HUB->scene != HUB->scene_d));
     if (on != fg) {
         hy_taskfore (hy_task (), fg = on);
     }
@@ -341,14 +345,12 @@ void s_scene (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-int main (int argc, char* argv[])
+/* The maker's start, once (part seen_save's, its start's too: the main RAM's room, the scene's foreground's 25
+** bytes, even3's, 2026-11-25): a test's start copied, the changes' and the chunks ahead's banks, no piece placed */
+#pragma code-name (push, "SW_seen_save_CODE")
+#pragma rodata-name (push, "SW_seen_save_RODATA")
+void s_mk_begin (void)
 {
-    unsigned char i, w, t, calm = 0;
-
-    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
-        return 1;
-    }
-    libpath = argv[3];
     hub_map (0);
     sc_said = HUB->sc_said;
     sc_sky = HUB->sc_sky;
@@ -357,6 +359,20 @@ int main (int argc, char* argv[])
     changes_init ();
     ahead_init ();                              /* (Its own banks for the chunks it makes ahead) */
     hub_set (THEME_BANK, THEME_PLACE, 0xFF, NPIECES * sizeof (struct tplace));     /* (No piece placed yet) */
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void mk_begin (void);                           /* (Part seen_save's: its stub) */
+
+int main (int argc, char* argv[])
+{
+    unsigned char i, w, t, calm = 0;
+
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
+        return 1;
+    }
+    libpath = argv[3];
+    mk_begin ();                                /* (Its start's own: part seen_save's) */
     for (;;) {
         hub_map (0);                            /* (The hub's header: its own banks may be in the window) */
         if (HUB->quit) {

@@ -20,8 +20,8 @@
 #define W_SLOT          HUB->slot[SLOT_WORLD]
 
 void den_intents (void);                        /* (Part den_bodies's: wbody.h's) */
-extern unsigned char sc_look;
-extern unsigned char den_done;                   /* (wbody.h's: the minds' turn done) */                   /* (dq0w.c's: the scene's intents held for the look at it) */
+extern unsigned char sc_look;                   /* (dq0w.c's: the scene's intents held for the look at it) */
+extern unsigned char den_done;                  /* (wbody.h's: the minds' turn done) */
 
 /* At the turns pace, the scene in place whole (scene_d: the maker's part and the minds' done, after the world's)
 ** before the world goes on with its pass, and the intents the minds posted for it (SO_INTENT) held through this pass
@@ -100,6 +100,7 @@ void s_scene (void)
     hub_ring (mk ? T_MAKER : T_DENIZENS);
     if (md && !HUB->tpr && den_done == HUB->den_go && HUB->di_tail == HUB->di_head) {
         whole (s);                              /* (The minds quiet, their turn done: else as ever, their turn's intents
-                                                **   the world's to carry out as it goes, dq0stray's shot mid-fight) */                               /* (The turns pace: the scene whole before the world goes on) */
+                                                **   the world's to carry out as it goes, dq0stray's shot mid-fight; the turns pace's: the
+                                                **   scene whole before the world goes on) */
     }
 }
