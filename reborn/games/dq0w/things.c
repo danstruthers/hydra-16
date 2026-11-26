@@ -2702,7 +2702,11 @@ unsigned char s_serve (void)
     hand_n = 0;
     hub_map (0);
     HUB->ireq.result = iq.result;
-    if (rs_ok && reach_do (RO_REPLY)) {         /* (The reach's steps: part room_tests's, a step begun the reply's) */
+    if (rs_ok && iq.result == IR_WHICH && !(rs_pack | rs_using | naq | rs_st)) {
+        rs_ok = rs_live = 0;                    /* (Asked which: nothing reached, nothing begun, RO_REPLY's end alone;
+                                                **   part reach_do not copied in for it nor this one back, 67,000
+                                                **   cycles: dq0letwhich's, even3's) */
+    } else if (rs_ok && reach_do (RO_REPLY)) {  /* (The reach's steps: part room_tests's, a step begun the reply's) */
         return 0;
     }
     return changed && iq.kind != IO_KIT;
