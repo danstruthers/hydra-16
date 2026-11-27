@@ -14907,7 +14907,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74LS139"
+		(property "Value" "74F139"
 			(at 324.7741 100.33 0)
 			(effects
 				(font
@@ -14925,7 +14925,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74f139a.pdf"
 			(at 322.58 123.19 0)
 			(effects
 				(font
@@ -16502,7 +16502,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74LS139"
+		(property "Value" "74F139"
 			(at 195.2341 31.75 0)
 			(effects
 				(font
@@ -16520,7 +16520,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74f139a.pdf"
 			(at 193.04 54.61 0)
 			(effects
 				(font

@@ -1746,7 +1746,7 @@
 				)
 			)
 		)
-		(property "Value" "74HC139"
+		(property "Value" "74F139"
 			(at 3.81 20.11 90)
 			(layer "F.Fab")
 			(uuid "b3781f57-4962-42ea-b3c4-2f3cdf3d45cc")
@@ -1757,7 +1757,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74f139a.pdf"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")

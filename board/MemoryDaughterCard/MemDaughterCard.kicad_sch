@@ -11597,7 +11597,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74LS139"
+		(property "Value" "74F139"
 			(at 183.8041 38.1 0)
 			(effects
 				(font
@@ -11615,7 +11615,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74f139a.pdf"
 			(at 181.61 60.96 0)
 			(effects
 				(font

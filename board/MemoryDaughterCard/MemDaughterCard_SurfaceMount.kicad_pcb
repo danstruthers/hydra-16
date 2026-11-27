@@ -7665,7 +7665,7 @@
 				)
 			)
 		)
-		(property "Value" "74LS139"
+		(property "Value" "74F139"
 			(at 3.81 21.5342 90)
 			(layer "F.SilkS")
 			(uuid "dec214bb-4f65-465f-85ff-de30d98ecd2a")
@@ -7676,7 +7676,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74f139a.pdf"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
