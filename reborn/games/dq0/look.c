@@ -29,6 +29,11 @@
 
 char lb[400];                                   /* The words, as they're made (words.c's), */
 char* lbe;                                      /*   their end, */
+const char* const wl_said[2] = {                   /* (A well's shaft overhead, its foot's, words.c's; and a vault's: the main
+                                                **   RAM's, overlay 2 full, 2026-11-06) */
+    " Above you the well's shaft rises to its mouth, far overhead.",
+    " A pointed vault rises high overhead, to "
+};
 unsigned lbn;                                   /*   and how many a look's said already (streamed: lb_stream) */
 unsigned char lb_stream;                        /* A look's words said a sentence at a time as they're made (words.c's
                                                 **   add): its first out while the rest is worked out */
@@ -247,7 +252,9 @@ void __fastcall__ s_map (const char* rules)
         HUB->pc_lost ? ", or so you think" : "");
     t_flush ();                                 /* (Its first words at once, the maker's drawing some ten million cycles:
                                                 **   the user's D17) */
+    fore_set (FS_UI | FS_SENS | FS_MAKE);                 /* (The answer begun: the maker first, the player waiting on it: main.c's) */
     hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
+    fore_set (fored);
     slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
                                                 **   believes in lies, as the map's turned: a quarter for every two

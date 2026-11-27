@@ -223,17 +223,75 @@ unsigned char __fastcall__ o_aff_cure (unsigned char power)
     return 1;
 }
 
+/* Its tongues and scripts (tongues, dq0harn.h's: the plan for the game between dungeons, its step 8): its file's line l,
+** "language NAME=ML" or "script NAME[=ML]", into it (a script's " *NAME=ML", a tongue's " NAME=ML"; any other line
+** passed over); or its next line made in l from it, past its own tongue (tw: where; l[0] 0, no more, and from the
+** first again) */
+static unsigned char tw;
+
+static void __fastcall__ tongue_in (char* l)
+{
+    unsigned char n = 0;
+    const char* p;
+
+    if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
+        l = *l == 's' ? (l[5] = ' ', l[6] = '*', l + 5) : l + 8;
+        for (p = tongues + 1; (p = strchr (p, ' ')) != 0; ++p) {
+            ++n;                                /* (Those past its own so far) */
+        }
+        if (n < TONGUE_LINES && strlen (tongues) + strlen (l) < sizeof tongues) {
+            strcat (tongues, l);
+        } else {
+            tongues[0] = '!';                   /* (More than it can hold: the sheet refused, loudly, not cut short) */
+        }
+    }
+}
+
+static void __fastcall__ tongue_out (char* l)
+{
+    const char* p = tongues + (tw ? tw : 7);
+    const char* e;
+    unsigned char g;
+
+    if (!*p) {
+        tw = l[0] = 0;
+        return;
+    }
+    e = strchr (p + 1, ' ');
+    e = e ? e : p + strlen (p);
+    g = p[1] == '*' ? 2 : 0;
+    strcpy (l, g ? "script " : "language");
+    strncat (l, p + g, e - p - g);
+    tw = e - tongues;
+}
+
 /* The save's line of the body (the character's file's "body": its venom, its rest toward its healing in minutes, its
 ** disease, its breath, "body 3 14 0 25 1200 0 0 0 0 0 0"), into l (rd 0); or read back from l (rd 1: after "body ").
-** And its skills' growth, "body u..." lines (skills.c's: rd 2 the next made, rd 3 cleared, rd 1 its u read) */
+** And its skills' growth, "body u..." lines (skills.c's: rd 2 the next made, rd 3 cleared, rd 1 its u read), and after
+** them its tongues' and scripts' lines (rd 2 on; rd 3 cleared, its own alone; rd 4 a line of the file's, l whole) */
 void __fastcall__ o_body_line (char* l, unsigned char rd)
 {
     char b[8];
     unsigned v[11];
     unsigned char k;
 
+    if (rd == 4) {
+        tongue_in (l);
+        return;
+    }
+    if (rd == 2 && tw) {
+        tongue_out (l);
+        return;
+    }
     if (rd >= 2 || (rd && *l == 'u')) {
+        if (rd == 3) {
+            tongues[7] = tw = 0;
+            tongues[0] = ' ';                   /* (Not refused: tongue_in's) */
+        }
         skill_line (l, rd);
+        if (rd == 2 && !l[0]) {
+            tongue_out (l);
+        }
         return;
     }
     if (!rd) {

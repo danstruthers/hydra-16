@@ -53,7 +53,7 @@ const EXPRS = {
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
   sLimbs: F('struct rs_summary', 'limbs'), sLimp: F('struct rs_summary', 'limp'), sNorth: F('struct rs_summary', 'northsense'),
-  actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS', diHead: F('struct hub', 'di_head'),
+  actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS', diHead: F('struct hub', 'di_head'), uiKeys: F('struct hub', 'ui_keys'),
   diTail: F('struct hub', 'di_tail'), diAt: F('struct hub', 'di'), msgSize: 'sizeof (struct msg)', diSize: 'DI_SIZE',
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'), aArm: F('struct actor', 'arm'), aDropped: F('struct actor', 'dropped'),
@@ -96,7 +96,7 @@ const EXPRS = {
   bDist: F('struct beyond', 'dist'), bKind: F('struct beyond', 'kind'), bLit: F('struct beyond', 'lit'),
   wNitems: F('struct wayseen', 'nitems'), wItem: F('struct wayseen', 'item'), wNdens: F('struct wayseen', 'ndens'),
   wDen: F('struct wayseen', 'den'), wNglows: F('struct wayseen', 'nglows'), wGlow: F('struct wayseen', 'glow'),
-  uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W', uMapLay: F('struct uirec', 'maplay'),
+  uiBank: 'UI_BANK', uCap: F('struct uirec', 'cap'), ucapSize: 'sizeof (struct ucap)', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W', uMapLay: F('struct uirec', 'maplay'),
   uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: 'TR_TEXT', trHow: F('struct tread', 'how'),
   trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
   trTrod: F('struct tread', 'trod'), trSmoke: F('struct tread', 'smoke'), trNtr: F('struct tread', 'ntr'), trTr: F('struct tread', 'tr'),
@@ -223,7 +223,8 @@ function createRecorder() {
         else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
         else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b; e.seen = !!(w >> 8 & 0x40); e.task = name('LT_NONE', w >> 8 & 0x3F); }   // (A light's kind; one lying there seen)
-        else if (e.te === 'TE_ROBBED') e.by = e.b - 1;                     // (The robber: its entry)
+        else if (e.te === 'TE_ROBBED') { e.by = e.b - 1; e.purse = !!(w & 0x100); e.caught = !!(w & 0x200); e.asleep = !!(w & 0x400); delete e.task; }   // (The robber: its entry; at
+                                                                   //   rest, 2026-11-06: RB_PURSE, RB_CAUGHT, RB_ASLEEP)
         else if (e.te === 'TE_FETCHED') { e.by = (e.b & 15) - 1; e.ft = name('FT_TOOK', e.b >> 4); e.thing = w >> 8; delete e.task; }   // (An errand's, a gift's: slice 4.8's)
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
         else e.named = name('LT_NONE', e.b);

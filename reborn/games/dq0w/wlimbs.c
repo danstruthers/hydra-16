@@ -300,7 +300,7 @@ void __fastcall__ s_den_other (const struct msg* m)
     if (HUB->gear & GE_OLD) {
         return;                                 /* (dq0 -K's, the tests': none of theirs) */
     }
-    if (ui_first ()) {
+    if (ui_long ()) {
         kit_off |= 2;                           /* (A command come: its answer first, this intent left in the ring: all
                                                 **   of it a million cycles and more, the card's reads in it, on whichever
                                                 **   answer it fell, the user's D17, 2026-11-03: wbody.c's) */
@@ -317,9 +317,21 @@ void __fastcall__ s_den_other (const struct msg* m)
         ost.hy = m->w2;
         ost.hsn = m->x[2];
         ost.fac = m->b;
-        it_need (ost.hsn, (ost.hx - STRATUM (ost.hsn).x0) >> CW_BITS, (ost.hy - STRATUM (ost.hsn).y0) >> CW_BITS);
         ost.kit = 0;
-        den_kit (m);
+        hub_map (0);
+        if (!ui_long ()) {
+            it_need (ost.hsn, (ost.hx - STRATUM (ost.hsn).x0) >> CW_BITS, (ost.hy - STRATUM (ost.hsn).y0) >> CW_BITS);
+            hub_map (0);
+            if (!ui_long ()) {                  /* (Looked at before each of its long steps: the chunk's things read in,
+                                                **   the file opened and its index read, 700,000 cycles behind a
+                                                **   first letter, 2026-11-04) */
+                den_kit (m);
+            } else {
+                ost.kit = 2;
+            }
+        } else {
+            ost.kit = 2;
+        }
         if (ost.kit == 2) {
             kit_off |= 2;                       /* (Given way to a command: its intent left in the ring, wbody.c's) */
             return;

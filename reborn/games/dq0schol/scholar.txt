@@ -1,0 +1,25 @@
+# scholar.txt - (dq0schol: lib/acct/scholar.txt) the scholar's house's words, in the town between two dungeons (the plan for
+# the game between dungeons, its step 12; HOUSE.md's the scholar's house).  A line a key and its values between bars (a value's
+# spaces trimmed); a key's lines one picked by the dice where there are several.  The words and every number the house's, for
+# review; nothing here is the book's.
+#   enter    the house as the character comes in (one picked)
+#   help     what's done here, told as it comes in
+#   prompt   what's asked
+#   scripts  the scripts a master teaches, the game's own (history.txt's peoples')
+#   tongues  the tongues a master teaches (the peoples' and the gargun's: history.txt's, hmchar's)
+#   small    what a master teaches in a town that isn't big (town.txt's kinds): a big town's masters teach every script and
+#            tongue above
+#   reckons  the writings Mathematics can reckon from (a word of the thing's name)
+#   made     what each people's work made, by its era's work (theme.h's W_*: keep, temple, mine, tomb, town, hold)
+#   went     where the tales have them go on to, by the land (history.txt's: mountains, hills, forest, marsh, coast, plain)
+enter    | The scholar's house is cool and quiet, and smells of ink and old vellum.
+enter    | A clerk at a high desk looks up as you come in; shelves of books run back into the gloom.
+enter    | In the scholar's house a boy is grinding ink, and two old men argue over a map.
+help     | A scribe will read a writing for you (read 1); if you know its letters and its tongue you can study it in the library (study 1); a master will teach you a script or a tongue in a month (learn delvic); and the old tales, the stars, the heralds' rolls and a reckoner's sums may tell you something of it (folklore 1, astrology 1, heraldry 1, reckon 1).
+prompt   | At the scholar's house: read, study, learn, or Enter to go back
+scripts  | delvic | ardic | starric | hethric | clawmark | sunglyph
+tongues  | khuzdul | sindarin | hethrin | kobold | ostari | gargun
+small    | ardic
+reckons  | tally | ledger | journal | map
+made     | raised keeps | built temples | dug mines | laid their dead in tombs | built towns | carved great holds
+went     | into the mountains | into the hills | into the woods | into the marshes | down to the coast | out onto the plains

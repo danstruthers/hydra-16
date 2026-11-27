@@ -51,6 +51,8 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 #pragma data-name (push, "SW2RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
 static unsigned char mx_[SEE_DOORS] = { 0 }, my_[SEE_DOORS] = { 0 };     /* (The mouths' squares, as they're counted) */
 static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
+static const struct opening* wo_ = 0;           /* (A well's shaft over the character, perceive's, 2026-11-06: its opening, */
+static struct sight_open* ws_ = 0;              /*   and the record's) */
 static unsigned char sun_ = 0;                  /* (The daylight's reach now: the hub's tb.sun) */
 static unsigned char kn_ = 0;                   /* (The rel's KNOWN_REL, as it's those remembered) */
 static unsigned char some_ = 0;                 /* (A door or an opening only remembered, this look's first pass) */
@@ -438,6 +440,23 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.way[S.nways].dz = fz (dz);
                 S.way[S.nways++].steps = TILE (*p);    /* (Its square's kind: steps, rubble) */
             }
+        }
+    }
+    at (sn, x, y);                              /* (A well's shaft over it, its foot: told as the well's, 2026-11-06;
+                                                **   its mouth lit, the world's words as it comes down) */
+    for (k = C->nopen, wo_ = C->open; k; --k, ++wo_) {
+        if (wo_->x == cx_ && wo_->y == cy_ && wo_->link != 0xFF && s->link[wo_->link].dug == LD_WELL) {
+            for (k = S.nopen, ws_ = S.open; k && ws_->rel != 0xFF; --k, ++ws_) {
+            }
+            if (!k) {
+                if (S.nopen >= SEE_OPEN) {
+                    break;
+                }
+                ++S.nopen;                      /* (In a passage, a sump: one of its own) */
+                ws_->rel = 0xFF;
+            }
+            ws_->kind = O_SHAFT_UP | O_WELLS;
+            break;
         }
     }
     if (S.dark) {                               /* (In the dark, its ceiling's unseen: what its hands find instead, and

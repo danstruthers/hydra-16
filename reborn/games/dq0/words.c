@@ -300,7 +300,7 @@ static void ceiling (void)
         add (" The ceiling is a dome, ");
         break;
     case C_CATHEDRAL:
-        add (" A pointed vault rises high overhead, to ");
+        add (wl_said[1]);                       /* (" A pointed vault ...": the main RAM's, look.c's: overlay 2's room) */
         break;
     case C_SLOPED:
         add (" The ceiling slopes from ");
@@ -325,6 +325,10 @@ static void __fastcall__ opening (unsigned char i)
 {
     unsigned char k = S->open[i].kind, rel = S->open[i].rel, d = k & O_DAYLIT;
 
+    if (k & O_WELLS) {
+        add (wl_said[0]);                       /* (A well's shaft, its foot: 2026-11-06) */
+        return;
+    }
     k &= ~O_DAYLIT;
     add (rel == 0xFF ? (k >= O_SKYLIGHT ? " You stand under " : " You stand by ") : " You see ");
     add (k == O_SKYLIGHT ? "a skylight in the roof" : k == O_SKYSHAFT ? "a shaft open to the sky" :

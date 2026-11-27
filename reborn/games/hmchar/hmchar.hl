@@ -201,9 +201,12 @@
       =(e (filter (fn {x} {eq (str-lower (nth 2 x)) lw}) b))
       ?(e (fst e) ?((nil? b) NIL ?((nil? (tail b)) (fst b) :two)))))}))
 
-; A skill of an occupation's: SKILL/N, SKILL (at its OML), Ritual/N (the deity's), or weapons N/M or crafts N/M
-; (chosen after: pend, {weapons? N M}); a skill listed twice, the higher
+; A skill of an occupation's: SKILL/N, SKILL (at its OML), Ritual/N (the deity's), weapons N/M or crafts N/M
+; (chosen after: pend, {weapons? N M}), or tongues N or scripts N (ntongues, nscripts: C's; scripts N opens the native
+; as Script does); a skill listed twice, the higher
 (def {pend} NIL)
+(def {ntongues} 0)
+(def {nscripts} 0)
 (def {raise} (fn {sk m} {do
   =(v ?((zero? m) (harn.get-oml h sk) (* m (harn.get-sb h sk))))
   ?((< (harn.get-ml h sk) v) (harn.put-ml h sk v) NIL)}))
@@ -212,13 +215,15 @@
   =(m ?((>= i 0) (val (substring tx (+ i 1))) 0))
   =(nm ?((>= i 0) (substring tx 0 i) tx))
   =(lw (str-lower nm))
+  ?((starts-with? lw "tongues ") (set! {ntongues} (val (snd (str-split nm " "))))
+  ?((starts-with? lw "scripts ") (do (set! {nscripts} (val (snd (str-split nm " ")))) (raise 20 0))
   ?((or (starts-with? lw "weapons ") (starts-with? lw "crafts "))
     (set! {pend} (list (starts-with? lw "w") (val (snd (str-split nm " "))) m))
   ?((eq lw "ritual") ?((eq (h :dty) 10) NIL (raise (+ 21 (h :dty)) m))
     (do
       =(sk (name-in snames lw 0))
       ?((< sk 91) NIL (set! {sk} (skill-named nm (range 0 91))))
-      ?((or (nil? sk) (eq sk :two)) (print-to stderr (+ "hmchar.hl: occupations.txt: no skill " nm)) (raise sk m)))))}))
+      ?((or (nil? sk) (eq sk :two)) (print-to stderr (+ "hmchar.hl: occupations.txt: no skill " nm)) (raise sk m)))))))}))
 
 ; An occupation's skills said (its kind's every one's, then its own), and taken (apply)
 (def {take-occ} (fn {x apply} {do
@@ -468,18 +473,29 @@
 ; 2026-10-31)
 (def {wl} (+ "wealth " (wealth)))
 (def {ts} (eq (harn.d 100) 1))
-; A second language (C's: those the book's table gives one, Character 15; which by its culture and its name's first
-; letter, the house's; at its skill base once, Skills 11; 2026-11-03)
-(def {lg} ?((< (name-in {"Sage/Tutor" "Scribe" "Innkeeper" "Litigant" "Mercantyler" "Herald"} occname 0) 6)
-  (+ "language "
-    (nth (+ (* (% (h :culture) 4) 2) (% (char-code (char-at name 0)) 2))
-      {"khuzdul" "sindarin" "khuzdul" "sindarin" "khuzdul" "gargun" "gargun" "kobold"})
-    "=" (harn.get-sb h 19))
-  NIL))
+; Its tongues and scripts (C's): a second language (those the book's table gives one, Character 15, occupations.txt's
+; tongues 2; which by its culture and its name's first letter, the house's; at its skill base once, Skills 11;
+; 2026-11-03); its native script by its culture (the game's own, each people's by its tongue's number), and the book's
+; Two or Three Scripts (scripts N) rolled from the rest last of all, each at 70 + SB; each a line of its file, and said
+(def {t2} (nth (+ (* (% (h :culture) 4) 2) (% (char-code (char-at name 0)) 2))
+  {"khuzdul" "sindarin" "khuzdul" "sindarin" "khuzdul" "gargun" "gargun" "kobold"}))
+(def {lg} ?((> ntongues 1) (+ "language " t2 "=" (harn.get-sb h 19)) NIL))
+(def {scripts} {"delvic" "ardic" "starric" "hethric" "clawmark" "sunglyph"})
+(def {pick-scripts} (fn {left n} {?((or (zero? n) (nil? left)) {}
+  (do
+    =(s (nth (random (len left)) left))
+    (cons s (pick-scripts (filter (fn {x} {not (eq x s)}) left) (- n 1)))))}))
+(def {nat} ?((zero? (harn.get-ml h 20)) NIL (nth (nth (h :culture) {3 0 1 1 0 2}) scripts)))
+(def {more} ?(nat (pick-scripts (filter (fn {x} {not (eq x nat)}) scripts) ?((> nscripts 1) (- nscripts 1) 0)) {}))
 (def {lines} (list (+ "name " name) (+ "occupation " occname) wl))
 ?(ts (set! {lines} (join lines (list "timesense"))) NIL)
 ?(lg (set! {lines} (join lines (list lg))) NIL)
+?(nat (set! {lines} (join lines (cons (+ "script " nat) (map (fn {x} {+ "script " x "=" (harn.get-oml h 20)}) more))))
+  NIL)
 (try (harn.write out h lines)
   {do (print-to stderr (+ "hmchar.hl: " out ": can't write it")) (exit 1)})
+(print (+ "Tongues: common " (harn.get-ml h 19) ?(lg (+ ", " t2 " " (harn.get-sb h 19)) "") ". Scripts: "
+  ?(nat (str-join (cons (+ nat " " (harn.get-ml h 20)) (map (fn {x} {+ x " " (harn.get-oml h 20)}) more)) ", ") "none")
+  "."))
 ?(ts (print "Absolute timesense: you always know the hour.") NIL)
 (print (+ "Written to " out))

@@ -1811,3 +1811,66 @@ The study (F:/.claude/hydra-2/swapstudy/report.md) measured the copies at 12-15%
 - A first word on plain walks and steps? "No word, leave them".
 
 **So:** no true cache and no second area; 6-byte stubs, the record walk, SWFAST in dq0d, rare code out of hot parts; each landing apart from game work.
+
+## The last questions of the round (2026-11-04)
+
+Put to the user after the life soak's faults, with their answers:
+
+- Should long world jobs hold back once typing starts? "Hold back".
+- One G5 cut killed 6 of 20 hunters by infection: should that stand? "Try in play first".
+- A death in the account between dungeons, final in both modes? "Final in both".
+- Working toward a repair of something out of reach, skip it? "Skip it".
+- A first-dungeon death before any save says "Your last save is kept" and nothing is: save on arriving, or change the words? "Change the words".
+
+**So:** the world's long jobs wait from the first key typed until the first word is out, measured so the world isn't starved; infection left as it is until it's been played; no time goes on repairs out of reach; the words at a death tell the truth about the save, and no save is made on arriving.
+
+## After the long delays (2026-11-06)
+
+Put to the user with the lead's recommendations; the user: "Yes, use your recommendations on the two outstanding questions".
+
+- Robbers hiding 3 squares from a resting character re-hide for hours rather than come and rob it: should they come and rob? Yes.
+- Should every look make only the chunks a line from the eyes reaches (fewer chunks, but lairs placed later, 18 tests to re-baseline)? No, not for now; again only if the pauses of about 2 s a chunk bother the user in play.
+
+**So:** a denizen that wants something of a character at rest comes for it, as a robber comes to rob a sleeper; looks stay as built at 2dc5439d.
+
+## Climbing down a well (2026-11-06)
+
+The user, in play: "What about climbing down a well?"  A well was only its curb (drink, fill, a rope tied, "The well's shaft drops away into the dark."), nothing below.  Asked what a well's shaft should be, the user chose "A real shaft": a narrow shaft down to water, climbed with a rope tied to the curb by the rope and climbing rules, the bottom in the water, some wells with a way on (a cistern, a passage to a lower level).
+
+## Designators for things and denizens (2026-11-06)
+
+The user: "I am wondering if it might be easier to work with things if they had some sort of designator, like nethack uses.  Please research how nethack manages inventory and items in the environment so we can make interacting with them easier, and produce a plan to do something like that to make life interacting with objects easier."  And: "We could possibly do something similar for denizens we can see (list them, with designators, for when we want to interact with them)."  The plan: the Claude Doc "dq0: letters for things and denizens" (https://claude.ai/artifact/92kFwatKMsoNbizMWE86oR).
+
+Having read it: "I think capital letters for in-the-environment things (items and denizens, unique, up to two characters) with denizens numbered first (designators only for seen items or creatures), and lower-case letters for items carried/worn (one or two characters).  When shown, the designators should be in parens or brackets, like `(A) a gargun`.  Multiple items should be takable from the environment with a prefix (`take 3A`) with the appropriate warning if less than three are in the stack."
+
+Then, asked: capitals shown "Look and a list" (in the look's sentences and a list of all in sight); the inventory "A list, one a line", replacing the sentence; a thing seen again "Keep it a while" (its capital kept while it's remembered).
+
+**So:** six steps (the doc's), after the torch fixes merge, since both change how a thing is chosen.
+
+### Stowing asks where (2026-11-06)
+
+The user: "To add to the designator work, when stowing something, it should ask where if there is more than one place it could go (pouch(es) or backpack), of course depending on size.  Stowing a weapon with a sheath should choose the sheath if worn."
+
+Made general in the designators plan (step 7): a holder made for the thing (sheath or scabbard for its blade, quiver for arrows) is chosen first when worn and free; otherwise, if more than one place could hold it by size, the question asks with designators.
+
+## The torch playtest: which thing, the first words (2026-11-06)
+
+The user's playtest, verbatim:
+
+> When I say `drop torch` it says `You reach for the torch.` followed by `Put down.`  I think it was because there was a lit torch on the ground.  Also, I had a lit torch, and I said `drop the spent torch` and it dropped the lit one.  When I said `take spent torch from backpack` it first said `You reach for the torch.` followed by the reach stream.  One other issue was when I was in the dark with the spent torch in my hand I said `light a new torch`; the response was the reach you would expect, but the `You put the torch in your backpack` was concerning because I thought it was putting the newly lit torch in there, but no, it was the spent torch.  One more thing: if I say `put <obj> in backpack` when <obj> is in hand, the response leads with `You reach for the <obj>.`; same if <obj> is not in hand and is not around anywhere.  One last thing: when you dip a torch, one line of the reach is `You set to filling the torch.` which should be `You set to dipping the torch.` or the like.
+
+> If there are many items of the same type around, it can be hard to get the one you want.  If there are three torches, one in hand, one in my backpack on my back, and one on the ground, if I say `pick up the torch` it should take the one I don't already have (from the ground).  But if all three are on the ground, I should get a prompt for which one, with longer descriptions of each, something like `Which one?  1. a torch (lit), 2. a torch (spent), or 3. a torch (almost spent).`
+
+> One other strange thing: I was trying to light a torch that was in one hand, with the tinderbox that was in the other hand, it finished the reach sequence with `You put away the tinderbox.` even though the tinderbox remains in hand.
+
+> If I have no torches in my backpack, but there are some on the floor and I say `take torch`, it first takes off my backpack, then takes a torch from the ground, then puts the backpack back on.  The torch ends up in the backpack.  It doesn't just take it in hand.
+
+> I can't specify `take torch from the floor` or `take torch from the ground`.  It says `You see no [floor|ground] here`.
+
+**So:** the first word follows what will happen (HOUSE.md's a command's first words); a thing is named by what tells it apart; "spent" and "full" choose by state; dipping is its own word; a tool in hand before stays in hand; a plain take goes to a free hand; the floor and the ground are places to take from and put on.
+
+### A line typed during a reach (2026-11-06)
+
+Asked whether a line typed while a reach's steps are still going (the pack going back on, without a question) should run between the reach's steps or wait for them all, the user: "I think that `stop` and other similar commands should be acted on immediately, but others could be held until after the reach."
+
+**So:** the commands that halt or break off (stop, and its kind: halt, enough, flee and the like) act at once, between the reach's steps; every other line waits until the reach is done, as now.

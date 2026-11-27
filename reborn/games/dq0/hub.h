@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     51                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     55                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -70,7 +70,10 @@
                                                 **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
                                                 **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
                                                 **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
-                                                **   IOS_*) */
+                                                **   IOS_*; 53, LT_DIP, SL_SPENT, SL_FULL, the UI bank's ix (what's
+                                                **   carried: the UI's first words), a thing told apart, AW_*; 54, the letters: the UI bank's low and
+                                                **   cap, struct cix's let, NLET, LT_REC, struct ucap, CW_*;
+                                                **   55, the denizens' capitals: struct sden's den) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -333,6 +336,10 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
 #define RB_HIDE         1                       /* (I_ROB's x[2]: the takings hidden at its home, */
 #define RB_HOARD        2                       /*   or put in its faction's hoard there) */
+#define RB_PURSE        1                       /* (I_ROB's x[3]: the character at rest robbed unawares, its coins
+                                                **   alone (the book's Legerdemain: a purse cut), the mind's; */
+#define RB_CAUGHT       2                       /*   caught at it (its Awareness the better), nothing taken; */
+#define RB_ASLEEP       4                       /*   the world's, to the UI: E_TASK TE_ROBBED's w1 high byte, asleep) */
 struct msg {
     unsigned char   kind;                       /* I_* or E_* */
     unsigned char   who;                        /* The actor (0: the character) */
@@ -437,7 +444,10 @@ enum {
                                                 **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED;
                                                 **   x[2] RB_HOARD, w1 w2 its faction's leader's home (its hoard
                                                 **   there, b its kind's faction: the takings in it), RB_HIDE, hidden
-                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB.  Or (a,
+                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB; x[3]
+                                                **   RB_PURSE, the character at rest robbed unawares, its coins
+                                                **   alone, | RB_CAUGHT, caught at it: nothing, its rest stopped
+                                                **   (2026-11-06; TE_ROBBED's w1 high byte the how).  Or (a,
                                                 **   slice 4.8's) an ally's errand: FE_TAKE, t the thing fetched taken
                                                 **   up where it lies (w1, w2), its own then; FE_GIVE, handed to
                                                 **   the character; FE_GIFT, the character's thing t given it, taken;
@@ -545,7 +555,8 @@ enum {
                                                 **   squares searched those nearer than it, squared: the UI's things'
                                                 **   search the same, IO_SEARCH's to) */
     E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
-                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
+                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT; a fall's E_DEEP,
+                                                **   E_SHALLOW, into water */
     E_TRAP,                                     /* A trap and who: w1 its kind (TK_*) and its trigger (TT_*) times
                                                 **   16, what came of it (TO_*) times 256 */
     E_DEN,                                      /* (The denizens' own, their queue's: DENIZENS.md's events) A
@@ -670,12 +681,19 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define FF_STOPPED      0x40                    /*   a strike stopped by armour (rs.h's AF_STOPPED, AF_STOPPED_D), */
 #define FF_FUMBLE       0x80                    /*   a weapon fumbled */
 #define I_JUMP          0x80
+#define I_WELL          0x40                    /* (I_CLIMB's: a well named, down its shaft: wwell.c's, 2026-11-06) */
 #define STEP_KEEP       0x100                   /* (I_STEP's: backing up, a step aside) */
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
+#define E_DEEP          0x1000                  /* (E_HARM's, a fall's: into deep water, shallow: 2026-11-06, a well's foot */
+#define E_SHALLOW       0x2000                  /*   or any shaft's with water at it) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its
                                                 **   own since the long slopes, 8 and 9, 2026-11-02) */
+#define O_WELL          12                      /* (And a well's shaft climbed, down or up; fallen or jumped down it into */
+#define O_WELL_FELL     13                      /*   its water: the user's "a real shaft", 2026-11-06; E_ARRIVE's w1 |
+                                                **   E_MOUTH_LIT, down it, its mouth far above in a lit room) */
+#define E_MOUTH_LIT     0x400
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -946,7 +964,8 @@ struct cthing {
 };
 enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME,
     SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY,
-    SL_NEW = 28 };                              /* (SL_NEW, "a new torch", "a fresh torch", "another torch" (the user's,
+    SL_NEW = 28, SL_SPENT = 31, SL_FULL = 47 };  /* (SL_SPENT, "the spent torch": a light or a fuel burnt out; SL_FULL,
+                                                **   "the full sack": SL_EMPTY's low bits, the n 1, 2; 2026-11-06) */                              /* (SL_NEW, "a new torch", "a fresh torch", "another torch" (the user's,
                                                 **   2026-11-02): not in a hand, not burning: the world's, its low bits
                                                 **   SL_UNLIT, the request's n 1) */
                                                 /* (Which: the one there is, or the one meant; any one; it, the last
@@ -968,6 +987,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_HIDE, LT_TIE, LT_TEND,                /* (LT_TIE: a rope tied off and let down, 2026-11-04; LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
        LT_KEY,                                  /* (A door's key turned, got out by a tool's steps first, 2026-11-04) */
+       LT_DIP,                                  /* (A torch dipped: LT_FILL a lantern's, each its own words, 2026-11-06) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
        LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
        LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK, LT_LAYLIT2, LT_INPACK2, LT_DOWN2, LT_UP2 };   /* (The reach's
@@ -1184,8 +1204,10 @@ struct sway {
     unsigned        item, ix, iy;               /* (The UI's: a thing to fetch, its item and where it lies; a gift's
                                                 **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
     unsigned char   actor;                      /* (The reply's: the actor it was, plus 1; the market's request: the
-                                                **   one the goods were found on, plus 1) */
+                                                **   one the goods were found on, plus 1; another's, the one a
+                                                **   capital named, plus 1, | SWA_MEANT: the UI's den_meant) */
 };
+#define SWA_MEANT       0x80
 #define SW_COIN(s)      (((unsigned*) (s)->word2)[0])   /* (The market's, in word2, its words the UI's own: the */
 #define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
 #define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */
@@ -1421,6 +1443,13 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
+    volatile unsigned char ui_keys;             /* The UI's: a line being typed, from its first key (odd, each line's
+                                                **   own: a hold begun again as it changes, a line typed again after the
+                                                **   last let go though the gap went unseen, 2026-11-06), or entered and held for
+                                                **   the character (else its Enter's ui_cmd): the world's long jobs hold back, ui_long's, a typist's own
+                                                **   time and so no answer's first letter behind one (2026-11-04); the
+                                                **   denizens' intents, the minds' deciding and the senses' answers to
+                                                **   them too, three seconds at most while the keys go on (2026-11-06) */
     unsigned char   starting;                   /* The game's still starting (the UI's, till the world's first look):
                                                 **   nothing yet to hear, the sound's naps the longer: the start's
                                                 **   time, 2026-11-03 */
@@ -1610,12 +1639,56 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
                                                 **   quarter ahead; its own record, WAY_SEEN) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
+/* A thing the character carries (the UI bank's ix): its kind, what it's in (that one's entry plus 1; 0 none: held, worn,
+** hung from the belt), its state (CX_*) */
+#define NIX             40
+struct cix {
+    unsigned char   kind, up, flags;            /* (kind: its place in ixks, its kinds; 0xFF past them) */
+    unsigned char   let;                        /* (Its letter: its place in the UI bank's low plus 1; 0 none) */
+};
+#define CX_HELD         0x01                    /* (In a hand) */
+#define CX_WORN         0x02                    /* (Worn) */
+#define CX_LIT          0x04                    /* (Lit) */
+#define CX_SPENT        0x08                    /* (A light or a fuel burnt out: SL_SPENT's) */
+#define CX_EMPTY        0x10                    /* (A container or a surface with nothing in it, a fuel empty) */
+#define CX_SHUT         0x20                    /* (Closed) */
+#define CX_BACK         0x40                    /* (A pack worn on the back: taken off to reach into) */
+#define CX_HOLDS        0x80                    /* (A container or a surface) */
+#define NIXK            24
+struct cixk {                                   /* (The kinds of what it carries: each kind once, its flags, K_*, its name:
+                                                **   the UI's first words read no catalogue, the user's D17) */
+    unsigned char   kind, flags;
+    char            name[14];
+};
+enum { AW_NONE, AW_LIT, AW_UNLIT, AW_SPENT, AW_EMPTY };   /* (A thing told apart from another of its kind at hand by its
+                                                **   state: the world's apart, "the spent torch", the user's, 2026-11-06) */
+
+/* The designators (the user's design, 2026-11-06: DECISIONS.md's designators): a letter for a thing carried or worn
+** (lower case, the UI bank's low: the world's), a capital for a thing in sight (the UI bank's cap: the UI's), shown in
+** brackets, "(a) a torch", "(C) a sack"; a letter typed where a thing's name goes names it (letters.c: the line's
+** letters made the things' names before it's parsed, each one's id the world's to choose by).  A letter's text, by its
+** place n: 0 ... 25 one letter, 26 ... 51 two, the first an a (or an A) */
+#define NLET            52
+#define LT_REC          0x8000                  /* (A low entry's: a thing with no id yet, by its record's number) */
+struct ucap {
+    unsigned        id;                         /* The thing's id (0: the capital free) */
+    unsigned char   what;                       /* CW_*: a thing's; a denizen's (the plan's step 4: its id the
+                                                **   denizen's, its did) */
+    unsigned char   kind;                       /* Its kind (the catalogue's: a capital typed made its name) */
+    unsigned        t;                          /* When it was last told or named (the clock's minutes: the longest
+                                                **   ago given up first) */
+};
+enum { CW_NONE, CW_THING, CW_DEN };
+#define CAP_DEN(r)      (0xFF00U | (r))         /* (A denizen's capital's id: its actor's record, struct sden's den; never
+                                                **   a thing's, under 0x8000, nor a thing's record's, LT_REC's) */
+
 /* The UI's bank's records (UI_BANK) */
 struct uirec {
     char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
                                                 **   squares' layers) */
-    char            things_text[800];           /* The things' words for the UI (what's carried: ireq's reply; said in pieces
-                                                **   of lb's size, list_say's: a soldier's kit runs past 400), and
+    char            things_text[1024];          /* The things' words for the UI (what's carried: ireq's reply; said in pieces
+                                                **   of lb's size, list_say's: a soldier's kit runs past 400, its list
+                                                **   one a line with their letters past 700), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
     unsigned        before[SEE_ITEMS + SEE_DENS];   /* What it saw as the command began (resolve.c's): the things' numbers,
                                                 **   the denizens' first letters; a walk over for it tells only what's
@@ -1627,6 +1700,35 @@ struct uirec {
                                                 **   with dust. ...") */
     unsigned char   maplay[MAP_H][MAP_W];       /* The map's squares' layers (ML_*: the maker's, with its rows: the UI
                                                 **   colours them, slice 4.2's) */
+    unsigned char   ixn;                        /* What the character carries, for the UI's first words (the world's as
+                                                **   what it carries changes, the store's order: things.c's ix_make; the
+                                                **   user's playtest, 2026-11-06), how many, */
+    struct cix      ix[NIX];                    /*   and each, */
+    unsigned char   ixk;                        /*   and their kinds, how many, */
+    struct cixk     ixks[NIXK];                 /*   and each */
+    unsigned        low[NLET];                  /* The letters of what the character carries (the user's designators,
+                                                **   2026-11-06: "lower-case letters for items carried/worn"): each
+                                                **   letter's thing, a, b ... z, then aa ... az (its id; its record's
+                                                **   number | LT_REC while it has none; 0 the letter free), given as it
+                                                **   first comes to the character, kept while it's carried, given back
+                                                **   as it's taken up again; a new one, of a ... z the first free, else
+                                                **   the one whose thing was let go of longest ago, then of aa ... az
+                                                **   (the world's: things.c's ix_make);
+                                                **   kept in the save (game.dat, the UI's) and in kit.dat (struct
+                                                **   kitrec's let) */
+    unsigned        lowt[NLET];                 /*   and when each one's thing was last carried (the clock's tenths
+                                                **   over 1024: the world's, as it makes ix) */
+    struct ucap     cap[NLET];                  /* The capitals of what the character's seen (the UI's: A ... Z, then
+                                                **   AA ... AZ), given as each is first told, kept while it's
+                                                **   remembered: given up only as a new one's wanted and none is free,
+                                                **   the one told longest ago that isn't in sight; a thing put down its
+                                                **   own again.  Kept in the save (game.dat's) */
+    char            which_l[101];               /* A take asked which of (the world's IR_WHICH: the designators' step 5,
+                                                **   the UI's): its line (dq0.h's INMAX), */
+    char            which_o[16];                /*   its thing's word, */
+    unsigned char   which_n;                    /*   how many it asked of, */
+    char            which_w[4][24];             /*   and each one's words (the inventory's: "a torch (spent)"), its
+                                                **   capital in the last byte */
 };
 enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
                                                 **   carried; the character; the compass) */
@@ -1820,6 +1922,7 @@ struct wsave {
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
 **   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
+**   own hub.ui_keys ui                                         (A line being typed: the world's long jobs hold back)
 **   own hub.starting ui +world                                 (The game's start: the sound naps)
 **   own hub.ui_giving ui                                       (A command being given: the turns pace waits)
 **   own hub.ui_eq ui                                           (The events it's seen to: the turns pace waits)
@@ -1874,6 +1977,9 @@ struct wsave {
 **   own chunk.open maker +world
 **   own chunk.air maker +world                                 (Its bad air: AIR_STATE, store.c's, 2026-10-31)
 **   own chunk.aat maker +world
+**   own chunk.wet maker +world                                 (A well's water at its foot: WELL_WET, store.c's, 2026-11-06)
+**   own chunk.wlev maker +world
+**   own chunk.wany maker +world
 **   own bank(CAT_BANK) world                                   (The catalogue: the world's)
 **   own bank(KIND_BANK) world                                  (Its kinds: the world's, the theme's after them)
 **   own banks(KIND_BANK+1,ITEM_BANKS) world                    (The items' places and states)
@@ -1891,6 +1997,13 @@ struct wsave {
 **   own uirec.map maker +ui
 **   own uirec.maplay maker +ui                                 (Its squares' layers: slice 4.2's)
 **   own uirec.things_text world +ui
+**   own uirec.ixn world                                        (What it carries: the UI's first words, 2026-11-06)
+**   own uirec.ix world +ui                                     (Its letters swapped: "letter d as t", caps.c's)
+**   own uirec.ixk world
+**   own uirec.ixks world
+**   own uirec.low world +ui                                    (The letters of what it carries: the save's, the UI's)
+**   own uirec.lowt world +ui
+**   own uirec.cap ui                                           (The capitals of what it's seen)
 **   own uirec.tread world                                      (The traces read: I_TRACE's reply)
 **   own uirec.trtext world                                     (Their words)
 **   own bank(WORLD_BANK) maker                                 (The cache's table)

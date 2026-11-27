@@ -42,3 +42,4 @@ _ovbank:    .res        4           ; The parts' images' banks (dq0p.cfg's OV1 .
             SWFN        zones_seen, 6
             SWFN        num, 3              ; (An argument's number: the main RAM's room, 2026-11-01)
             SWFN        light_init, 3       ; (The light layer begun: the main RAM's room, 2026-11-01)
+            SWFN        hub_attach, 3       ; (The hub attached, as it starts: the main RAM's room, 2026-11-06)

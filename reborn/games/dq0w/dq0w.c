@@ -1136,12 +1136,14 @@ unsigned __fastcall__ s_fall (unsigned feet, unsigned char how)
     r->actor = 0;
     r->other = 0;
     r->a = HC_FALL;
-    r->b = m == MAT_EARTH || m == MAT_SOIL ? GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;
-    r->c = how;
+    r->b = how & HF_DEEP ? GR_DEEP_WATER : how & HF_SHALLOW ? GR_SHALLOW_WATER : m == MAT_EARTH || m == MAT_SOIL ?
+        GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;     /* (Into a well's water, its foot's: wwell.c's) */
+    r->c = how & (HF_CLEAR | HF_HOLDS);
     r->w1 = feet;
     r = hub_ask (SLOT_WORLD);
     out = r->result == 1 ? 0xFFFF : r->w2;
-    event (E_HARM, 0, HC_FALL | r->b << 8 | (r->result == 1 ? E_CAUGHT : 0) | (r->w2 ? E_OUT : 0));
+    event (E_HARM, 0, HC_FALL | r->b << 8 | (r->result == 1 ? E_CAUGHT : 0) | (r->w2 ? E_OUT : 0) |
+        (how & HF_DEEP ? E_DEEP : how & HF_SHALLOW ? E_SHALLOW : 0));
     harm_fx ();                                 /* (What it dropped, fallen prone: part 49's, slice 4.1b's) */
     hub_map (0);
     r->state = REQ_FREE;
@@ -1153,6 +1155,7 @@ static struct {
     unsigned        need, done;                 /* Feet */
     unsigned        x, y;                       /* The square at its top (up) or its foot (down) */
     unsigned char   sh;                         /* (A shaft's: its link and one, the climb's end another stratum) */
+    unsigned char   wet;                        /* (A well's: the water a fall lands in, HF_DEEP, HF_SHALLOW) */
 } cl;
 unsigned char __fastcall__ climb_on (unsigned w);   /* (Part 97's: a round, or what's asked of a climb's rope, CG_*) */
 #define CG_AID          0x8000
@@ -1456,7 +1459,7 @@ static void climb_round_on (void)
     if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
         t = cl.up ? cl.done : cl.need - cl.done;
         event (E_CLIMB, 0, K_FELL << 8 | t);
-        if ((t = fall (t, HF_CLEAR | HF_HOLDS)) == 0xFFFF) {
+        if ((t = fall (t, HF_CLEAR | HF_HOLDS | (cl.sh ? cl.wet : 0))) == 0xFFFF) {
             climb_round ();                     /* (Caught on the way down: the climb goes on) */
             return;
         }
@@ -1480,6 +1483,13 @@ static void climb_round_on (void)
         cl.up = 2;                              /* (Its top kept: climbed again, pit_climb's) */
         cl.done = HUB->rhi = 0;
         event (E_CLIMB, 0, K_SLID << 8 | (cl.need > 255 ? 255 : cl.need));
+        see (0);
+        return;
+    }
+    if (g == G_MF && !cl.done && cl.up == 1 && (HUB->pc_wet & 0x7F) >= 5) {
+        event (E_CLIMB, 0, K_NOHOLD << 8 | (cl.need > 255 ? 255 : cl.need));
+        HUB->rhi = 0;                           /* (Up out of deep water, a well's foot: no hold found, the climb ends, a
+                                                **   swimmer can't cling on; the player's to try again: 2026-11-06) */
         see (0);
         return;
     }
@@ -1957,6 +1967,28 @@ static unsigned char __fastcall__ shaft_foot (const struct link* lk)
 /* Thing n, just put down: on a square with a shaft down in it, it falls to the shaft's foot (told; a shaft choked, or
 ** a thing with no room in the store below: it lies where it is); any shaft's, a dug one's too */
 #pragma static-locals (push, off)               /* (A stub called: the part copied back, its statics as they were) */
+
+/* The water at the foot of shaft l of the character's stratum, down it or up it (its foot the stratum below's square, or
+** this one's): a fall's landing, the book's deep water (three feet or more) or shallow (HF_DEEP, HF_SHALLOW), or 0: a
+** well's, 2026-11-06, any shaft's alike */
+static unsigned char __fastcall__ shaft_wet (unsigned char l)
+{
+    const struct link* k = &STRATUM (sn_).link[l];
+    unsigned char b = k->kind == O_SHAFT_DOWN ? k->to : sn_, r;
+    signed char d = 0;
+
+    if (b != 0xFF && stratum_in (b) && at (b, k->x, k->y) && WET_BIT (C, cx_, cy_)) {
+        r = room_of (b, k->x, k->y);
+        r = r == 0xFF ? NROOMS : r;
+        d = C->wlev[r];
+        if (!(C->wruns & 1 << r)) {
+            d -= C->elev[cy_][cx_];
+        }
+    }
+    hub_map (0);
+    return d >= 3 ? HF_DEEP : d > 0 ? HF_SHALLOW : 0;
+}
+
 static void __fastcall__ let_fall (unsigned n)
 {
     struct opening* o;
@@ -2037,6 +2069,7 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
     }
     cl.done = 0;
     cl.sh = (unsigned char) w + 1;
+    cl.wet = shaft_wet ((unsigned char) w);     /* (A fall into the water at its foot, a well's: 2026-11-06) */
     if (a) {
         event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
     }
@@ -2052,6 +2085,7 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
 static unsigned char __fastcall__ shaft_end (unsigned char dir)
 {
     static struct link* lk;
+    static unsigned char* p;
 
     lk = &STRATUM (sn_).link[cl.sh - 1];
     cl.sh = 0;
@@ -2071,6 +2105,25 @@ static unsigned char __fastcall__ shaft_end (unsigned char dir)
     move.y = lk->y;
     move.face = HUB->pc_face;
     move.dir = dir ? dir : lk->kind;
+    if (lk->dug == LD_WELL) {                   /* (A well's: told as its own, E_ARRIVE's O_WELL; down, its mouth lit or
+                                                **   not, its room's light; up, out beside its curb) */
+        move.dir = dir ? O_WELL_FELL : O_WELL;
+        if (!cl.up) {
+            if ((dir = room_of (sn_, mx, my)) != 0xFF && (C->room[dir].flags & R_LIT)) {
+                move.dir |= 0x10;
+            }
+        } else {
+            for (dir = 0; dir < 8; dir += 2) {
+                if ((p = at (lk->to, lk->x + head_x[dir], lk->y + head_y[dir])) != 0 && T_PASS (*p) &&
+                    TILE (*p) != T_UP && TILE (*p) != T_DOWN) {
+                    move.x += head_x[dir];
+                    move.y += head_y[dir];
+                    break;
+                }
+            }
+        }
+        hub_map (0);                            /* (The window as it was: the caller's busy, its header) */
+    }
     return 1;
 }
 
@@ -2092,9 +2145,13 @@ static unsigned char __fastcall__ way_here (unsigned w)
     return 0xFF;
 }
 
-/* (Its stub's, the one: SA_HERE a way on its own square; SA_GO a shaft's going; SA_END a climb's end; else thing w let fall) */
+/* (Its stub's, the one: SA_HERE a way on its own square; SA_GO a shaft's going; SA_END a climb's end; SA_WET the water at
+** a shaft's foot; else thing w let fall) */
 unsigned char __fastcall__ s_sky_ask (unsigned w)
 {
+    if (w & SA_WET) {
+        return shaft_wet ((unsigned char) w);
+    }
     if (w & SA_HERE) {
         return way_here (w);
     }
@@ -2224,14 +2281,14 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
 void __fastcall__ s_climb (unsigned char d)
 {
     unsigned long t;
-    unsigned char l, face, jump = d & I_JUMP;
+    unsigned char l, face, jump = d & I_JUMP, wl = d & I_WELL, k;
     unsigned feet;
     struct link* lk;
 
     here ();
     face = HUB->pc_face;
     paced ();
-    d &= ~I_JUMP;
+    d &= ~(I_JUMP | I_WELL);
     hub_map (0);
     cl.sh = HUB->rhi = 0;
     if (HUB->ropes) {                           /* (A rope here that goes this way, over a ledge or a pit: that way) */
@@ -2254,6 +2311,23 @@ void __fastcall__ s_climb (unsigned char d)
                                                 **   words say, u) */
     }
     l = link_here (d, &t);
+    if (d == DIR_DOWN && (wl || l == 0xFF || t == 0xFFFFFFFFUL)) {   /* (A well within reach, named or the only way down:
+                                                **   its shaft, part 103's, read in first: 2026-11-06) */
+        look_more (0, LM_ROPES);
+        if ((k = well (WL_DOWN)) < 0xFE) {
+            l = k;
+            t = cut = 0;
+        } else if (k == 0xFE || wl) {
+            if (k == 0xFF) {
+                no_way (N_NO_STAIRS);           /* (A well named, none within reach) */
+                return;
+            }
+            hub_map (0);                        /* (Choked: told) */
+            HUB->pc_ready = HUB->now;
+            HUB->pc_going = IDLE;
+            return;
+        }
+    }
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
         if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
             hub_map (0);
@@ -2315,8 +2389,8 @@ void __fastcall__ s_climb (unsigned char d)
     }
     if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
         event (E_CLIMB, 0, K_JUMPED << 8 | (feet > 255 ? 255 : feet));
-        t = stept + fall (feet, HF_CLEAR);
-        move.dir = O_FELL;
+        t = stept + fall (feet, HF_CLEAR | sky_ask (SA_WET | l));   /* (Into the water at its foot, a well's: part 89's) */
+        move.dir = lk->dug == LD_WELL ? O_WELL_FELL : O_FELL;
     }
     hub_map (0);
     busy (t);
@@ -2449,9 +2523,14 @@ void s_arrive_b (void)
         }
         barw_ = 0;
     }
-    event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 : 0) |
-        (how == A_WENT_TO && went_cut ? 0x200 : 0));
+    event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 |
+        (move.dir & 0x10 ? E_MOUTH_LIT : 0) : 0) | (how == A_WENT_TO && went_cut ? 0x200 : 0));
     went_cut = 0;
+    if ((how == A_UP || how == A_DOWN) && at (sn_, mx, my) && WET_BIT (C, cx_, cy_)) {
+        wade (0);                               /* (Come into water by a way between strata, a well's foot: its depth told,
+                                                **   swimming, part 73's) */
+    }
+    hub_map (0);
     if (bn) {
         event (E_BEARING, 0, bn);
     }
@@ -3079,6 +3158,11 @@ void s_begin (void)
     body_at = HUB->now | 1;
     if (HUB->resume) {                          /* (Carried on: the save's strata, the change records' generation,
                                                 **   the maker's seen maps back) */
+        rseed (HUB->seed ^ HUB->now ^ 0x52534D45UL);    /* (Its dice from the game's seed and its clock: unseeded, a
+                                                **   carried-on game's first roll (a thing let fall, where it lies) was
+                                                **   the library's, from the real clock and the ticks, and the turns
+                                                **   pace no longer the seed's and the commands' alone: the life soak's
+                                                **   -same, seed 11, 2026-11-06) */
         move.how = A_RESUMED;
         move.sn = HUB->pc_stratum;
         move.x = HUB->pc_x;
@@ -4388,13 +4472,21 @@ void s_stopped (void)
 
 
 /* The character's long task as the clock goes: its part done, if it's a wait; its work, if there's any (part 23's:
-** a walk's next square come, a blow or a wound to see to) */
+** a walk's next square come, a blow or a wound to see to).  Its next step gives way to a line entered since it began
+** till the line's command is given (the hub's ui_keys, Enter to the line taken, and ui_giving), at the real paces,
+** ui_first's quarter second at most: its step done, the line answered, then on (dq0hold's, 2026-11-06); not a blow */
+static unsigned char tsq;                       /* (The parser's request's seq as it began, or as an intent was last
+                                                **   taken: its own line's, never held for it: main's) */
 static void stepping (void)
 {
     unsigned char k;
 
     hub_map (0);
-    if (!(k = HUB->pc_task.kind) || HUB->pc_task.asking) {
+    if (!(k = HUB->pc_task.kind)) {
+        tsq = HUB->cq.seq;
+        return;
+    }
+    if (HUB->pc_task.asking || (!pc_hit && tsq != HUB->cq.seq && (HUB->ui_keys | HUB->ui_giving) && ui_first ())) {
         return;
     }
     if ((k == LT_WAIT || k == LT_SLEEP || k == LT_SEARCH || k >= LT_STUDY || lwork) && !HUB->pc_task.mins) {
@@ -4940,7 +5032,9 @@ unsigned char s_dark_way (void)
         }
     }
     hub_map (0);
-    if (lim_ == 250) {
+    if (lim_ == 250 && npath) {                 /* (Not a walk of no steps: a close-in's later leg already where it can
+                                                **   get, "You run northeast into the dark." told again for nothing, the
+                                                **   fight soak's seed 31, 2026-11-06) */
         event (E_BEAT, 0, WB_FEEL | (unsigned) (h0 | rush_ << 4) << 8);
     }
     return 0;
@@ -6765,7 +6859,9 @@ unsigned char __fastcall__ fumbled (unsigned char k)
 /* A command in hand at the real paces (the hub's ui_cmd, the UI's: Enter to its answer's news): 1, the denizens'
 ** intents wait (they'd copy parts in, and draw outfits, a quarter second and more of the world's time in the
 ** kernel's foreground with the UI's), a quarter second at most, each line's own; then 0, on with them (wbody.c's
-** den_intents looks between them).  The hub's header in the window */
+** den_intents looks between them).  A long job's free pass (keys_hold's) goes before it, the second time.  The hub's
+** header in the window */
+static unsigned char kfree, kcut;
 unsigned char ui_first (void)
 {
     static unsigned t0;
@@ -6776,22 +6872,82 @@ unsigned char ui_first (void)
         t0 = 0;
         return 0;
     }
+    if (kfree == 2) {
+        return 0;
+    }
+    kcut |= kfree;
     if (HUB->cq.seq != sq) {
         sq = HUB->cq.seq;                       /* (Each line's own quarter second: a line typed as the last's answer
                                                 **   was still owed had its kits drawn meanwhile, 2026-10-30) */
         t0 = 0;
     }
     if (!t0) {
-        t0 = hy_ticks () | 1;
+        t0 = (hy_ticks () - 1) | 1;             /* (Not 0, and not ahead of the ticks: an even tick's | 1 made the time
+                                                **   gone 65,535 till the next, a job let through as a command came) */
     }
     return (unsigned) (hy_ticks () - t0) < 50;
+}
+
+/* The world's long jobs (HOUSE.md's holding back: a denizen's things drawn, the traces' journal taken in, the lights'
+** minute and the sconces, the map making's things, a look about as a body falls: each a tenth of a second of the
+** world's time and more; not a denizen's plain intent, a word of the game's own) hold back for a line being typed
+** too, from its first key (the hub's ui_keys; the turns pace never, the game turning on no one's typing), so none's
+** under way as its Enter comes.  KEY_HOLD ticks at most from the first one held back, those ticks running on through a
+** line's answer, a steady typist's lines one hold; then a pass of the main loop goes free (kfree, main's): what's
+** begun in it isn't stopped by keys; an Enter stops it, its answer first, but that once (kcut): the next free pass
+** isn't stopped by one either, a kit given way to being drawn again from the start, and a steady typist's Enters
+** stopping each try for good otherwise (the denizens behind it in the ring with it).  Then they hold back again:
+** late by that, not starved.  1, it waits for the keys (a command's own ui_first's, a quarter second).  The hub's
+** header in the window */
+#define KEY_HOLD        600
+static unsigned kt0;
+static unsigned char keys_hold (void)
+{
+    if ((HUB->pace & 3) == 3 || !(HUB->ui_keys | HUB->ui_cmd)) {
+        return 0;
+    }
+    if (!kt0) {
+        kt0 = (hy_ticks () - 1) | 1;            /* (ui_first's t0's) */
+    } else if (!kfree && (unsigned) (hy_ticks () - kt0) >= KEY_HOLD) {
+        kfree = 1 + kcut;
+        kcut = 0;
+    }
+    return !kfree && !HUB->ui_cmd;
+}
+
+/* A long job, as it's due and as it goes: 1, it gives way (a command in hand, or a line being typed) */
+unsigned char ui_long (void)
+{
+    hub_map (0);
+    return keys_hold () || ui_first ();
+}
+
+/* The denizens' intents held for a line being typed too (dq0hold's, 2026-11-06), as the minds and the senses hold:
+** from the first key KEY_HOLD ticks at most, then on till its Enter (its command's hold ui_first's) or the keys let
+** go; not keys_hold's free pass and hold again, the denizens three seconds behind at most, not slowed while the keys
+** go on.  1, held */
+static unsigned char dst;
+static unsigned dt0;
+static unsigned char den_held (void)
+{
+    hub_map (0);
+    if ((HUB->pace & 3) == 3 || !HUB->ui_keys || HUB->ui_cmd) {
+        dst = 0;
+        return ui_first ();
+    }
+    if (!dst) {
+        dst = 1;
+        dt0 = hy_ticks ();
+    } else if ((unsigned) (hy_ticks () - dt0) >= KEY_HOLD) {
+        dst = 2;
+    }
+    return dst == 1;
 }
 
 int main (int argc, char* argv[])
 {
     static struct msg m;
-    static unsigned char uf;
-    unsigned char was_busy = 0, dseq = 0, took;
+    static unsigned char uf, was_busy, dseq, took;  /* (Static: the main RAM's room, 2026-11-06) */
 
     if (argc < 4 || ovl_load (argv[3]) || wstart (argv)) {
         return 1;                               /* (Attached, and started: part 3's) */
@@ -6799,38 +6955,59 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
+        if (!(HUB->ui_keys | HUB->ui_cmd)) {
+            kcut = 0;                           /* (Nothing in hand: all begun again) */
+            kfree = kt0 = 0;
+        } else if (kfree && !burn_ask) {
+            kfree = kt0 = 0;                    /* (Its free pass over, a minute's passes all of it: the keys' hold
+                                                **   again, keys_hold's) */
+        }
         uf = ui_first ();                       /* (The UI's command in hand at the real paces, its answer first: the
                                                 **   world's own periodic work waits for it, a quarter second at most:
-                                                **   ui_first's) */
+                                                **   ui_first's; the long jobs, as they fall due, ui_long's: a line being
+                                                **   typed too, and looked at then, this pass perhaps long since begun) */
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
-        if (chart_late && !uf) {
+        if (chart_late && !ui_long ()) {
             if (chart_late & 2) {
+                chart_late &= ~2;
                 sconce_lights (1);              /* (A sconce's light, a thing handled: wkept.c's) */
             }
             if (chart_late & 1) {
+                chart_late &= ~1;               /* (It may give way, and so be late again) */
                 chart_now ();                   /* (The map making's things, as what it carries has changed: part 13's) */
             }
-            chart_late = 0;
         }
-        if (tr_n >= TR_FLUSH && !uf) {
+        if (tr_n >= TR_FLUSH && !ui_long ()) {
             tr_flush (TF_SOME);                 /* (The passings journalled taken into the traces' store: part 28's,
                                                 **   giving way as a command comes; 160,000 cycles of the world's and a
                                                 **   part's swap, on whichever answer it fell: 2026-11-03) */
         }
-        if (DEN_INTENTS () && !uf) {
+        if (DEN_INTENTS () && !den_held ()) {
             den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
-                                                **   in hand at the real paces, its answer first: ui_first's) */
+                                                **   in hand at the real paces, its answer first: ui_first's; nor while
+                                                **   a line's typed, from its first key three seconds at most: den_held's,
+                                                **   none of it its parts' swaps each time round, nor its news told as
+                                                **   the Enter comes (a denizen's things only, keys_hold's, till
+                                                **   2026-11-06: dq0hold's, the senses' and the minds' with it) */
         }
         while (hub_take (&m)) {
+            tsq = HUB->cq.seq;                  /* (The line whose intent it is: a task it begins not held for it,
+                                                **   stepping's; a task begun in the pass its line came in, 2026-11-06) */
+            if (m.kind != I_ASK) {
+                was_busy = 1;                   /* (Its E_READY as it's free; but a sound's question (I_ASK, the UI's
+                                                **   as a task goes) none, the task's own has it: one come as a step's
+                                                **   time was up made a second E_READY, the step asked for and told
+                                                **   twice, the soak's seed 141, 2026-11-06.  A question's yes, I_GO_ON,
+                                                **   comes only as its task is paused, asking: its E_READY still to come) */
+            }
             intent (&m);
-            was_busy = 1;
         }
         if (hub_posted (&HUB->wreq)) {
             answer ();                          /* (The UI's: the save, a close look) */
         }
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
-        if (den_saw && !move.on && !uf) {
+        if (den_saw && !move.on && !ui_long ()) {
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
@@ -6848,7 +7025,7 @@ int main (int argc, char* argv[])
             }
             hub_map (0);
         }
-        if (HUB->round && (burn_ask || HUB->now >= burn_due) && !uf) {
+        if (HUB->round && (burn_ask || HUB->now >= burn_due) && !ui_long ()) {
             if (burn_ask & BA_SCONCES) {        /* (A minute in two passes: the sconces' on their own, a part's swap and
                                                 **   its passes of the store, a command coming between; part 27 not
                                                 **   copied for it, 2026-11-04) */
@@ -6936,8 +7113,11 @@ int main (int argc, char* argv[])
             things ();                          /* (The UI's: the things; after the clock's moved on for an intent,
                                                 **   so the denizens see it moved, as before the things were here) */
         }
-        hub_sleep (move.on || was_busy ? 2 : 4);  /* (Nothing under way: asleep on the doorbell, an intent
-                                                **   waking it at once; the clock on from the ticks gone) */
+        hub_sleep (uf ? 8 : move.on || was_busy ? 2 : 4);  /* (Nothing under way: asleep on the doorbell, an intent
+                                                **   waking it at once; the clock on from the ticks gone.  The UI's
+                                                **   command in hand at the real paces: its jobs and its steps held
+                                                **   (ui_first's), the longer, its requests and intents waking it as
+                                                **   ever: fewer passes of its own in the answer's time, 2026-11-06) */
     }
     event (E_BYE, 0, 0);
     return 0;

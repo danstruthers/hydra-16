@@ -147,6 +147,7 @@ static void __fastcall__ one (unsigned char i, unsigned char n)
     const struct sitem* p = &S->item[i];
     unsigned char sz = p->hid >> 4, b = afar (i);
 
+    add (cap_of (i));                           /* (Its capital: letters.c's, the user's designators) */
     if (n > 1 && !p->plural && gq <= 1) {
         add (few[n]);
         add (b ? (sz <= 2 ? " small things" : sz >= 5 ? " large things" : " things") : p->hid & 4 ? " lit " : " ");

@@ -29,8 +29,11 @@
 #define NTOOLS          20
 
 static char name[16] = "Dingus", calling[20] = "Wanderer";
-static char tongues[32] = " common";            /* The tongues it speaks, a space before each (dq0harn's way) */
+static char tongues[120] = " common";           /* The tongues it speaks, a space before each, and the scripts it
+                                                **   knows, a * before each (dq0harn's way: kept, not used; as many as its
+                                                **   store's, ../dq0harn/dq0harn.h's TONGUES_N: more refused, RS_LOAD_PC 2) */
 static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchfulness: the world's to set) */
+static unsigned char ntongue;                   /* (Its tongues and scripts past its own, read) */
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
 static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
 static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
@@ -274,7 +277,7 @@ static unsigned char __fastcall__ speaks (const char* t)
     unsigned char n = strlen (t);
 
     while ((p = strstr (p, t)) != 0) {
-        if (p[-1] == ' ' && (!p[n] || p[n] == ' ')) {
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
             return 1;
         }
         ++p;
@@ -338,8 +341,14 @@ static void __fastcall__ load_pc (struct req* r)
                 watch = l[7] - '0';
             } else if (!strncmp (l, "wounds ", 7)) {
                 wounds = atoi (l + 7);
-            } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
-                strcat (tongues, l + 8);
+            } else if (!strncmp (l, "language ", 9) || !strncmp (l, "script ", 7)) {
+                l = *l == 's' ? (l[5] = ' ', l[6] = '*', l + 5) : l + 8;
+                if (++ntongue <= 8 && strlen (tongues) + strlen (l) < sizeof tongues) {   /* (Eight past its own at most:
+                                                **   dq0harn.h's TONGUE_LINES) */
+                    strcat (tongues, l);
+                } else {
+                    r->result = 2;              /* (More than it can hold: refused, loudly, the UI's, never cut short) */
+                }
             }
         }
         close (fd);
@@ -365,6 +374,7 @@ static void __fastcall__ save_pc (struct req* r)
     static char b[16];
     char* p;
     char* e;
+    unsigned char k;
 
     r->result = 1;
     if ((fd = open (r->text, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
@@ -378,11 +388,12 @@ static void __fastcall__ save_pc (struct req* r)
     b[2] += HUB->watch;
     put_line ("pace ", b);
     put_line ("wounds ", itoa (wounds, b, 10));
-    for (p = tongues + 7; *p; p = e) {          /* (Its tongues but common) */
+    for (p = tongues + 7; *p; p = e) {          /* (Its tongues but common; its scripts) */
         e = strchr (p + 1, ' ');
         e = e ? e : p + strlen (p);
-        strcpy (line, "language");
-        strncat (line, p, e - p);
+        k = p[1] == '*' ? 2 : 0;
+        strcpy (line, k ? "script " : "language");
+        strncat (line, p + k, e - p - k);
         put_line (line, "");
     }
     close (fd);
@@ -769,13 +780,21 @@ static void __fastcall__ answer (struct req* r)
                                                 **   HarnMaster referee's, 2026-11-02) */
             break;
         }
+        if (r->a == P_READ && r->text[0]) {     /* (A writing read: its tongue and its script known, the flat odds: rs.h's,
+                                                **   step 9's) */
+            *strchr (r->text, ' ') = 0;
+            r->result = !strchr (tongues, '*') ? 1 : !speaks (r->text) ? 2 : !speaks (r->text + strlen (r->text) + 1) ? 3 : 0;
+            r->grade = flat (r->steps);
+            *tp = 0;
+            break;
+        }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0] && !speaks (r->text)) {
             r->result = 2;
             break;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
-            r->steps += house_notice (r, HUB->pc_going, HUB->watch);
-        }
+            r->steps += house_notice (r, HUB->pc_going, HUB->watch) - (!r->actor && HUB->pc_task.kind == LT_SLEEP ? BASE / 10 : 0);
+        }                                       /* (Asleep, at half, 2026-11-06: HarnMaster's, Skills 11) */
         if ((r->a == P_STEALTH || r->a == P_DIG) && r->other != RS_ASKER) {
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);

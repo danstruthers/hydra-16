@@ -30,7 +30,10 @@
 ** (Character 16: a skill opened at its OML for one, or improved by its SB for one; but no more than two points in one
 ** skill, the user's: so improved once at most; ? lists the skills, the open ones' ML and the others' OML); a name;
 ** the family's wealth (Character 17's by its class: rolled last, its file's "wealth" line, the game's outfit bought
-** with it, 2026-10-27).
+** with it, 2026-10-27); its tongues and scripts (its native tongue the Language skill, the common tongue; a 2nd Language
+** the book's table gives, "language NAME=ML"; its native script, if Script's open, "script NAME", the Script skill its
+** ML, by its culture; and the book's Two or Three Scripts, "script NAME=ML", rolled last of all: the plan for the game
+** between dungeons, its step 8).
 ** Not here: the family's occupation and its skills, contacts, the veterans' points.
 **
 ** Its lib/hmchar (in its own directory, as rc's $prog has it, else the card's /sd/0/games/lib/hmchar): the
@@ -380,8 +383,35 @@ static unsigned char __fastcall__ species (const char* w)
 
 static char exppath[56], bppath[56];
 
-static const char* const second[6] = { "Sage/Tutor", "Scribe", "Innkeeper", "Litigant", "Mercantyler", "Herald" };
 static const char* const tongue2[8] = { "khuzdul", "sindarin", "khuzdul", "sindarin", "khuzdul", "gargun", "gargun", "kobold" };
+
+/* The scripts of the game's own world (G3; the plan for the game between dungeons, its step 8): each people's, by its
+** tongue's number (themegen's history.txt, namegen's: 1 the dwarves' ...), and the native script by culture (Character
+** 3's, Skills 11's: the local one; the book's Runic its Khuzdul's and its Vikings', Selenian its Sindarin's): the Tribal
+** the hill-men's, the Vikings and the Khuzan the dwarves', the Feudal and the Imperial the men's, the Sindarin the elves' */
+unsigned char ntongues, nscripts;
+static const char* const scripts[6] = { "delvic", "ardic", "starric", "hethric", "clawmark", "sunglyph" };
+static const unsigned char native[6] = { 3, 0, 1, 1, 0, 2 };
+
+/* A line of the file (the file's line, a "language" or a "script"), and said: NAME and its ML (in the tongues and
+** scripts said: comma before all but the first) */
+static void __fastcall__ tongue (int fd, char* line, const char* nm, unsigned char ml, unsigned char first)
+{
+    char* e = line + strlen (line);
+
+    strcpy (e, nm);
+    if (ml) {
+        strcat (e, "=");
+        utoa (ml, e + strlen (e), 10);
+    }
+    harn_write_line (fd, line);
+    if (!first) {
+        s (", ");
+    }
+    s (nm);
+    s (" ");
+    n (ml ? ml : h.ml[line[0] == 'l' ? HARN_LAN : HARN_SCR]);
+}
 
 /* The family's wealth (Character 17: by its class, poor, average or rich; the GM's to choose, the book says): rolled
 ** (the user's, DECISIONS.md's outfits, answer 2: a quarter poor, half average, a quarter rich, an outcast or an
@@ -414,7 +444,7 @@ int main (int argc, char* argv[])
 {
     static char path[64], line[48];
     const char* out = 0;
-    unsigned char i, j, sp = 0xFF;
+    unsigned char i, j, k, r, mask, sp = 0xFF;
     struct bank_fn *occ, *cul;
     char* e;
     int fd;
@@ -511,17 +541,36 @@ int main (int argc, char* argv[])
                                                 **   house's, 2026-10-31: Dingus Quest Zero's time of day believed) */
         harn_write_line (fd, "timesense");
     }
-    for (j = 0; j < 6; ++j) {                   /* (Those the book's table gives a 2nd Language, Character 15: which one
-                                                **   the house's, by its region and the game's peoples' tongues; at the book's
-                                                **   mastery for an alien family's, its skill base once, Skills 11; rolled after
-                                                **   the rest: the user's, 2026-11-03) */
-        if (!strcmp (occname, second[j])) {
-            strcpy (line, "language ");
-            strcat (line, tongue2[(h.culture & 3) * 2 + (name[0] & 1)]);
-            strcat (line, "=");
-            harn_write_line (fd, strcat (line, utoa (harn_get_sb (&h, HARN_LAN), line + 40, 10)));
+    s ("Tongues: common ");                     /* (Its native tongue the common one, the game's for every character) */
+    n (h.ml[HARN_LAN]);
+    if (ntongues > 1) {                         /* (Those the book's table gives a 2nd Language, Character 15, its
+                                                **   occupations.txt's "tongues 2": which one the house's, by its region
+                                                **   and the game's peoples' tongues; at the book's mastery for an alien
+                                                **   family's, its skill base once, Skills 11; after the rest: the user's,
+                                                **   2026-11-03) */
+        strcpy (line, "language ");
+        tongue (fd, line, tongue2[(h.culture & 3) * 2 + (name[0] & 1)], harn_get_sb (&h, HARN_LAN), 0);
+    }
+    s (". Scripts: ");
+    if (!h.ml[HARN_SCR]) {                      /* (Illiterate: no Script open) */
+        s ("none");
+    } else {                                    /* (The native script, "script NAME" (its ML the Script skill's); then
+                                                **   the book's Two or Three Scripts, "scripts N": the rest rolled from
+                                                **   the game's own after all else, so the character's dice fall as they
+                                                **   did, each at 70 + SB, Skills 11) */
+        k = native[h.culture < 6 ? h.culture : HARN_FEUDAL];
+        mask = 1 << k;
+        strcpy (line, "script ");
+        tongue (fd, line, scripts[k], 0, 1);
+        for (j = 1; j < nscripts && j < 6; ++j) {
+            for (r = random (6 - j), k = 0; (mask >> k & 1) || r--; ++k) {
+            }
+            mask |= 1 << k;
+            strcpy (line, "script ");
+            tongue (fd, line, scripts[k], harn_get_oml (&h, HARN_SCR), 0);
         }
     }
+    s (".\n");
     close (fd);
     if (i) {
         s ("Absolute timesense: you always know the hour.\n");

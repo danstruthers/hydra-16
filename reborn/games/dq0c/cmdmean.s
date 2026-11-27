@@ -96,7 +96,7 @@ S_BAR       = 6
 S_WAYOUT    = 7
 P_SPECIAL   = 1
 
-NCONST      = 30                    ; The constants (commandwords.js's CONSTANTS, in order)
+NCONST      = 31                    ; The constants (commandwords.js's CONSTANTS, in order)
 MAXWS       = 15                    ; The words of a line (cmdmatch.s's MAXTOK + 1)
 
             .zeropage
@@ -138,6 +138,7 @@ v_SHAFT     = kv + 26
 v_THROW     = kv + 27               ; throw; HOW_TO, PR_AT
 v_HOWTO     = kv + 28
 v_AT        = kv + 29
+v_IN        = kv + 30               ; PR_IN ("drop the dagger down the well": into it, 2026-11-06)
 pgwi:       .res        2           ; Each entry's record
 colpl:      .res        NCOL        ; Each column
 colph:      .res        NCOL
@@ -906,7 +907,28 @@ nonum:      ldy         #C_DIR          ; A way: with one before, the way betwee
             beq         thing
             dea
             sta         kk
-            lda         dir
+            cmp         v_DOWN          ; Down, after a thing said, a word after it, dropped, put or thrown: into
+            bne         :+              ;   it ("drop the dagger down the well": a shaft's, a hole's, 2026-11-06)
+            lda         cm_cmd + CM_PREP
+            bne         :+
+            lda         cm_cmd + CM_OBJ + T_WORD
+            ora         cm_cmd + CM_OBJ + T_SEL
+            beq         :+
+            ldx         wi
+            inx
+            cpx         wsn
+            bcs         :+
+            lda         verb
+            cmp         v_DROP
+            beq         @in
+            cmp         v_PUT
+            beq         @in
+            cmp         v_THROW
+            bne         :+
+@in:        lda         v_IN
+            sta         cm_cmd + CM_PREP
+            jmp         next
+:           lda         dir
             cmp         #NONE
             beq         newdir
             jsr         vert

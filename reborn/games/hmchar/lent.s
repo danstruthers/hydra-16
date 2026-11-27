@@ -6,5 +6,5 @@
 ; ****************************************************************************
 
             .forceimport    _h, _quiet, _cname, _uname, _occname, _libdir, _ab, _col, _ch, _s, _n, _named, _err, _ask
-            .forceimport    _skill_named, _spend
+            .forceimport    _skill_named, _spend, _ntongues, _nscripts
             .forceimport    _atoi, _harn_deity_name, _harn_rand_class, bnegax

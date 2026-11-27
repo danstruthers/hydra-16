@@ -29,11 +29,11 @@ static void make_region (void)
 
 /* The eras, oldest first: each its people (of the land, not the one before it; kobolds only the last), what they
 ** made, how it ended (the last may hold it still), how long ago; their names.  A prisoner's goal has the kobolds
-** last, holding mines of their own (its keepers); the evil's an era that ended cursed */
+** last, holding mines of their own (its keepers), as a scourge's has (the raiders); the evil's an era that ended cursed */
 static void make_eras (void)
 {
     static char w[12], cand[8];
-    unsigned char e, k, n, nc, i, cursed = 0, prisoner = gk == G_PRISONER - 1;
+    unsigned char e, k, n, nc, i, cursed = 0, prisoner = gk == G_PRISONER - 1 || gk == G_SCOURGE - 1;
     struct era* r;
 
     ne = 2 + random (2);
@@ -117,7 +117,7 @@ static void make_strata (void)
 {
     static struct str t;
     static char nm[40];
-    unsigned char e, k, n, i, nd, top, tries, kobolds = gk == G_PRISONER - 1;
+    unsigned char e, k, n, i, nd, top, tries, kobolds = gk == G_PRISONER - 1 || gk == G_SCOURGE - 1;
     signed char sub;
     struct str* s;
     struct era* r;
@@ -364,16 +364,60 @@ static void __fastcall__ take (struct line* l)
     }
 }
 
-/* The history: the region, the eras, the region's name (the oldest people's), the strata, the inhabitants; the
-** goal's kind first (goalgen's, the data's goal lines': a prisoner where there are no kobolds to keep one an
-** artifact), as the eras are made to fit it */
+/* A goal kind (the data's goal line k) a history picks by itself: not one that's only heard of (goals.txt's heard), but making
+** rumours (rmode), any */
+static unsigned char __fastcall__ pickable (unsigned char k)
+{
+    return data (TK_GOAL, 0, k) && (rmode || D.n < 4 || strcmp (D.v[3], "heard"));
+}
+
+/* Why the character came, given (a theme's why line: the rumour it followed, quest.txt's): its goal kind, its reason, its
+** patron */
+static void __fastcall__ why_of (struct line* l)
+{
+    unsigned char k;
+
+    if (strcmp (l->key, "why")) {
+        return;
+    }
+    for (k = 0; data (TK_GOAL, 0, k); ++k) {
+        if (!strcmp (D.v[0], l->v[0])) {
+            gk = k;
+            strncpy (gwhy, l->n > 1 ? l->v[1] : "", sizeof gwhy - 1);
+            strncpy (gQ, l->n > 2 ? l->v[2] : "", sizeof gQ - 1);
+            return;
+        }
+    }
+}
+
+/* The history: the region (a hand-written theme's, if it gives it: the goal and the eras fit its land), the eras, the region's
+** name (the oldest people's), the strata, the inhabitants; the goal's kind first (goalgen's, the data's goal lines': one of
+** those a history picks by itself, or the why's it's given; a prisoner or a scourge where there are no kobolds to keep one or
+** raid an artifact), as the eras are made to fit it */
 void make (void)
 {
-    unsigned char n = tg_count (TK_GOAL, 0);
+    unsigned char n = tg_count (TK_GOAL, 0), m, k, r;
 
     make_region ();
-    gk = n ? random (n) : 0xFF;
-    if (gk == G_PRISONER - 1 && !among (land, "mountains hills")) {
+    if (given[GR_REGION]) {
+        given_each (GR_REGION, take);
+    }
+    for (m = k = 0; k < n; ++k) {
+        m += pickable (k);
+    }
+    gk = 0xFF;
+    if (m) {
+        for (r = random (m), k = 0; k < n; ++k) {   /* (The r'th of those it picks by itself: the same dice as ever) */
+            if (pickable (k) && !r--) {
+                gk = k;
+                break;
+            }
+        }
+    }
+    if (given[GR_HEAD]) {
+        given_each (GR_HEAD, why_of);
+    }
+    if ((gk == G_PRISONER - 1 || gk == G_SCOURGE - 1) && !among (land, "mountains hills")) {
         gk = G_ARTIFACT - 1;
     }
     if (given[GR_GOAL]) {
@@ -384,13 +428,14 @@ void make (void)
         ne = npl = 0;
         given_each (GR_HIST, take);
     }
-    if (given[GR_REGION]) {
-        given_each (GR_REGION, take);
-    } else {
+    if (!given[GR_REGION]) {
         strcpy (rname, "the ");
         strcat (rname, name_of (ne ? er[0].tongue : 2, NG_PLACE, rand32 ()));
         strcat (rname, " ");
         strcat (rname, noun);
+    }
+    if (rmode) {
+        return;                                 /* (A rumour's: its place and its goal kind are all it tells) */
     }
     make_strata ();
     if (given[GR_STRATA]) {

@@ -150,7 +150,7 @@ static unsigned char opened (void)
 ** personal things (KT_PURSE, as it's first met: its kind's [purse KEY], else its standing's, m's x[0], [standing N]),
 ** every line given, each on its own die (its stratum's seed, its number and the section's: the same things each
 ** time), and made (part 58's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
-unsigned char ui_first (void);                  /* (dq0w.c's) */
+unsigned char ui_long (void);                   /* (dq0w.c's) */
 void __fastcall__ s_den_kit (const struct msg* m)
 {
     static const char pre[3] = { '#', '&', '%' };
@@ -181,7 +181,7 @@ void __fastcall__ s_den_kit (const struct msg* m)
     ost.age = k > 50 ? 250 : 5 * k;
     for (k = 0; k < 4; ++k) {
         hub_map (0);
-        if (ost.kit == 2 || ui_first ()) {
+        if (ost.kit == 2 || ui_long ()) {
             ost.kit = 2;                        /* (A command come: all drawn again after its answer: before a section's
                                                 **   read from the card, and before anything's made) */
             return;

@@ -180,12 +180,14 @@ ovl_out:
             .include    "../dq0/swap.inc"
 
             SWPART      1, 6                ; The map (map.c)
-            SWPART      2, 2                ; The seen maps' save (changes.c; overlay 2's since 2026-10-31: 6's room
-                                            ;   for the diagonal ways' map)
+            SWPART      2, 9                ; The seen maps' save (changes.c; overlay 2's since 2026-10-31: 6's room
+                                            ;   for the diagonal ways' map); the start, a well's water (overlay 9's, 2026-11-06)
             SWPART      3, 6                ; The rooms' sconces (sconce.c)
 
             SWFN        draw_map, 1
             SWFN        changes_save, 2
             SWFN        changes_restore, 2
+            SWFN        changes_init, 2     ; (Once, as it starts: the main RAM's room, 2026-11-06)
+            SWFN        wet_put, 2          ; (A well's water laid over a chunk: changes.c's)
             SWFN        sconces, 3
             SWFN        stale, 3            ; (Its slots' chunks given up: dq0m.c's, the main RAM's room)

@@ -33,6 +33,11 @@ int s_find_banks (void)
 #pragma code-name (push, "SW88CODE")
 #pragma rodata-name (push, "SW88RODATA")
 #endif
+#ifdef HUB_ATTACH_P3                            /* (The senses': part 3's, with hub_attach, as it starts: the main
+                                                **   RAM's room, 2026-11-06) */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+#endif
 static int find_banks (void)
 #endif
 {
@@ -51,7 +56,7 @@ static int find_banks (void)
     hub_map (0);
     return 0;
 }
-#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_SW3)
+#if !defined (HUB_ATTACHED) || defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #endif
@@ -138,9 +143,14 @@ int __fastcall__ hub_create (unsigned char banks)
 #endif
 
 #ifdef HUB_ATTACHED                             /* (The UI's room: what it never does left out, here and below) */
+#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3)
 #ifdef HUB_ATTACH_SW3
 #pragma code-name (push, "SW88CODE")            /* (The world's: its start-up's, the main RAM's room) */
 #pragma rodata-name (push, "SW88RODATA")
+#else
+#pragma code-name (push, "SW3CODE")             /* (The senses': part 3's, as it starts) */
+#pragma rodata-name (push, "SW3RODATA")
+#endif
 int __fastcall__ s_hub_attach (unsigned char s, unsigned char me)
 #else
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)
@@ -155,7 +165,7 @@ int __fastcall__ hub_attach (unsigned char s, unsigned char me)
     smask = HUB->small ? 1 : MAXSTRATA - 1;     /* (dq0 -C: two of the strata's slots) */
     return 0;
 }
-#ifdef HUB_ATTACH_SW3
+#if defined (HUB_ATTACH_SW3) || defined (HUB_ATTACH_P3)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #endif

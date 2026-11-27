@@ -94,6 +94,14 @@ enum {
                                                 **   northsense) isn't asked, and never fails */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
+#define P_READ          P_LORE                  /* A writing read (the plan for the game between dungeons, its step 9):
+                                                **   P_LORE with words, its text "TONGUE *SCRIPT" (the theme's people's:
+                                                **   "khuzdul *delvic"), its steps the writing's condition (asked once a
+                                                **   writing: the UI keeps what was read, its clue); the reply's result
+                                                **   0 tested (its grade), 1 the character reads no script at all, 2
+                                                **   not the tongue, 3 not the script.  The
+                                                **   book's (Skills 11): only one who knows both reads it, tested at
+                                                **   their masteries' average */
 #define TIME_STEPS      100                     /* (P_BEARING's steps from 64 on: keeping count of the time underground,
                                                 **   out of the sun's sight, its steps these less TIME_STEPS (the
                                                 **   world's: DUNGEON.md's the time of day believed, 2026-10-31; its

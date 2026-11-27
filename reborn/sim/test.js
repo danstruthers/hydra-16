@@ -268,7 +268,11 @@ runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename
   testFiles: { 'base/tests/tests.js': require('../../base/tests/tests.js').tests, 'reborn/tests/tests.js': tests } });
 
 if (require.main === module) {
-  const argv = process.argv.slice(2), k = argv.indexOf('--tier');
+  const argv = process.argv.slice(2), k = argv.indexOf('--tier'), bad = require('../build.js').lastBuildFailed();
+  if (bad && !argv.includes('--build')) {             // (The images the last good build's: none tested, 2026-11-06)
+    console.error('the last build failed (' + bad + '): build again (node build.js) before testing');
+    process.exit(2);
+  }
   if (k >= 0) require('./tiers.js').main(argv[k + 1], [...argv.slice(0, k), ...argv.slice(k + 2)]);
   else runner.main(argv);
 }

@@ -200,7 +200,7 @@ again:
             k = s->open[i - s->ndoors].kind;
             if (!((obj == OB_STAIRS && (k == O_STAIRS_UP || k == O_STAIRS_DOWN || k == O_WAY_OUT)) ||
                 (obj == OB_LADDER && (k == O_LADDER_UP || k == O_LADDER_DOWN)) ||
-                (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN || (k & 15) >= O_SKYLIGHT)) ||
+                (obj == OB_SHAFT && ((k & 15) == O_SHAFT_UP || k == O_SHAFT_DOWN || (k & 15) >= O_SKYLIGHT)) ||
                 (obj == OB_WAY_OUT && k == O_WAY_OUT))) {
                 continue;
             }

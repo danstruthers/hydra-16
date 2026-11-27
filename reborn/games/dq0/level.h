@@ -67,7 +67,7 @@ struct sight {
     unsigned char   nzones;                     /* The room's other zones seen */
     struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
-    struct { unsigned char rel, kind; signed char dz; unsigned x, y; } open[SEE_OPEN];    /* kind: O_* */
+    struct sight_open { unsigned char rel, kind; signed char dz; unsigned x, y; } open[SEE_OPEN];    /* kind: O_* */
     unsigned char   nways;                      /* A passage's ways on */
     struct sseen_way { unsigned char rel; signed char dz; unsigned char steps; } way[4];  /* (steps: the next square's kind,
                                                 **   world.h's T_*: steps, rubble, slice 4.10's; rel's high four bits
@@ -83,8 +83,10 @@ struct sight {
     unsigned        x, y;                       /* Its square */
     unsigned char   ndens;                      /* The denizens it sees: each one's square, what it's doing (DO_*),
                                                 **   its name (the hub's actor's, as it lies there) */
-    struct sden { unsigned x, y; unsigned char doing; char name[12]; unsigned char gear; } den[SEE_DENS];
-                                                /* (gear: the hub's agear, its things at a look, AG_*: 2026-10-27) */
+    struct sden { unsigned x, y; unsigned char doing; char name[12]; unsigned char den, gear; } den[SEE_DENS];
+                                                /* (den: the actor's record, the denizens' task's: its capital's,
+                                                **   the user's designators, 2026-11-06; gear: the hub's agear, its
+                                                **   things at a look, AG_*: 2026-10-27) */
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
     unsigned        rx, ry;                     /* A room's: its floor's northwest square (the room known by it: the
@@ -142,6 +144,8 @@ enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT
                                                 **   floor square beside a window on the surface, its sill the portal's
                                                 **   number in the chunk, no link; O_SKYSHAFT a chunk's opening of a shaft
                                                 **   up open to the sky, its stratum's link's O_SHAFT_UP, LD_SKY: sky.c's) */
+#define O_WELLS         0x20                    /* (And a well's shaft overhead, its foot's: the senses' record's, O_SHAFT_UP's, O_DAYLIT its
+                                                **   mouth far above in a lit room: 2026-11-06) */
 #define O_DAYLIT        0x10                    /* (The senses' record's kind: a skylight's or such a shaft's, daylight
                                                 **   falling from it now) */
 enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };

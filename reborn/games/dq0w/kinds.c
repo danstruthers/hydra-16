@@ -222,6 +222,9 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "stout post", 0, 160, 20, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 0, KF_FIXED },
     { "tied rope", 0, 40, 8, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 48, KF_FIXED },
     { "hanging rope", 0, 0, 0, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 0, KF_FIXED },
+    { "old writing", K_HAND, 8, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_BOOK, 0 },  /* (A writing carried out of its dungeon, and a
+                                                **   copy of one on a sheet: the plan's steps 9 and 10, 2026-11-06) */
+    { "copy", K_HAND, 0, 1, 0, 0, 0, 0, 2, "", MT_CLOTH, AP_BOOK, 0 },
 };
 #pragma rodata-name (pop)
 
@@ -282,7 +285,8 @@ const unsigned char throws[KI_COUNT] = {
     2, 2,                                       /* antidote, remedy */
     0,                                          /* broken weapon */
     2, 2, 1, 1,                                 /* stone chisel, wood chisel, mattock, spade */
-    2, 0, 0, 0, 0, 0                            /* iron spike; a spike driven, a ring, a post, a rope in place */
+    2, 0, 0, 0, 0, 0,                           /* iron spike; a spike driven, a ring, a post, a rope in place */
+    1, 2                                        /* old writing, copy */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

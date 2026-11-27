@@ -388,7 +388,7 @@ void __fastcall__ say (const char* s)
                 t_flush ();
             }
             c = *w;
-            ob[on] = c;
+            ob[on] = c == '\t' ? ' ' : c;       /* (A hard space: the inventory's list's indent, 2026-11-06) */
             ++on;
             ++w;
             ++col;
@@ -598,6 +598,8 @@ void __fastcall__ t_key (unsigned char k)
     }
 }
 
+unsigned char t_taken;                          /* (The lines taken out of the queue, t_line's: a line's letters' things kept
+                                                **   while it's posted again, not for the next line the same, letters.c's sum) */
 const char* t_next (void)
 {
     return qlen ? queue : 0;
@@ -614,6 +616,7 @@ char* t_line (void)
     n = strlen (queue) + 1;                     /* (The first line, out of the queue) */
     memcpy (taken, queue, n);
     qlen -= n;
+    ++t_taken;
     away = 1;                                   /* (The line typed drawn again at t_done: its prompt as the game
                                                 **   stands, none shown while the line waited, 2026-10-28) */
     soon = 1;                                   /* (Its answer's first words out as they're said, whatever went out

@@ -32,6 +32,10 @@ static const char preps[] = "in\0into\0inside\0on\0onto\0to\0from\0at\0under\0";
 static const char wants[] = "put\0place\0give\0hand\0offer\0throw\0toss\0hurl\0";   /* (Verbs with no meaning without
                                                 **   what's said after the thing) */
 static const char chain[] = "take\0get\0drop\0open\0close\0hold\0stow\0wear\0light\0";  /* ("take and drop the pick") */
+static const char brks[] = "stop\0halt\0enough\0flee\0escape\0disengage\0withdraw\0retreat\0";   /* (A line that breaks off,
+                                                **   task.c's free_cmd: the parser's stop, flee and disengage, their words in
+                                                **   commands.verbs, kept in step by dq0reachstop's check) */
+static const char brk2[] = "run\0back\0break\0";   /* ("run away", "back away", "back off", "break off") */
 
 /* The line's own, this overlay's data (the main RAM's room): where each part begins in inl, its length, it follows a
 ** list's word ("and", a comma); so many parts */
@@ -191,9 +195,14 @@ unsigned char __fastcall__ o_parts_in (unsigned char op)
     }
     parts ();
     a = qlen > qafter;                          /* (A list's parts still to come) */
-    if (a && np && pn[0] == 4 && !strnicmp (inl + pa[0], "stop", 4)) {
-        let_go ();                              /* ("stop" at once, not after them) */
-        a = 0;
+    if (a && np) {
+        for (i = pa[0]; inl[i] && inl[i] != ' '; ++i) {
+        }
+        if (among (pa[0], brks) || (inl[i] && among (pa[0], brk2) && among (i + 1, "away\0off\0"))) {
+            let_go ();                          /* ("stop", "flee" ... at once, not after them: a line that breaks off,
+                                                **   2026-11-06) */
+            a = 0;
+        }
     }
     qwas = qlen;
     if (np > 1) {

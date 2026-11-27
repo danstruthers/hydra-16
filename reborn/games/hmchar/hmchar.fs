@@ -138,16 +138,20 @@ create kind 12 allot  0 value kind-n              \ The group's kind ("soldier")
 0 value occk   0 value occkind   10 value occdty
 create wname 2 cells allot
 0 value pend-n   0 value pend-m   0 value pend-w
+0 value ntongues   0 value nscripts            \ (Its tongues N, scripts N: the native and N - 1 more, as C's)
 
 : brk ( -- ) col @ if nl then 0 to cell# ;
 : upto ( first last -- ) tuck <> if s" -" say sayn else drop then nl ;
 
-\ A skill of an occupation's: SKILL/N, SKILL (at its OML), Ritual/N (the deity's), or weapons N/M or crafts N/M (chosen
-\ after: pend-*); a skill listed twice, the higher
+\ A skill of an occupation's: SKILL/N, SKILL (at its OML), Ritual/N (the deity's), weapons N/M or crafts N/M (chosen
+\ after: pend-*), or tongues N or scripts N (ntongues, nscripts: C's; scripts N opens the native as Script does); a
+\ skill listed twice, the higher
 : num ( c-addr u -- n ) 0 0 2swap >number 2drop drop ;
 : skill-token ( c-addr u -- )
   2dup s" /" search if over >r 1 /string num nip r> 2 pick - swap else 2drop 0 then   ( c-addr u' m )
   >r
+  2dup s" tongues " 2swap begins? if 8 /string num to ntongues r> drop exit then
+  2dup s" scripts " 2swap begins? if 8 /string num to nscripts s" Script" then
   2dup s" weapons " 2swap begins? >r 2dup s" crafts " 2swap begins? r> or if
     over c@ lower-c [char] w = dup to pend-w  7 swap - /string num to pend-n  r> to pend-m exit
   then
@@ -425,16 +429,30 @@ variable ai
   s" -o" word= if ai @ 1+ arg 63 min dup to out-n out swap move  2 ai +! exit then
   usage ;
 : options ( -- ) 1 ai !  begin ai @ argc < while option repeat ;
-\ ---- A second language (C's: those the book's table gives one, Character 15; which by its
-\ culture and its name's first letter, the house's; at its skill base once, Skills 11; 2026-11-03)
-: occ? ( c-addr u -- f ) occname occ-n compare 0= ;
-: second? ( -- f )
-  s" Sage/Tutor" occ?  s" Scribe" occ? or  s" Innkeeper" occ? or
-  s" Litigant" occ? or  s" Mercantyler" occ? or  s" Herald" occ? or ;
+\ ---- Its tongues and scripts (C's): a second language (those the book's table gives one, Character 15, occupations.txt's
+\ tongues 2; which by its culture and its name's first letter, the house's; at its skill base once, Skills 11;
+\ 2026-11-03); its native script by its culture (the game's own, each people's by its tongue's number), and the book's
+\ Two or Three Scripts (scripts N) rolled from the rest last of all, each at 70 + SB; each a line of its file, and said
 : tongue2 ( -- c-addr u )
   harn-culture c@ 3 and 2* name c@ 1 and +
   dup 5 = over 6 = or if drop s" gargun" exit then  7 = if s" kobold" exit then
   name c@ 1 and if s" sindarin" else s" khuzdul" then ;
+: script-name ( i -- c-addr u ) >r s" delvic|ardic|starric|hethric|clawmark|sunglyph" r> |field ;
+create native-t 3 c, 0 c, 1 c, 1 c, 0 c, 2 c,         \ (By culture: Tribal ... Sindarin)
+0 value smask
+: lang-line ( c-addr u ml -- )                    \ "language NAME=ML", said after a comma
+  >r 2dup line{ s" language " line+ line+ s" =" line+ r@ 0 <# #s #> line+ line} drop  ." , " type space r> n. ;
+: script-line ( i ml -- )                          \ "script NAME=ML" (ml 0: the native, its ML the Script skill's)
+  >r script-name 2dup line{ s" script " line+ line+ r@ if s" =" line+ r@ 0 <# #s #> line+ then line} drop
+  r@ if ." , " then type space r> ?dup 0= if 20 harn-ml@ then n. ;
+: nth-free ( r -- k )                              \ The r-th script (from 0) not had yet (smask's)
+  0 begin smask over rshift 1 and 0= if over 0= if nip exit then swap 1- swap then 1+ again ;
+: tongues-said ( -- )
+  ." Tongues: common " 19 harn-ml@ n.  ntongues 1 > if tongue2 19 harn-sb lang-line then  ." . Scripts: "
+  20 harn-ml@ 0= if ." none." cr exit then
+  harn-culture c@ dup 5 > if drop 2 then native-t + c@  1 over lshift to smask  0 script-line
+  nscripts 6 min 1 max 1 ?do 6 i - random nth-free  1 over lshift smask or to smask  20 harn-oml script-line loop
+  ." ." cr ;
 
 \ ---- The family's wealth (Character 17, by its class: poor, average or rich; C's wealth, the house's odds): d100,
 \ a quarter poor, half average, a quarter rich, an outcast's or an unpopular child's ten less, a favourite's ten more; a
@@ -465,7 +483,7 @@ create wealth-t  40 , 40 , 40 ,  40 , 80 , 160 ,  60 , 120 , 240 ,  90 , 180 , 3
   line{ s" wealth" line+ wealth line+n line} drop
   ( absolute timesense, as C's: one in a hundred, rolled after all the rest; the house's, 2026-10-31 )
   d100 1 = dup if line{ s" timesense" line+ line} drop then
-  second? if line{ s" language " line+ tongue2 line+ s" =" line+ 19 harn-sb s>d <# #s #> line+ line} drop then
+  tongues-said
   swap close-file drop
   if ." Absolute timesense: you always know the hour." cr then
   ." Written to " out out-n type cr ;

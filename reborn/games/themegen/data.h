@@ -24,7 +24,7 @@ void lines_close (void);
 /* ---- The data file (themegen.dat: make.js's), its keys (make.js's KEYS); its text in banks of the program's own,
 ** each read leaving the window as it was (a bank program's in it, as it calls) */
 enum { TK_PEOPLE = 1, TK_LAND, TK_WORK, TK_NAME, TK_BUILT, TK_REUSED, TK_NOUN, TK_ENDED, TK_CLUE, TK_ROOMS, TK_USES,
-    TK_LIGHT, TK_FOLK, TK_NOW, TK_OPEN, TK_AGO, TK_GOAL = 20, TK_THING, TK_EXIT, TK_TITLE, TK_CALLED, TK_THEME = 30,
+    TK_LIGHT, TK_FOLK, TK_NOW, TK_OPEN, TK_AGO, TK_GOAL = 20, TK_THING, TK_EXIT, TK_TITLE, TK_CALLED, TK_WHY, TK_THEME = 30,
     TK_BEAST = 40, TK_FACTION };
 #define TK_THEMES       9                       /* (A goal's theme lines: kind piece rule story lock opened ending wayin wayout) */
 int __fastcall__ tg_load (const char* path);    /* Read in: 0, or -1 */

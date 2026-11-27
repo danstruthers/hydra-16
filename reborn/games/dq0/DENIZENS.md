@@ -234,7 +234,9 @@ from the start, is the character and its allies.
   darkvision, hearing and eyes); allies by the character's requests; and says so, its intents to the world, as the UI
   says the character's (minds and bodies, below).  The populations, the records and the denizens away from the
   character are its own.  At the real paces its minds wait while the UI has a command in hand (the hub's ui_cmd, a
-  second at most), as the senses' look does, so a command's answer doesn't wait for them.  And the kernel's
+  second at most), as the senses' look does, so a command's answer doesn't wait for them.  A denizen's things drawn, and what's
+  behind them in the ring, hold back from a line's first key too (three seconds at most: HOUSE.md's holding back); its plain
+  intents don't.  And the kernel's
   foreground (TASKFORE) puts the answer's tasks first meanwhile: the UI for good, the world, the command parser, the
   senses and the referee while a command's in hand; the minds, the maker and the sound are the background, their
   turn the rest of a tick after eight of the foreground's (DECISIONS.md, 2026-10-30).
@@ -767,4 +769,8 @@ The character hidden, a denizen's senses answer SN_LOOK for what they'd have see
 the hider's Stealth at its cover's steps and how near the looker is, once a nearness, the hub's hlook; a marginal failure its Awareness); found, it posts I_RISE
 with POS_HIDE | HD_FOUND (the world's part 94 ends the hiding and tells it).  Heard, it's drawn to the place; smelt, it's known.
 A robber (ways r) hears the character coming, unseen: it lies in wait (HM_AMBUSH: I_RISE POS_HIDE | HD_IN, the world's to say if there's cover; the actor's state says
-how well, ST_HID), held by HM_LURK till the character's beside it, it's spotted, or two minutes pass.  Its blow from hiding is the book's Ignore (the world's blow, RS_ASLEEP).
+how well, ST_HID), held by HM_LURK till the character's beside it, it's spotted, two minutes pass, or the character lies down to rest; out, it's DO_WATCH (aware: it comes on, not
+hiding again at its next turn).  Its blow from hiding is the book's Ignore (the world's blow, RS_ASLEEP).  The character at rest (2026-11-06: HOUSE.md's those that want it, as it
+rests): no robber lies in wait for it; one beside it, unnoticed, robs it as it lies (HM_FILCH: its Stealth for the book's Legerdemain, the character's Awareness, half
+asleep, the referee's; I_ROB's x[3] RB_PURSE, | RB_CAUGHT the better: the world takes only its coins, or nothing and stops its rest; E_TASK TE_ROBBED, the how in w1's
+high byte, RB_ASLEEP the world's); and any with a mind coming at it stalks it (its Stealth tested as it begins, as a hunter by smell).

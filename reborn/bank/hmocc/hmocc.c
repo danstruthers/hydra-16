@@ -194,8 +194,9 @@ static void __fastcall__ upto (unsigned char first, unsigned char last)
     ch ('\n');
 }
 
-/* A skill of an occupation's (tk's): SKILL/N, SKILL (at its OML), Ritual/N (the deity's), or weapons N/M or crafts N/M
-** (chosen after: pend_*); a skill listed twice, the higher */
+/* A skill of an occupation's (tk's): SKILL/N, SKILL (at its OML), Ritual/N (the deity's), weapons N/M or crafts N/M
+** (chosen after: pend_*), or tongues N or scripts N (the native and N - 1 more: hmchar's, rolled after the rest,
+** ntongues and nscripts; scripts N opens the native as Script does); a skill listed twice, the higher */
 static void skill_token (void)
 {
     char* sl = tk;
@@ -213,6 +214,14 @@ static void skill_token (void)
         pend_n = atoi (tk + 7 + pend_w);
         pend_m = m;
         return;
+    }
+    if (!strnicmp (tk, "tongues ", 8)) {
+        ntongues = atoi (tk + 8);
+        return;
+    }
+    if (!strnicmp (tk, "scripts ", 8)) {
+        nscripts = atoi (tk + 8);
+        strcpy (tk, "Script");
     }
     if (same (tk, "Ritual")) {
         if (h.att[HARN_DTY] == HARN_NODEITY) {

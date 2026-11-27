@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 1595, FILE_AT = 1305, MINT_AT = 1321, TMINTS = 8, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
+const THEME_SIZE = 0x1000, HEAD = 1739, EXIT_AT = 1594, TONGUE_AT = 1595, FILE_AT = 1305, MINT_AT = 1321, TMINTS = 8, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
 const TLAYERS = 3, TERAS = 6, TFACTIONS = 8, TPEOPLES = 8;
 const KIND = 37;                                                    // items.h's struct kind
 const WT_LB = 4, SQ_FT = 5;                                         // rs.h's units: a pound's quarters, a square's feet
@@ -28,7 +28,7 @@ const USES = ['kitchen', 'pantry', 'barracks', 'armoury', 'chapel', 'bedchamber'
 const DID = ['built', 'ruined', 'reused'];                          // theme.h's TL_*
 const ENDINGS = ['abandoned', 'conquered', 'collapsed', 'flooded', 'cursed', 'held'];   // EN_*
 const WORKS = ['keep', 'temple', 'mine', 'tomb', 'town', 'hold'];   // W_*
-const GOALS = ['none', 'artifact', 'evil', 'prisoner', 'through'];  // G_*
+const GOALS = ['none', 'artifact', 'evil', 'prisoner', 'through', 'lore', 'scourge'];  // G_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };                        // hub.h's AT_*
 
 // A theme's file read: its lines, each its key and its values (a line begun with a space goes on with the last: its
@@ -109,7 +109,7 @@ function compile(text, f, beasts, count) {
         break;
       case 'wayout':                                                // (Another way out's stratum: theme.h's exit_sn)
         if (!(+v[0] >= 1 && +v[0] <= 63)) bad(l, 'another way out\'s stratum: 1 to 63');
-        t.exitSn = b[HEAD - 1] = +v[0];
+        t.exitSn = b[EXIT_AT] = +v[0];
         break;
       case 'story': b.writeUInt16LE(text_(l, v[0]), 776); break;
       case 'stratum':
@@ -209,8 +209,19 @@ function compile(text, f, beasts, count) {
         break;
       // ---- The history (HISTORY.md): the record keeps what the engine builds by; the rest is the file's to read
       case 'seed': case 'region': break;
+      // ---- Why the character came, and what solving brings (the plan's step 7): the file's to read (dq0acct's), not the record's
+      case 'why':
+        if (GOALS.indexOf(v[0]) < 1 || !v[1]) bad(l, 'why: its goal kind, its reason, its patron');
+        break;
+      case 'reward':
+        if (v.length < 4 || !/^\d+$/.test(v[0]) || +v[0] > 9999 || !/^-?\d$/.test(v[1]) || !v[2] || !v[3]) {
+          bad(l, 'a reward: its pennies (9999 at most), its standing (-9 to 9), a thing (a kind of the catalogue\'s, or -), its words');
+        }
+        break;
       case 'people':
         if (peoples.length >= TPEOPLES || v.length < 4 || !(+v[2] >= 1 && +v[2] <= 8)) bad(l, 'a people: name, what, tongue (1-8), builds');
+        if (v.slice(4, 6).some(w => !/^[a-z]{1,8}$/.test(w))) bad(l, 'a people\'s tongue and script: a word each, 8 letters at most');
+        [4, 5].forEach((k, i) => { if (v[k]) b.write(v[k], TONGUE_AT + 72 * i + 9 * peoples.length, 'latin1'); });   // (Its tongue's and script's words: reading's)
         peoples.push({ name: v[0], tongue: +v[2] });
         break;
       case 'era': {
@@ -265,7 +276,7 @@ function compile(text, f, beasts, count) {
       }
       case 'goal': {
         const g = GOALS.indexOf(v[0]);
-        if (g < 1 || !v[1] || !(+v[2] >= 0 && +v[2] <= 255)) bad(l, 'a goal: artifact, evil, prisoner or through; its name; its stratum; its guardians');
+        if (g < 1 || !v[1] || !(+v[2] >= 0 && +v[2] <= 255)) bad(l, 'a goal: ' + GOALS.slice(1).join(', ') + '; its name; its stratum; its guardians');
         t.goal = { kind: g, name: v[1], sn: +v[2], guard: v[3] && v[3] !== '-' ? v[3] : null, l };
         break;
       }
@@ -301,7 +312,7 @@ function compile(text, f, beasts, count) {
   if (t.goal) {
     b[990] = t.goal.kind;
     b[991] = t.goal.sn;
-    if (t.goal.kind === 4) t.exitSn = b[HEAD - 1] = t.goal.sn;      // (A far exit: the way out that is the goal)
+    if (t.goal.kind === 4) t.exitSn = b[EXIT_AT] = t.goal.sn;      // (A far exit: the way out that is the goal)
     b[992] = t.goal.guard ? faction(t.goal.l, t.goal.guard) : 0;
   }
   for (const p of t.pieces) b[1120 + p.i] = p.guard ? faction(p.l, p.guard) : 0;
@@ -329,13 +340,14 @@ function check(t, beasts, f) {
     more = false;
     for (const r of t.rules) if (r.verb === 1 && can(r) && !have.has(r.c)) { have.add(r.c); made.add(r.c); more = true; }
   }
-  const ends = new Set(t.rules.filter(can).map(r => r.effect));
+  const ends = new Set(t.rules.filter(r => r.verb !== 0 && can(r)).map(r => r.effect));   // (Proved unread: no read rule counted, step 9's)
   const through = t.goal && t.goal.kind === 4;
   if ((t.mission & 1) && !ends.has(1) && !through) faults.push('its way out can\'t be opened: no rule that opens it has its things to be had');
   if ((t.mission & 2) && !ends.has(2)) faults.push('the place can\'t be ruled: no rule that rules it has its things to be had');
   if (through && t.goal.sn >= 255) faults.push('its far exit is on no stratum');
   if (!t.wayin && !t.exitSn) faults.push('no way out to be had: the way in shut, and no other way out (wayin, wayout)');
   if (!t.leftWords) faults.push('no words for leaving it unsolved (ending | left)');
+  t.rules.forEach((r, i) => { if (r.verb === 0 && r.effect) faults.push(`rule ${i + 1}: a writing read solves nothing (no puzzle needs reading: a writing's a hint)`); });
   t.rules.forEach((r, i) => { if (!can(r)) faults.push(`rule ${i + 1} can't be done: its things aren't all to be had`); });
   const styleOf = sn => { const s = t.strata[Math.min(sn, t.strata.length - 1)]; return s[1]; };
   const lives = (k, sn) => sn >= beasts[k].strata[0] && sn <= beasts[k].strata[1] && [...styleOf(sn)].some(c => beasts[k].styles.includes(c));
@@ -371,4 +383,4 @@ function build({ dir, objdir, say = () => {} }) {
   return { overlays: n, themes: themes.length, words: themes.map(t => t.used) };
 }
 
-module.exports = { build, compile, check, bestiary, THEME_SIZE, HEAD };
+module.exports = { build, compile, check, bestiary, lines, THEME_SIZE, HEAD };

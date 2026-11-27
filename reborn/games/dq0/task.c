@@ -22,7 +22,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tying the rope", "tending the wound", "turning a key", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "hiding", "tying the rope", "tending the wound", "turning a key", "dipping", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping",
     "letting fall", "sheathing", "slinging", "setting down", "setting down", "putting away", "setting down", "putting away", "setting down", "taking up"
@@ -119,7 +119,7 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
     static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
 
     strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
-    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_DIP || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
         strcat (dn, " ");
         strcat (dn, noun (n));
     }
@@ -155,7 +155,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         parts_in (PO_STOP);                     /* (The rest of its line with it: parts.c's lists, 2026-11-04) */
         if (k != LT_FIGHT || reach < 5) {          /* (A fight begun as the character came free, its line's first step in hand: that stopped, not the step) */
             reach = 0;                          /* (A walk over to a thing stopped: its command dropped; a thing's
-                                                **   timed work stopped: its end dropped, words.c's) */
+                                                **   timed work stopped: its end dropped, words.c's; "take all"'s
+                                                **   later things with it, 2026-11-06) */
+            pending[0] = 0;
         }
     }
     k = p;
@@ -174,8 +176,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     }
     switch (k) {
     case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
-                                                **   of it, slice 4.3's) */
-        return body_words ();
+                                                **   of it, slice 4.3's; then a robbery at rest, as it's up: robbed's) */
+        if (!(p = body_words ())) {
+            robbed (0, 0);
+        }
+        return p;
     case TE_STOPPED:
     case TE_HIT:
     case TE_NEAR:
@@ -192,10 +197,18 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         sayf ("\nYou aren't %s: you're %s.", doing[named < NDOING ? named : 0], d);
         break;
     case TE_IDLE:
-        msg ("You aren't doing anything to stop.");
         if (reach >= 5) {
-            reach_said (TE_IDLE, 0);            /* (Between two steps of the reach: they stop, part 19's) */
+            if (busy && step_k) {               /* (Engaged, a step a round's action, no long task: that step not done) */
+                sayf ("\nYou stop %s.", doing_of (step_k, step_n));
+            } else {
+                msg ("You stop there.");        /* (Between two steps of the reach: they stop, the pack's place told,
+                                                **   part 19's; "take all"'s later things with them, 2026-11-06) */
+            }
+            pending[0] = 0;
+            reach_said (TE_IDLE, 0);
+            break;
         }
+        msg ("You aren't doing anything to stop.");
         break;
     case TE_CANT:
         msg ("There's no stopping part way up: you cling on and climb.");
@@ -284,8 +297,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         strcpy (t, fn);
         sayf (fetched[(n >> 4) & 7], foe (n & 15, 1), t);
         break;
-    case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
-        sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
+    case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens'.  At rest, 2026-11-06:
+                                                **   caught at it, or its coins taken unawares: overlay 15's robbed) */
+        robbed (w, (char*) foe (named, 0));
         break;
     case TE_PACKED:                             /* (The reach's: part 19's) */
     case TE_FUMBLE:
@@ -792,13 +806,15 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                            LT_SLEEP, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
-                                           LT_FILL, LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
+                                           LT_FILL, LT_DIP, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
                                            LT_PRISE, LT_PRISE, LT_HONE, LT_HONE };   /* ("working" none: whatever the work is) */
-    unsigned char i;
+    unsigned char i, k;
 
     for (i = 0; i < sizeof kind_; ++i) {
         if (!strcmp (word, word_[i])) {
-            return kind_[i] == LT_FILL && HUB->pc_task.kind == LT_DIPOLD ? LT_DIPOLD : kind_[i];   /* (A dip's the old torch's own) */
+            k = HUB->pc_task.kind;              /* (Filling, soaking, dipping: whichever of them it's at, a lantern's, a
+                                                **   torch's, the old torch's: each its own words, 2026-11-06) */
+            return (kind_[i] == LT_FILL || kind_[i] == LT_DIP) && (k == LT_FILL || k == LT_DIP || k == LT_DIPOLD) ? k : kind_[i];
         }
     }
     return LT_NONE;
@@ -808,7 +824,7 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
 unsigned char __fastcall__ o_answer_of (const char* l)
 {
     static const char* const yes[] = { "y", "yes", "yeah", "ok", "sure", "go on", "carry on", "continue" };
-    static const char* const no[] = { "n", "no", "nope", "stop", "halt" };
+    static const char* const no[] = { "n", "no", "nope", "stop", "halt", "enough" };
     unsigned char i;
 
     if (!strnicmp (l, "keep ", 5)) {
@@ -831,7 +847,10 @@ unsigned char __fastcall__ o_answer_of (const char* l)
 ** once, taking no time (what it carries, its sheet, the map, the help, a stop, its state, a look about, a stance),
 ** or the fight's own as it fights (an attack at a denizen: its target changed, the world's); else 0, held till the
 ** character's free, or 2, held and the fight it's in stopped for it (HOUSE.md's fighting on: a command that takes
-** time takes over, its round out first) */
+** time takes over, its round out first); 3, a line that breaks off (the stop's kind, the user's, 2026-11-06: "`stop`
+** and other similar commands should be acted on immediately"): held, whatever long task it's at stopped for it at
+** once, a reach's steps with it (main's), then carried out.  The class by the parser's meanings, not its words: a stop
+** (stop, halt, enough: carried out at once, 1), a flight or a disengage (flee, escape, run away, back away, withdraw ...) */
 unsigned char __fastcall__ o_free_cmd (const char* l)
 {
     static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_META_TIME, VB_STOP,
@@ -845,6 +864,9 @@ unsigned char __fastcall__ o_free_cmd (const char* l)
     }
     if (!strcmp (l, "status")) {
         return 1;
+    }
+    if (a == VB_FLEE || a == VB_DISENGAGE) {
+        return 3;                               /* (Breaks off: any long task, a reach's steps, a fight, a journey) */
     }
     hub_mem (0, &i, &HUB->pc_task.kind, 1);
     if (i == LT_TRAVEL) {
@@ -1037,3 +1059,46 @@ void __fastcall__ o_time_said (unsigned w, unsigned char b)
 #pragma rodata-name (pop)
 #pragma data-name (pop)
 #pragma bss-name (pop)
+
+/* ---- A robbery's words (E_TASK's TE_ROBBED, task_words': overlay 15's, overlay 3's room), who its robber as it's said
+** ("the bandit", "something" unseen), w its how (the world's: RB_* in its high byte).  Helpless, robbed; at rest (a rest's
+** or a sleep's), caught at it, or its coins taken unawares, told as it's up (who 0: E_READY's TE_BODY, news_due's 2, its
+** long task over), 2026-11-06 (HOUSE.md's robbers at a rest) */
+#pragma code-name (push, "OV15CODE")
+#pragma rodata-name (push, "OV15RODATA")
+#pragma local-strings (push, on)
+
+static unsigned char pursed;                    /* (Its coins taken as it lay, not told yet) */
+
+void __fastcall__ o_robbed (unsigned w, char* who)
+{
+    unsigned char p = w >> 8;
+
+    if (!who) {
+        if (pursed) {
+            hub_mem (0, &p, &HUB->pc_task.kind, 1);
+            if (p) {
+                news_due |= 2;                  /* (At rest still: as it's up) */
+                return;
+            }
+            pursed = 0;
+            msg ("You find your coins gone: someone robbed you as you lay.");
+        }
+        return;
+    }
+    if (p & RB_CAUGHT) {
+        sayf (p & RB_ASLEEP ? "\nYou wake to find %s at your purse!" : "\nYou catch %s at your purse!", who);
+    } else if (p & RB_PURSE) {
+        pursed = 1;
+        news_due |= 2;
+    } else {
+        if (who[0] >= 'a') {
+            who[0] -= 'a' - 'A';
+        }
+        sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", who);
+    }
+}
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

@@ -37,6 +37,7 @@
 #include <harn.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
+#include "../dq0/life.h"
 #include "dq0harn.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -46,6 +47,7 @@ void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
 void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
 void __fastcall__ dice_set (struct req* r);
+void __fastcall__ read_test (struct req* r);    /* (Part 4's: a writing read) */
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
@@ -56,8 +58,10 @@ char tpart[16];                                 /* (RS_TREAT's part said) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
-static char tongues[32] = " common";             /* The tongues it speaks, a space before each: its own (the game's
-                                                **   stand-in for every character's), and its file's "language" lines */
+char tongues[TONGUES_N] = " common";            /* The tongues it speaks, a space before each: its own (the game's
+                                                **   stand-in for every character's), and its file's "language" lines;
+                                                **   and the scripts it reads and writes, each a * before it, its file's
+                                                **   "script" lines (dq0harn.h's) */
 
 /* ---- Words into a reply (from the overlay too: s may be in the window, where the hub is, so each character's
 ** taken with s's bank in, and put with the hub's) */
@@ -230,6 +234,8 @@ void __fastcall__ s_dig_answer (struct req* r)
         } else {
             r->grade = test_sk (&pc, sk, r->steps);
         }
+    } else if (r->a == P_READ) {
+        read_test (r);                          /* (A writing read: part 4's, step 9's) */
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
@@ -509,18 +515,20 @@ static void __fastcall__ own_line (char* l)
         body_line (l + 5, 1);                   /* (Its venom, its rest toward its healing rolls: heal.c's) */
     } else if (!strncmp (l, "wealth ", 7)) {
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
-    } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
-        strcat (tongues, l + 8);
     } else if (!strcmp (l, "timesense")) {
         HUB->pcsum.timesense = 1;               /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31:
                                                 **   the world's, the hub's tb; the hub in the window as the file's
                                                 **   read, its request's) */
+    } else {
+        body_line (l, 4);                       /* (Its "language" and "script" lines: afflict.c's, into tongues) */
     }
 }
 
+static char path[64];                           /* (The file's path read, and a line of it written: s_save_pc's line too, the
+                                                **   main RAM's room for the tongues, the plan's step 12) */
+
 void __fastcall__ s_load_pc (struct req* r)
 {
-    static char path[64];
     int fd;
 
     if (r->kind == RS_HELLO) {
@@ -538,7 +546,8 @@ void __fastcall__ s_load_pc (struct req* r)
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
-    r->result = harn_read (fd, &pc, own_line) < 0;
+    r->result = harn_read (fd, &pc, own_line) < 0 ? 1 : *tongues == '!' ? 2 : 0;   /* (2: more tongues and scripts
+                                                **   than it can hold, refused, the UI's to say so) */
     close (fd);
     develop (0);                                /* (Its might, by its skills) */
     hub_map (0);
@@ -551,13 +560,11 @@ void __fastcall__ s_load_pc (struct req* r)
 }
 
 /* The character's sheet written (r's text a path): 0, or 1 */
+#define line    path
 void __fastcall__ s_save_pc (struct req* r)
 {
-    static char line[48];
     char b[12];
     unsigned char g = HUB->gait, w = HUB->watch;
-    char* p;
-    char* e;
     int fd;
 
     r->result = 1;
@@ -578,7 +585,8 @@ void __fastcall__ s_save_pc (struct req* r)
     harn_write_line (fd, line);
     body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
     harn_write_line (fd, line);
-    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03) */
+    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03; then its tongues
+                                                **   and its scripts, "language" and "script" lines: afflict.c's) */
         harn_write_line (fd, line);
     }
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
@@ -587,19 +595,13 @@ void __fastcall__ s_save_pc (struct req* r)
     }
     line[g + 6] = 0;
     harn_write_line (fd, line);
-    for (p = tongues + 7; *p; p = e) {             /* (Its tongues but its own: "language" lines) */
-        e = strchr (p + 1, ' ');
-        e = e ? e : p + strlen (p);
-        strcpy (line, "language");
-        strncat (line, p, e - p);
-        harn_write_line (fd, line);
-    }
     if (HUB->pcsum.timesense) {
         harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
     }
     close (fd);
     r->result = 0;
 }
+#undef line
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -683,14 +685,85 @@ static unsigned char __fastcall__ speaks (const char* t)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* ---- A writing read (RS_TEST's P_READ, rs.h's: the plan for the game between dungeons, its step 9): part 4's */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
+/* Its mastery of a tongue or a script (t: "khuzdul", "*delvic": a word of tongues, dq0harn.h's): 0 none; its own (no ML said)
+** the Language skill's, a script's the Script skill's */
+static unsigned char __fastcall__ known (const char* t)
+{
+    char* p = tongues;
+    unsigned char n = strlen (t);
+
+    while ((p = strstr (p, t)) != 0) {
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
+            return p[n] == '=' ? atoi (p + n + 1) : pc.ml[*t == '*' ? HARN_SCR : HARN_LAN];
+        }
+        ++p;
+    }
+    return 0;
+}
+
+/* The writing's tongue and script in the text ("khuzdul *delvic"): only one who knows both reads it (the book's, Skills 11),
+** tested at their masteries' average, less its penalty, its condition's steps (once: the UI keeps what was read, the clue's).
+** Result 1 no script at all, 2 not the tongue, 3 not the script */
+void __fastcall__ s_read_test (struct req* r)
+{
+    unsigned char t, s;
+    int e;
+
+    *strchr (r->text, ' ') = 0;
+    t = known (r->text);
+    s = known (r->text + strlen (r->text) + 1);
+    r->result = !strchr (tongues, '*') ? 1 : !t ? 2 : !s ? 3 : 0;
+    if (!r->result) {
+        e = ((t + s) >> 1) - 5 * harn_get_pp (&pc) + STEP_PCT * (signed char) r->steps;
+        r->grade = grade (harn_test (e));
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
 ** the words need copied for the overlay (the hub's not in the window while it is) */
 struct pstate ps;
 
 void __fastcall__ pace_set (unsigned char a);
 void __fastcall__ stress (struct req* r);
+void age_get (void);
 #pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
 #pragma rodata-name (push, "SW3RODATA")
+
+/* Its age, for the sheet (the plan for the game between dungeons, its step 8): by the life's record (life.h's, at the
+** top of the save's folder: the year it was born, the day this dungeon began: its age as the dungeon began, LIFE_AGE's),
+** its birthday its sheet's; 0 without a record (no save's folder, dq0 -d's).  The record read into piece, the creatures'
+** sheets' (s_beasts' alone); the days since its birth year began in 16 bits (no long division's code in the main RAM) */
+unsigned char age;
+
+void s_age_get (void)
+{
+    char* path = (char*) piece + sizeof (struct life_head);
+    const struct life_head* h = (const struct life_head*) piece;
+    unsigned d;
+    int fd;
+
+    age = 0;
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (path, HUB->savedir);
+    strcat (path, "/../" LIFE_FILE);
+    if ((fd = open (path, O_RDONLY)) < 0) {
+        return;
+    }
+    if (read (fd, piece, sizeof (struct life_head)) == sizeof (struct life_head) && h->magic == LIFE_MAGIC) {
+        d = (unsigned) (h->date - h->born * 360UL);
+        age = d / 360 - (d % 360 < ((pc.att[HARN_BD] >> 8) - 1) * 30 + (pc.att[HARN_BD] & 0xFF) - 1);
+    }
+    close (fd);
+}
 
 void __fastcall__ s_pace_set (unsigned char a)
 {
@@ -918,12 +991,13 @@ parted:
             r->result = 1;
             break;
         }
-        if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing: part 3's) */
+        if (((unsigned char) (r->a - P_READ) <= P_INTIMIDATE - P_READ || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
+                                                **   tongue: one it speaks, or nothing; a writing read, its tongue and
+                                                **   its script (P_READ, P_LORE with words; P_TRACK never has any): part 3's) */
             goto parted;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
-            ps.go = HUB->pc_going;
+            ps.go = HUB->pc_task.kind == LT_SLEEP ? 0xFF : HUB->pc_going;   /* (0xFF asleep: at half, sheet.c's) */
             ps.watch = HUB->watch;
             memcpy (rq, r, sizeof rq);
             r->steps += noticing ((struct req*) rq);
@@ -975,6 +1049,7 @@ parted:
             put (news);                         /* (What time did to it: heal.c's, told once) */
             news[0] = 0;
         } else {
+            age_get ();                         /* (Its age: part 3's, the life's record) */
             sheet ();
         }
         break;

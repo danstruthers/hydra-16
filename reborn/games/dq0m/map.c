@@ -30,7 +30,7 @@
 #pragma static-locals (on)
 
 static struct chunk* K;
-static unsigned char kx, ky, lk = 0xFF, lsn;
+static unsigned char kx, ky, lk = 0xFF, lsn, lb;
 static unsigned lcx, lcy;
 static unsigned char sn_, north, lay;
 static unsigned map_, now_, ufade;
@@ -69,9 +69,11 @@ static unsigned char* __fastcall__ peek (unsigned char sn, unsigned x, unsigned 
         lsn = sn;
         lcx = cx;
         lcy = cy;
+        lb = CACHE_BANK (k);                    /* (Found once a chunk: dividing by 3 for each square of the window, a
+                                                **   part of the map's 5.6M cycles) */
+        K = CHUNK_AT (k);
     }
-    hub_map (CACHE_BANK (lk));
-    K = CHUNK_AT (lk);
+    hub_map (lb);
     return &K->tile[ky][kx];
 }
 

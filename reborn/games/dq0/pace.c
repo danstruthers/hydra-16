@@ -352,7 +352,9 @@ unsigned char __fastcall__ s_travel_go (const char* l)
 #pragma rodata-name (push, "OV16RODATA")       /*   overlay 3's since 2026-10-29: overlay 9's room for the look) */
 
 /* ---- A line's first look (main.c's, in the overlay's bank: the part's copied in only for a line that may be its):
-** 0 if line l has none of the words s_pace_cmd acts on (split's words, the case aside), nor one begun with a figure.
+** 0 if line l has none of the words s_pace_cmd acts on (split's words, the case aside), nor ends with one begun with a
+** figure (a figure before its unit: the unit's word is here; before any other word, a thing's count, "drop 2 rations",
+** not s_pace_cmd's: the pace's part and the commands' not swapped for it, some 100,000 cycles, 2026-11-06).
 ** s_pace_cmd's words that matter: a pace's (paces), "status", the colours', the watchfulness's (without one, wa is the
 ** hub's), a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
 ** to match must be here too */
@@ -381,10 +383,16 @@ unsigned char __fastcall__ o_pacing (const char* l)
                                                 **   parts' swaps and a word with the world, all a walk's first words were
                                                 **   waiting on); else 2) */
         }
-        if (*l >= '0' && *l <= '9') {
-            return 2;
-        }
         for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
+        }
+        if (*l >= '0' && *l <= '9') {
+            for (p = l + n; *p == ' ' || *p == ',' || *p == '.' || *p == '!'; ++p) {
+            }
+            if (!*p) {
+                return 2;                       /* (A figure at the end: squares, s_pace_cmd's) */
+            }
+            l += n;
+            continue;
         }
         if (!words && n == 4 && !strnicmp (l, "walk", 4)) {
             w = 1;

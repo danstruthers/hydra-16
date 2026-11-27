@@ -232,6 +232,11 @@ empty = SL_EMPTY
 new = SL_NEW                                # (2026-11-02, the user's "light a new torch": not in a hand, not burning)
 fresh = SL_NEW
 another = SL_NEW
+spent = SL_SPENT                            # (new, 2026-11-06: the user's "drop the spent torch", "take spent torch from
+burnt = SL_SPENT                            #   backpack": a light or a fuel burnt out, for every verb, carried or not;
+burned = SL_SPENT                           #   full, a container with something in it, a fuel not empty)
+used = SL_SPENT
+full = SL_FULL
 
 [manners]
 carefully = MN_CAREFUL

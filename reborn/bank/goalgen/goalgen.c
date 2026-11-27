@@ -2,7 +2,7 @@
 ** goalgen.c - (a bank program, themegen's: sdk/c/include/bankprog.h) the goal made (G5: the goal kinds are data,
 ** games/themegen/goals.txt), into themegen's main RAM, from the history histgen made: its stratum by where its kind
 ** says it is (built: a stratum an era that's ended built or made its own; cursed: an era's that ended cursed; lair:
-** the kobolds' lair, where they keep a prisoner; deep: the deepest, a far exit), its era, its guardians (the
+** the kobolds' lair, where they keep a prisoner or their raiders' standard; deep: the deepest, a far exit), its era, its guardians (the
 ** strongest faction that lives there: the dead, the kobolds, the beasts, the spiders, the rats; a prisoner's its
 ** captors), a stratum above it (where the evil's undoing lies), its things (one of each role its kind has) and their
 ** names, its person (a prisoner, a seeker, an old priest), and the theme's title.
@@ -78,6 +78,130 @@ static unsigned char __fastcall__ count (unsigned char key, char role)
     return m;
 }
 
+/* ---- Why the character came (the plan's step 7) */
+
+/* A number from x (a pick that spends none of the history's dice) */
+static unsigned long __fastcall__ mix (unsigned long x)
+{
+    x ^= x >> 15;
+    x *= 2654435761UL;
+    x ^= x >> 13;
+    return x;
+}
+
+/* Its reason: the goal block's why line (the one given, a rumour's; else the seed's pick, none of the history's dice spent),
+** its patron (given, or a name the seed's: %Q), what the patron pays (in its line's range, by the seed: %D) */
+static void why_pick (void)
+{
+    unsigned char m = 0, k;
+    int j, end = tg_find (TK_GOAL, 0, gk + 1);
+    unsigned lo, hi;
+    unsigned long h = mix (seed ^ 0x57485921UL);
+
+    if (end < 0) {
+        end = tg_lines;
+    }
+    for (j = goal_line + 1; j < end; ++j) {
+        if (tg_key[j] == TK_WHY) {
+            tg_get (j, &D, Dt);
+            if (*gwhy && !strcmp (D.v[0], gwhy)) {
+                gwl = j;                        /* (The one given) */
+                break;
+            }
+            ++m;
+        }
+    }
+    for (k = m ? (unsigned char) (h % m) : 0, j = goal_line + 1; gwl < 0 && m && j < end; ++j) {
+        if (tg_key[j] == TK_WHY && !k--) {
+            gwl = j;
+        }
+    }
+    if (!*gQ) {
+        strcpy (gQ, name_of (2, NG_PERSON, h ^ 0x50415452UL));
+    }
+    if (gwl >= 0) {
+        tg_get (gwl, &D, Dt);
+        lo = atoi (D.v[3]);
+        hi = atoi (strchr (D.v[3], '-') + 1);
+        gpence = lo + (unsigned) (mix (h) % (hi - lo + 1));
+        strcpy (gD, num (gpence));
+        strcat (gD, gpence == 1 ? " penny" : " pennies");
+    }
+}
+
+/* A rumour (themegen -r: rmode), a part-written theme for dq0acct to tell and the next dungeon to be made from (quest.txt, the
+** one followed): the words heard (%R and %Q its slots: the rest is made with the dungeon), the region, the why */
+static void rumour (void)
+{
+    if (gwl < 0) {
+        return;
+    }
+    SL ('R') = rname;
+    SL ('Q') = gQ;
+    tg_get (gwl, &D, Dt);
+    fill (W, D.v[1], LINE_TEXT);
+    begin_line ("rumour");
+    val (W);
+    end_line ();
+    region_line ();
+    data (TK_GOAL, 0, gk);
+    begin_line ("why");
+    val (D.v[0]);
+    tg_get (gwl, &D, Dt);
+    val (D.v[0]);
+    val (gQ);
+    end_line ();
+}
+
+/* The goal's slots, for linegen's lines (goals.txt's; %Q and %D why the character came), made in themegen's main RAM and kept there
+** (gsl: linegen puts them back after an era's words have had them) */
+static void goal_slots (void)
+{
+    struct era* g;
+    unsigned char x;
+
+    strcpy (gs_s, num (gs));
+    strcpy (gu_s, num (gu));
+    strcpy (ge_s, num (ge));
+    strcpy (geu_s, num (geu));
+    SL ('A') = gA;
+    SL ('a') = ga;
+    SL ('B') = gB;
+    SL ('b') = gb;
+    SL ('M') = gM;
+    SL ('S') = st[gs].name;
+    SL ('s') = gs_s;
+    SL ('E') = ge_s;
+    SL ('U') = st[gu].name;
+    SL ('u') = gu_s;
+    SL ('e') = geu_s;
+    SL ('T') = st[0].name;
+    for (x = (unsigned char) seed; ns > 1 && x >= ns - 1; x -= ns - 1) {
+    }                                           /* (Another way out's stratum: below the top, by the seed, none of its dice) */
+    strcpy (gx_s, num (ns > 1 ? x + 1 : 1));
+    SL ('O') = gx_s;
+    g = er + (ge - 1);                          /* (Through a pointer, as make's) */
+    SL ('N') = g->great;
+    SL ('P') = g->pthe;
+    SL ('K') = g->kind;
+    SL ('X') = g->place;
+    SL ('R') = rname;
+    SL ('G') = gg != 0xFF ? fa[gg].name : "-";
+    strcpy (gg_w, "the dark");
+    if (gg != 0xFF) {
+        if (data (TK_FOLK, fa[gg].name, 0)) {
+            strcpy (gg_w, D.v[1]);
+        } else {
+            strcpy (gg_w, "the ");
+            strcat (gg_w, fa[gg].name);
+        }
+    }
+    SL ('g') = gg_w;
+    SL ('Q') = gQ;                              /* (Why it came: its patron, what it pays) */
+    SL ('D') = gD;
+    memcpy (gsl, sl, sizeof gsl);
+}
+
 void make (void)
 {
     static char where[8];
@@ -85,6 +209,14 @@ void make (void)
     int j;
     struct era* g;
 
+    gwl = -1;
+    if (rmode && gk != 0xFF) {                  /* (A rumour's: its reason, its patron, its lines; the goal's made with the
+                                                **   dungeon) */
+        goal_line = tg_find (TK_GOAL, 0, gk);
+        why_pick ();
+        rumour ();
+        return;
+    }
     if (gk == 0xFF) {                           /* (A hand-written theme's own puzzle: its name the deeps') */
         strcpy (gmission, "escape");
         strcpy (title, "the Deeps of ");
@@ -116,7 +248,8 @@ void make (void)
     geu = era_now (gu) ? era_now (gu) : ge;
     g = er + (ge - 1);                          /* (Its era: through a pointer, never an import's address and an
                                                 **   offset, which a bank program can't have) */
-    strcpy (gM, name_of (gk == G_EVIL - 1 && ge < ne ? g[1].tongue : 2, NG_PERSON, rand32 ()));
+    strcpy (gM, name_of (gk == G_EVIL - 1 && ge < ne ? g[1].tongue : gk == G_SCOURGE - 1 ? g->tongue : 2, NG_PERSON,
+        rand32 ()));                            /* (A scourge's chief named in its own people's tongue) */
     SL ('N') = g->great;
     SL ('M') = gM;
     SL ('X') = g->place;
@@ -153,4 +286,6 @@ void make (void)
         }
         strncpy (title, W, sizeof title - 1);
     }
+    why_pick ();                                /* (Why it came: none of the history's dice) */
+    goal_slots ();
 }

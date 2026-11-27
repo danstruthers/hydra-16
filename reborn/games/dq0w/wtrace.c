@@ -192,7 +192,7 @@ static void take (void)
 
 /* The journal's ring (the denizens' or the character's: k) taken in from its place so far to its count now (those
 ** written over since, lost) */
-unsigned char ui_first (void);                  /* (dq0w.c's) */
+unsigned char ui_long (void);                   /* (dq0w.c's) */
 static unsigned char keeps;                     /* (s_tr_flush's keep: TF_SOME, ring gives way to a command) */
 static void __fastcall__ ring (unsigned char k)
 {
@@ -206,7 +206,7 @@ static void __fastcall__ ring (unsigned char k)
         at = n - (k ? NTRAIL : NJOURNAL);
     }
     for (; at != n; ++at) {
-        if (keeps == TF_SOME && (hub_map (0), ui_first ())) {
+        if (keeps == TF_SOME && (hub_map (0), ui_long ())) {
             tr_n = TR_FLUSH;                    /* (A command come: its answer first, the rest as it's answered) */
             break;
         }

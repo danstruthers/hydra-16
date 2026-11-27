@@ -138,14 +138,16 @@ by a request or an intent.
   lines cast in assembly) is kept from one look to the next while nothing in it has changed, and moved as the
   character steps.  At the real paces the look gives way to a command the UI has in hand (the hub's ui_cmd, half a
   second a look at most; not to one waiting for an answer of the world's that waits for the look), so the world's
-  answers and the UI's words don't wait for it.
+  answers and the UI's words don't wait for it.  The world's own long jobs hold back from a line's first key too (the
+  hub's ui_keys, three seconds at most: HOUSE.md's holding back).
 - **The game's own rules** are the world's too: the **theme's puzzle** (theme.h) is judged by the world
   (dq0w/wgame.c): the UI takes a command of the puzzle's (read the tablet, combine the sunstone with the moonstone,
   put the crown on the throne, use the seal on the way out) and asks the things' request of it (IO_PUZZLE: the verb,
   TR_*, and the things named), and the world finds them to hand (the item store's IO_FIND), looks for the theme's
   rule for their kinds, and does it (the things made one, IO_COMBINE's; put, IO_PUT's; the way out opened, the hub's
   way_open, which E_LEFT goes by), keeping the rules done; its reply is how it went (PZ_DONE and the rule, PZ_NONE,
-  PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings).  **A thing walked
+  PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings); a read rule's, a writing's, read.c's (the clue's
+  tongue and script, the referee's test, its four grades' words: HOUSE.md's reading and clues; an old writing or a copy, PZ_OLD and its clue).  **A thing walked
   over to** is the world's walk and its taking: a thing out of reach (IO_GET's IR_NOT_HERE, its square and its item)
   is the UI's I_TAKE, and the world walks there (again, as long as the walk gets it nearer: a denizen in the way, a
   trap that stopped it), takes it up as IO_GET would, and tells it (E_TAKEN: taken, the UI then asking its time and
@@ -361,7 +363,9 @@ for anyone who reads it (the lights', the denizens', the senses').
 
 - **Water:** a **well** where the stratum has water (for now from the stratum's seed and the region, till the plan
   has its water): in a domestic suite's kitchen, or a well room of its own in the stores'; a cistern where the
-  cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.
+  cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.  Its shaft a real one (2026-11-06, the user's "a real shaft": HOUSE.md's a well's shaft): down to
+  water at its foot on the stratum below, made as it's first wanted, climbed as any shaft is; one in four a cistern, some
+  with a passage on to the halls below, some coming out in their roof.
 - **Flat and straight:** a built stratum's ground is level (the plan's rock lies flat under it), so its rooms and
   passages are flat, one floor; its zones one plane each, never sloping, all at the room's floor, but a hall's
   **dais** (its last zone two feet up, a step along its front).  Passages run straight between their doors, a
@@ -635,9 +639,10 @@ knives; a pouch or a sack anything that fits).  **Missiles** weigh by the ten (K
 tenth of a pound each, the book's), their bulk too.  The things (dq0w/things.c): held in a hand (hold, wield, ready: two hands at most, a
 two-handed thing or a big one both), stowed in the pack, put in a container (by its room and the weight it bears; a
 container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from it
-(into the pack, else a hand), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
-worn); the inventory says which hand (both), what's worn, what's in or on what, and the load.  Taking up fills the
-pack first, then a hand.  **The load** (all the character carries, worn or not, its armour too) is the referee's to
+(into a hand, else the pack; by the count, the pack first), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
+worn); the inventory says which hand (both), what's worn, what's in or on what, and the load.  Taking up fills a free
+hand first, then the pack (told: "Your hands are full: you put the torch in your backpack."); "take all" and a count ("take 4
+rations") the pack first, then a hand, the rule's first purpose, many things (the user's playtest, 2026-11-06).  **The load** (all the character carries, worn or not, its armour too) is the referee's to
 judge: the things give it with the tools to hand (RS_EQUIP), and the referee makes it HarnMaster's encumbrance (the
 load over the endurance, its physical penalty: the body's tests harder, its move less, so the world's step slower),
 worded on the sheet (the load, the encumbrance) and in the inventory ("You're heavily burdened.").
@@ -707,6 +712,44 @@ count: a number, all, half) moves several in turn, each its own record; a lot co
 arrows; its qty how many, its weight each one's times it) is split for part of it, and a lot moved joins one alike
 where it goes; fewer there than asked, as many as there are, told.  The inventory, the look, a look in, tell things
 alike together ("two sacks"), and those on one square in one sentence.
+
+**Letters for things** (2026-11-06, the user's designators: DECISIONS.md's; HOUSE.md's letters for things): each thing the
+character carries or wears has a letter, a ... z then aa ... az (the UI bank's low, hub.h's designators: each letter's
+thing by its id, or its record's number | LT_REC till it has one; lowt when each one's thing was last carried), given as
+what it carries is made for the UI (things.c's ix_make, part 102's: letter.s's ix_letters, in assembly), kept while it's
+carried, given back by the thing's id as it's taken up again; a new one the first never given of a ... z, else the one let
+go of the longest ago, then aa ... az.  Kept in the save (game.dat's after the shortcuts: letters.c's, part 22's) and in
+kit.dat (struct kitrec's let: the carried-on kit's letters laid on its things as they're made, part 63's).  The inventory
+is a list, one a line (part 11's contents, the inventory's mode: its letter, letter.s's lput; what's in a thing indented by
+hard spaces, term.c's say, two a level; its gathering part 105's, s_inventory, part 11's room).  A letter typed where a thing's
+name goes names that thing (letters.c, overlay 22's, its own: the line's letters made the things' names as it's posted,
+"drop j" parsed as "drop torch", each one's id kept, ldes; the requests' words "#" and the id, des_map, the world's chooser
+by the records' ids, part 4's pick; the resolver's question of several not asked of it; its first words its own, sway.c's
+des_e; a tool named by its letter to hand without the world asked): the grammar the same, the letters never the
+parser's.  A command with nothing named of those done to a thing carried asks with their letters ("Drop what? [a, b,
+d]", o_what_ask), a letter answering it.  A capital for each thing
+seen, A ... Z then AA ... AZ (the UI bank's cap: its id, its kind, when last told: letters.c's cap_give), given as it's
+first told (seen.c's one, o_cap_of; "around", o_around, one a line with where it is), kept while remembered, given up
+only as a new one's wanted and none is free, the one told longest ago that isn't in sight; typed, it names its thing as a
+letter does (the catalogue's name of its kind; "take 5C" its count, part 35's: fewer there told, "There are only 3
+there; you take them all."; by the letter of one of several alike, the rest by its kind's name).  The capitals are
+overlay 23's since 2026-11-06 (caps.c: overlay 22's room), and the denizens take theirs from the same ones (the plan's
+step 4), given before the things' at each look (caps_load: each one seen, not heard only behind; its id CAP_DEN's, the
+actor's record, struct sden's den), told before its words in the look and as it stirs, alike ones' together ("(A, C) Two
+giant rats are ahead to your left", dens.c's den_caps), and first in "around"; typed, a denizen's capital is its name for
+the parser and the resolver finds it in sight by its record (o_des_thing: its square, so the blow, the throw, the walk
+go to that one; the sway told which, den_meant, SWA_MEANT), one out of sight refused.  "look at" a denizen looks it over
+as "examine" does.  Which one (step 5): a take whose name several things lying about fit, that differ by the inventory's
+words (their kind, count, lit, spent, nearly spent, burning low, empty), none chosen otherwise, gets IR_WHICH from the
+world (part 35's which: the chooser's every one in one pass, pick's SL_WHICH), each choice's id, kind, count and state;
+the UI gives each its capital and asks, "Which one? (E) a torch (lit), (F) a torch" (caps.c's o_which_ask), the command's
+line kept (the UI bank's which_*); a capital, a number or a state word answers it, the line made again with that one's
+capital where its thing's word was (letters.c's which_in).  The first words "You look them over." when several lie in
+reach.  Several letters in a line ("drop d e f", "take B C", step 6) each their own line, in turn; "letter d as t" swaps
+two letters (the UI bank's low and lowt, and ix: caps.c's).  Stowing (step 7): a stow with no place said, a holder made
+for the thing's family worn on the belt and free taken first (part 74's stow_where: the request made a put into it by its
+id); two or more places it fits (the pack, a pouch on the belt), IR_WHICH, "Stow it where? (b) the backpack, (f) the
+pouch", a letter answering it ("put h in f").
 
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
@@ -871,7 +914,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
   or by a hostile denizen coming into sight within 30 feet ("You stop walking"); anything else new (a denizen seen
   for the first time in the task, the first sound heard) asks, soft: "Keep waiting?", the clock still at the turns
   pace till it's answered, yes going on, no stopping it, and any other command stopping it and then carried out.
-  "stop" stops it, and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
+  "stop" ("halt", "enough") stops it at once, a reach between its steps too, and a flight or a disengage typed as it goes
+  breaks it off at once and then runs (HOUSE.md's breaking off at once, 2026-11-06; every other line waits for its end), and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
   fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
   "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
@@ -1442,7 +1486,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
   dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
   healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there, each as it was).
 - **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
-  kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
+  kept, so the last save, if it's made one, is there to go back to; if not, the first dungeon's next game is a new character, a later one's that dungeon begun again (HOUSE.md's words for each, dq0end's as it reads the folder: the user's, 2026-11-04).  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
   next game is a new one, a new character; said once, it goes on with the life, each next dungeon's too (LF_HARD, the record's).  No autosave before danger (the user's, 2026-11-03: DECISIONS.md's HOUSE.md's review), till a playtest shows the lost play hurts.
 - **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
   its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
@@ -1476,10 +1520,18 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   cycles from Enter to the first prompt in all).  It reads the sheet, kit.dat, kit0.dat and the kinds (dq0w.cat), and works by the life's seed and the dungeon's number alone: the same seed and answers, the same account.  Its
   healing is the referee's own: games/dq0harn's **course.h** (a toxin's and a disease's course: afflict.c's, moved) and **watch.h** (a watch of the clock: heal.c's), and the library's harnheal.c, each included by both.
   It writes pc.hm, kit.dat and the record's date; LF_BETWEEN in the record says it's yet to run (a reset between: it runs again).  It tells it in a dozen lines, asks its one question, and waits for Enter, as the game clears the screen as it starts (the rc variable dq0auto, the tests': no waiting; the tests' dq0Typed sets it for any game with a folder, dq0TypedAsk not).
+- **The clues** (the plan's steps 9 and 10; HOUSE.md's reading and clues): a writing (a theme's kind with a read rule) has its clue,
+  life.h's struct clue (its people's tongue and script, its condition, the place it names, its words), made by the UI (read.c, parts 25 and
+  26 in overlay 21's bank) as it's read or copied, and for every writing as the dungeon's left alive, in the dungeon's clues.dat; the
+  referee tests a reading (P_READ: the tongue and the script known, their average). The world's kit turns a writing carried into an
+  old writing (KI_WRITING, its fuel CLUE_HERE | its rule; a copy, KI_COPY, a sheet written on, CLUE_COPY too), and dq0life, as the next
+  dungeon begins, moves the clues read or carried to the top's clues.dat (each thing's fuel its number there), tells them, and makes the
+  first one read a rumour (heard.txt: step 7's rumours tell it first).
 - **kit0.dat** (top of the save's folder): what the life set out with, written by the world once, its first save of a life (a new life removes it): what's restocked to.
-- **The life's account** (**games/dq0end**, lib/acct/dq0end, 5K): the dungeons, the days, what was done, told as the character dies: by the UI as a game ends in a death, by dq0life if it died between two dungeons.  **What the record holds as it dies:**
+- **The life's account** (**games/dq0end**, lib/acct/dq0end, 7K): the dungeons, the days, what was done, told as the character dies: by the UI as a game ends in a death (told its name and occupation, for no sheet's in the folder till the first save), by dq0life if it died between two dungeons; then what's next, by what's in the folder, the tests the next start makes (dq0life's next_is): a game's words at a death are all its.  **What the record holds as it dies:**
   - *Hard mode's death in a dungeon:* the dungeon's days, outcome LO_DIED, or LO_SOLVED if it had solved it (Q2's "died, solved": LD_DIED in the dungeon's flags), the date of its death, LF_OVER.
   - *A death with a save to go back to (not hard mode):* nothing: the record's as it was, the dungeon not ended, since it goes back to its last save; "died, solved" can't happen there.  The account's told as the life so far.
+  - *A death with nothing saved yet (not hard mode):* nothing either.  In a later dungeon the next start begins that dungeon again: told as the life so far.  In the first, the next start is a new life over this record, which isn't marked over and so isn't kept in lives.dat (no world.dat to say its days): told as a life.
   - *A death between two dungeons, either mode:* the dungeon before keeps its outcome (solved or left), LF_OVER and LF_ABROAD, the date of its death, the dungeon count back on the last one.  There's no save to go back to in either mode (its last save's the one marked ended, and the dice would fall the same).
   - The next start in the folder is a new life; a record marked over is appended to **lives.dat** first, so it isn't lost.
 - **The start's time** (dq0starttime, no save's folder: dq0life isn't run): paid for by a file less to open for the UI (the deities' names
@@ -1488,6 +1540,106 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   kernel's cache held them worse, a million cycles a game.
 - **The room:** two dungeons hardly played, one a stand-in's and one with its own theme: 156K of the card (df, 14,996K free to 14,840K);
   a save's folder grows by that kind of figure a dungeon, more as it's played.  The test card has 15M free; a real one, far more.
+
+### Why you came (the plan's step 7, 2026-11-06)
+
+The plan's sections 1 to 3 and 6; HOUSE.md's between dungeons for the words and numbers.  All of it in the programs run before the
+game's tasks (themegen and its bank programs, dq0life, dq0acct, dq0end): none of the game's main RAM, none of its answer times.
+
+- **Why you came, told as the dungeon begins:** each goal kind has its reasons (games/themegen/goals.txt's why lines: two with someone
+  who asks, a patron, and a stranger's find), one picked by the dungeon's seed (none of the history's dice spent) or the one a rumour
+  followed names.  Its words go in the story where "you came down to try" was (goals.txt's %Y): "Haldan, a scholar, will pay well for
+  the Chronicle of Orth, if it can be found and carried out."  The theme says its why line (its goal kind, its reason, its patron) and
+  its reward line (what solving brings) for the account to read.  A stand-in theme keeps its own story and has a reward line of its own.
+- **What solving brings:** as the character comes out solved, the account between dungeons (dq0acct) reads the dungeon's theme's reward
+  line: the patron's pennies, paid into its money before the living's paid for; a thing given (the prisoner's kin's ring, made new in its
+  pouch); the standing it earns, added to the life's reputation (life.dat's head).  Told as it comes into town.  Left unsolved, nothing's
+  paid ("No one pays for what was left undone.") and no standing's lost; dead, the life's account says the standing it came to.
+- **The standing** told after the account's last line ("Your name is known in the inns hereabouts (standing 4).") and in the life's
+  account (dq0end: "Standing 4.").
+- **The rumours, between dungeons:** a life of a real game's (its seed 65,536 or more: the stand-ins' lives hear none, their dungeons
+  being no history's) has themegen make three rumours as the time between begins (themegen -r 3, dq0life's: by the life's seed and the
+  next dungeon's number, so the same life hears the same ones: some 39M cycles, 11 s on the board, its dots shown after "Dingus Quest
+  Zero is starting", each rumour's history made only as far as its place and its goal kind; a real game's carry-on 385M from Enter to
+  the first prompt in all, its next dungeon's history made too), each a place (a region: its name, land, rock, water, climate) and a
+  reason (a goal kind each its own, the heard ones too: lore and scourge come only so), written as part-written themes in the save's
+  folder (rumours.txt: each a rumour line, the words heard, then its region and why lines).  After the account, dq0acct tells them
+  ("In Kelford there's talk of other places: 1. ...") and asks which to follow; Enter, anything not one of them, or the tests' dq0auto
+  takes the first.  The one followed is written as quest.txt, which dq0life moves into the next dungeon's folder; themegen, run with
+  the folder and no dq0 -t, takes it as dq0 -t's theme: its region given (so the goal and the eras fit its land), its why given (its
+  goal kind, its reason, its patron), the rest of the dungeon its own seed's (its history's seed mixed with the place's name, so
+  each rumour's place has its own past).  It's asked before anything's written, so a reset tells
+  the time between again, the same.
+- **Ready for what comes:** the town (the plan's step 11, below) tells the rumours at its inn, and follows one from its "Leave for";
+  quest.c's question stays the straight-on character's (the tests' dq0auto).  A clue (step 10) adds or replaces a rumour by writing a
+  block of the same lines to heard.txt in the save's folder: its rumours are told first, ahead of themegen's (three at most in the
+  account's question, four in the town's).
+- **New goal kinds** (goals.txt's, marked heard: a history made without a rumour still picks among the four, so the stand-ins' seeds
+  and every seed's first dungeon keep their kinds): **lore**, a writing to find (a chronicle, a codex, a testament, among an era's
+  works, hidden; a torn leaf of a library's list hints where: never needed, Q9) taken up and carried out; **scourge**, a raiders'
+  chief's standard, skull drum or totem in the kobolds' lair (kobolds the last era, as a prisoner's are), taken up and carried out, the
+  raids ended.  Each has its why lines; the theme checker (themec) proves each solvable, as every kind's.
+
+### The town (the plan's step 11, 2026-11-06)
+
+The plan's section 3; the user's Q8 ("A menu"); HOUSE.md's between dungeons, the town, for the rules, words and numbers.  All of it in
+the programs run before the game's tasks: none of the game's main RAM, none of its answer times.
+
+- **A program of its own, games/dq0town** (lib/acct/dq0town, 25K, its words lib/acct/town.txt): the account (dq0acct) has no room for
+  it: its main RAM was at its floor (2109 free), and its overlays sit at the window where the kinds are, so none of their code can look at
+  a kind, and the market and the smith are all kinds.  dq0town has its own main RAM, the kinds and what's carried in a bank at the window
+  as the account has them, its words and the rumours in another (town.txt's lines but its notes, 3.5K; the rumours' files, 4.5K).  The
+  account runs it (SPAWN, as dq0life runs the account) only when the player's asked: the tests' dq0auto passes it by.
+- **Where in the account:** after its first lines (the days, the walk, what's paid, the physician, the wounds) and before its money's
+  matters, so the town's days are the account's days too (the wounds rolling on, the keep, the month's practice) and the account sees to
+  only what the player didn't.  The account hands it what's carried and its money as townkit.dat (kit.dat untouched till the account's
+  end, so a reset in the town tells the time between again, the same), the town's name and its inn's, the days so far, the keep owed so
+  far, a day's keep, Rhetoric's and Intrigue's EMLs (its arguments); it writes back townkit.dat, quest.txt (the place followed) and
+  town.dat (games/dq0acct/town.h: the days, what was seen to, the road), and the account reads them, passes the days, does its money's
+  matters but what was seen to (the market, the smith), and tells the rest: "Your time in Velmor comes to 7 days.", the lodging, the
+  practice, the money, the standing, "You set out for the Homuth Meres, 12 days on the road.", Enter to go on.
+- **The goods' code is shared** (games/dq0acct/goods.h: what's carried, its worth, the market's half, the smith's prices, the money laid
+  as coins), each program its own copy.  The town's name is the name maker's (namegen's code, compiled into the account's overlay 5:
+  dq0acct.ov5, a file of its own read as the account starts, 5.5K, with the wounds' words moved there from overlay 2, the date's and
+  the lodging's words from the main RAM: the account's main RAM 2281 free after it all).
+- **Intrigue's one more rumour** is made as it's heard: themegen -r 4 -a KINDS (the rumours made already, their goal kinds a bit each:
+  themegen goes on from them, so the fourth is the one -r 4 would have made), appended to rumours.txt; some 13M cycles, its dots shown.
+- **The carry-on's time** (seed 70000's, dq0whytime's scene, Enter on the dq0 line to the first prompt, the tests' dq0auto: no town):
+  385.3M cycles before, 388.8M after (the overlay's file and the name maker; a stand-in's, seed 3, 265.9M to 267.2M).  With the town
+  (the player's, seed 70000): 120M to the town's first question, each errand 2-4M (the inn's Intrigue's rumour 46M), 287M from
+  leaving to the game's first prompt.  dq0starttime (no folder: none of it run) 217.4M and 293.7M.
+
+### The scholar's house (the plan's step 12, 2026-11-06)
+
+The plan's section 4; HOUSE.md's the scholar's house for the rules, words and numbers.  All of it in the programs run before the game's
+tasks: none of the game's main RAM, none of its answer times.
+
+- **A program of its own, games/dq0schol** (lib/acct/dq0schol, 20K, its overlay lib/acct/dq0schol.ovl, 8K, its words
+  lib/acct/scholar.txt): the town (dq0town) runs it as the player goes into the scholar's house (5, "scholar", or a command of its own
+  typed in the street: "read the journal" goes there and is done there).  The town had 69 bytes of main RAM over the 2048, so the house
+  couldn't be in it.  dq0schol's main RAM holds its words, the sheet's lines it needs and the reader; its overlay (the readings, the
+  library, the masters, the other skills), read into a bank as it starts, stays at the window all the while (nothing else of it uses
+  the window).  It reads the sheet itself (its attributes, six masteries, its tongues and scripts: the library's harnfile.c not linked)
+  and the top's clues.dat and life.dat; it writes clues.dat's records (a better reading; the other skills asked; a copy sold on) and
+  heard.txt (a better reading's rumour).
+- **Between the town and the house:** town.dat (games/dq0acct/town.h's struct townrec), written by the town before it runs the house
+  and read back after: the money (in and out), whether it's a big town (town.txt's kind lines, "big" after two of them), the writings
+  carried (their things' fuel, eight at most), the days in town so far (the house adds its own), the months with a master, the script
+  studied, what a master opened (two a stay, the store's form: "*starric=82").  The account reads the last three from the town's
+  town.dat as ever: a master's lines added to the sheet's (written as the account ends), the month's practice forfeit a month each,
+  the script studied first in the practice's filled-in answer.
+- **The town's own room:** dq0town has an overlay now (lib/acct/dq0town.ovl: its line typed, the console's width, the rumours' seed,
+  running a program, town.dat, the house's arguments: code that never looks at the window's banks, put at the window to be called, the
+  kinds' bank put back after), and its town.txt line shares the rumours' buffer (never both at once), so its main RAM is 3211 free
+  (2117 before).
+- **The clue's record** (life.h's struct clue): two bytes more, out of its words (a byte for the era's centuries, the book's Ancient a
+  dead tongue's; a byte for the other skills asked and a copy sold on), so SAVE_VER 44: old clues aren't read.
+- **The tongues' store** (dq0harn.h's tongues): 56 bytes to 120, eight past its own of the longest (TONGUE_LINES, TONGUE_MOST), the
+  account's NTONGUES the same (sheet.c's check); the room made in the referee's main RAM by s_load_pc's path and s_save_pc's line
+  sharing one buffer (dq0harn 2197 free, its floor 2190).  A sheet with more: the referee's result 2, the UI saying so as it ends
+  ("dq0: too many tongues and scripts in its file", its status too; "dq0: no character in its file" is said now as well), dq0null's
+  alike.
+- **The carry-on's time:** unchanged with no town (seed 70000's, dq0whytime's scene, Enter on the dq0 line to the first prompt, the tests' dq0auto): 391.4M cycles before, 390.5M after; a stand-in's (seed 3) 269.9M and 270.6M.  In the town, going into the scholar's house 14.5M (the program, its overlay and the clues read: about 4 s on the board at 3.58 MHz), each errand there 1-2M, back to the street 2.8M.
 
 ## One path for every actor
 
@@ -1559,7 +1711,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound, tiring); where you are and
   going to places in a room; things out of reach walked to first, a blow's close-in, engagement; the search a long
   task, its finds told as it ends; a dig half done kept (its change record); battering a long task, a blow at a time;
-  looking one way (3 seconds, twice a glance's reach ahead, through what lets sight through), listening one way;
+  looking one way (3 seconds, twice a glance's reach ahead, through what lets sight through: the chunks past a glance's
+  reach made only as a line from the eyes in the quarter ahead reaches their edge, dq0p/view.c's, 2026-11-05; a chunk
+  made is the longest wait in the game, and it made up to nine, behind it as well), listening one way;
   every occupation the book lists in hmchar, and the player's own.  The slice built (2026-10-20); a smell layer's
   sniffing one way the trace layer's (slice 4.1).
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);

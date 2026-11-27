@@ -11,6 +11,8 @@ extern unsigned char quiet;                     /* -q: no questions */
 extern const char* cname;                       /* -c's occupation (NULL: none) */
 extern const char* uname;                       /* -u's culture (NULL: none) */
 extern char occname[20];                        /* The occupation (its name; the player's own, as it's called) */
+extern unsigned char ntongues, nscripts;        /* Its tongues and scripts (occupations.txt's tongues N, scripts N: the native
+                                                **   and N - 1 more, chosen as its file's written; 0 none said) */
 extern char libdir[48];                         /* hmchar's lib/hmchar (occupations.txt, hmocc.bp, hmchar.exp) */
 extern char ab[40];                             /* An answer typed */
 extern unsigned char col;                       /* The column the output's at */

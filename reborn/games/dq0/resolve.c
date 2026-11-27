@@ -318,6 +318,10 @@ static unsigned char __fastcall__ find_thing (struct cthing* t, unsigned char wh
 {
     unsigned char k;
 
+    if ((k = des_thing (t)) != 0) {
+        return k & 1;                           /* (One named by its letter: a thing, the world's by its id; a denizen,
+                                                **   found; or not in sight, refused: letters.c's) */
+    }
     if (t->kind || t->x || t->sel == SL_ME || t->sel == SL_IT || (!t->word[0] && t->sel == SL_THE) ||
         !gather (t->word, what)) {
         return 1;                               /* (A fixture, found already, the character, nothing, none it sees) */
@@ -366,7 +370,8 @@ static unsigned char tool_ok (void)
     }
     k = w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n << 4 : cmd.other.sel | cmd.other.n << 4;
     hub_mem (0, &HUB->ireq.sel, &k, 1);         /* (Which of several: the world's to choose) */
-    if (othings (IO_FIND, w, "", 0) != IR_OK) {
+    if (!des_low (w) && othings (IO_FIND, w, "", 0) != IR_OK) {   /* (One named by its letter, carried: to hand, the world
+                                                **   not asked, letters.c's) */
         msg (lb);                               /* ("You have no bar to hand.", "The bar is out of reach: ...") */
         return 0;
     }
@@ -438,7 +443,7 @@ unsigned char o_resolve (void)
     unsigned char k, n, a = cmd.action;
 
     if (reach < 5) {                            /* (A line's own: no run of handlings yet, part 19's) */
-        take_more = 0;
+        take_more = take_all = 0;
         hub_mem (0, &HUB->pc_lump, &nosteps, 1);
     }
     if (cmd.flags & CF_ASKED) {
@@ -588,7 +593,7 @@ unsigned char o_resolve (void)
                 cx[n] = cy[n] = 0xFFFF;
             }
             iall = 1;
-            take_more = nall > 1;
+            take_more = take_all = nall > 1;
             strcpy (cmd.obj.word, all[0]);
             cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
         } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0,
